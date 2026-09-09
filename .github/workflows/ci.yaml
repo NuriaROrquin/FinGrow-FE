@@ -2,9 +2,9 @@ name: CI
  
 on:
   push:
-    branches: [ main ]
+    branches: [ main, SCRUM-96-T-13-Extender-la-integración-continua-al-frontend-y-al-servicio-de-IA ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, SCRUM-96-T-13-Extender-la-integración-continua-al-frontend-y-al-servicio-de-IA ]
  
 jobs:
   build-and-test:
