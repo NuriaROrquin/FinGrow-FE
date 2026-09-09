@@ -194,7 +194,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     if (isLoaded) {
       localStorage.setItem("fingrow-empleados", JSON.stringify(empleados))
     }
-  }, [empleados, isLoaded])
+  }, [departamentos, empleados, isLoaded])
 
   // Función auxiliar para actualizar el contador de empleados de un departamento
   const updateDepartamentoCantidadEmpleados = (departamentoNombre: string) => {
@@ -310,7 +310,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         }
       })
     }
-  }, [empleados, isLoaded])
+  }, [departamentos, empleados, isLoaded])
 
   const value: CompanyContextType = {
     departamentos,
