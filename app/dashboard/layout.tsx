@@ -62,10 +62,17 @@ const empresaNavigation = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
-  const { role, userName, logout } = useAuth()
+  const { role, userName, logout, isAuthenticated, isHydrated } = useAuth()
 
   // Protección de rutas según el rol
   useEffect(() => {
+    if (!isHydrated) return
+
+    if (!isAuthenticated) {
+      router.replace("/")
+      return
+    }
+
     const isCompanyRoute = pathname.startsWith('/dashboard/company')
     const isEmployeeRoute = !isCompanyRoute && pathname.startsWith('/dashboard') && pathname !== '/dashboard/settings'
 
@@ -76,7 +83,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       // Si es empleado intentando acceder a rutas de empresa, redirigir
       router.push('/dashboard')
     }
-  }, [role, pathname, router])
+  }, [isAuthenticated, isHydrated, role, pathname, router])
 
   const getInitials = (name: string) => {
     return name
@@ -85,6 +92,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       .join('')
       .toUpperCase()
       .slice(0, 2)
+  }
+
+  const isCompanyRoute = pathname.startsWith("/dashboard/company")
+  const isEmployeeRoute = pathname.startsWith("/dashboard") && !isCompanyRoute && pathname !== "/dashboard/settings"
+  const hasInvalidRoleRoute =
+    (role === "empresa" && isEmployeeRoute) ||
+    (role === "empleado" && isCompanyRoute)
+
+  if (!isHydrated || !isAuthenticated || hasInvalidRoleRoute) {
+    return <div className="min-h-screen bg-background" />
   }
 
   return (
