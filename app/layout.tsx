@@ -26,7 +26,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "FinGrow - Bienestar Financiero",
   description: "Plataforma de bienestar financiero para empleados y empresas",
-    generator: 'v0.app'
+  generator: "v0.app",
+  other: {
+    "facebook-domain-verification": "2jkhz8dut8jntfm7q3pzcrixvw8vv8",
+  },
 }
 
 export default function RootLayout({
