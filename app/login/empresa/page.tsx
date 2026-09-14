@@ -12,10 +12,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/lib/auth-context"
+import { mockLogin } from "@/lib/api/mock-auth"
 
 export default function EmpresaLoginPage() {
   const router = useRouter()
-  const { login } = useAuth()
+  const { loginWithToken } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -24,13 +25,15 @@ export default function EmpresaLoginPage() {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simular autenticación
-    setTimeout(() => {
-      const companyName = email.split('@')[1]?.split('.')[0] || "Empresa"
-      login("empresa", companyName.charAt(0).toUpperCase() + companyName.slice(1))
-      setIsLoading(false)
+    try {
+      const { token } = await mockLogin({ email, password })
+      if (!loginWithToken(token)) {
+        throw new Error("El token recibido no es válido")
+      }
       router.push("/dashboard/company")
-    }, 1000)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (

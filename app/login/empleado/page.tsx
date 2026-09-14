@@ -12,10 +12,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/lib/auth-context"
+import { mockLogin } from "@/lib/api/mock-auth"
 
 export default function EmpleadoLoginPage() {
   const router = useRouter()
-  const { login } = useAuth()
+  const { loginWithToken } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -24,13 +25,15 @@ export default function EmpleadoLoginPage() {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simular autenticación
-    setTimeout(() => {
-      const userName = email.split('@')[0] || "Usuario"
-      login("empleado", userName.charAt(0).toUpperCase() + userName.slice(1))
-      setIsLoading(false)
+    try {
+      const { token } = await mockLogin({ email, password })
+      if (!loginWithToken(token)) {
+        throw new Error("El token recibido no es válido")
+      }
       router.push("/dashboard")
-    }, 1000)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (

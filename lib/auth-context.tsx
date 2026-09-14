@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation"
 
 type UserRole = "empleado" | "empresa"
 
-const TOKEN_KEY = "fingrow-auth-token"
+const TOKEN_COOKIE_NAME = "fingrow-auth-token"
+const NAME_IDENTIFIER_CLAIM =
+  "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"
+const ROLE_CLAIM = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+const COMPANY_ID_CLAIM = "company_id"
 
 interface TokenPayload {
   userId: string
@@ -22,7 +26,7 @@ interface AuthContextType {
   setUserName: (name: string) => void
   isAuthenticated: boolean
   isHydrated: boolean
-  login: (role: UserRole, name: string) => void
+  login: (token: string) => boolean
   logout: () => void
 }
 
@@ -47,20 +51,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { role, companyId, userName, isAuthenticated } = authState
 
   useEffect(() => {
-    const token = window.localStorage.getItem(TOKEN_KEY)
+    const token = getTokenCookie()
 
     if (token) {
       const payload = parseToken(token)
 
       if (payload && payload.exp * 1000 > Date.now()) {
-        setAuthState({
-          role: payload.rol,
-          companyId: payload.companyId,
-          userName: payload.userId,
-          isAuthenticated: true,
-        })
+        setAuthState(createAuthenticatedState(payload))
       } else {
-        window.localStorage.removeItem(TOKEN_KEY)
+        removeTokenCookie()
       }
     }
 
@@ -70,89 +69,124 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isAuthenticated) return
 
-    const token = window.localStorage.getItem(TOKEN_KEY)
+    const token = getTokenCookie()
     const payload = token ? parseToken(token) : null
-    const remainingTime = payload ? payload.exp * 1000 - Date.now() : 0
+    const remainingTime = payload ? getRemainingTime(payload.exp) : 0
 
     if (!payload || remainingTime <= 0) {
-      window.localStorage.removeItem(TOKEN_KEY)
+      removeTokenCookie()
       setAuthState((current) => ({ ...current, isAuthenticated: false }))
       router.replace("/")
       return
     }
 
     const timeoutId = window.setTimeout(() => {
-      window.localStorage.removeItem(TOKEN_KEY)
+      removeTokenCookie()
       setAuthState((current) => ({ ...current, isAuthenticated: false }))
       router.replace("/")
     }, remainingTime)
     return () => window.clearTimeout(timeoutId)
   }, [isAuthenticated, router])
 
-  const login = (userRole: UserRole, name: string) => {
-    const token = getAuth(userRole, name)
+  const loginWithToken = (token: string): boolean => {
     const payload = parseToken(token)
 
-    if (!payload) return
+    if (!payload || payload.exp * 1000 <= Date.now()) return false
 
-    window.localStorage.setItem(TOKEN_KEY, token)
-    setAuthState({
-      role: payload.rol,
-      companyId: payload.companyId,
-      userName: payload.userId,
-      isAuthenticated: true,
-    })
+    setTokenCookie(token, payload.exp)
+    setAuthState(createAuthenticatedState(payload))
+    return true
   }
+
   const logout = () => {
-    window.localStorage.removeItem(TOKEN_KEY)
+    removeTokenCookie()
     setAuthState((current) => ({ ...current, companyId: null, isAuthenticated: false }))
     router.push("/")
   }
 
-  const setRole = (nextRole: UserRole) => setAuthState((current) => ({ ...current, role: nextRole }))
-  const setUserName = (nextName: string) => setAuthState((current) => ({ ...current, userName: nextName }))
+  const setRole = (nextRole: UserRole) =>
+    setAuthState((current) => ({ ...current, role: nextRole }))
+  const setUserName = (nextName: string) =>
+    setAuthState((current) => ({ ...current, userName: nextName }))
 
   return (
-    <AuthContext.Provider value={{ role, setRole, companyId, userName, setUserName, isAuthenticated, isHydrated, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        role,
+        setRole,
+        companyId,
+        userName,
+        setUserName,
+        isAuthenticated,
+        isHydrated,
+        loginWithToken,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )
+}
+
+function createAuthenticatedState(payload: TokenPayload): AuthState {
+  return {
+    role: payload.rol,
+    companyId: payload.companyId,
+    userName: payload.userId,
+    isAuthenticated: true,
+  }
+}
+
+function getRemainingTime(expiresAt: number): number {
+  return expiresAt * 1000 - Date.now()
+}
+
+function getTokenCookie(): string | null {
+  const cookie = document.cookie
+    .split("; ")
+    .find((entry) => entry.startsWith(`${TOKEN_COOKIE_NAME}=`))
+
+  return cookie ? decodeURIComponent(cookie.slice(TOKEN_COOKIE_NAME.length + 1)) : null
+}
+
+function setTokenCookie(token: string, expiresAt: number): void {
+  const maxAge = Math.max(0, Math.floor(expiresAt - Date.now() / 1000))
+  document.cookie = `${TOKEN_COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAge}; SameSite=Lax`
+}
+
+function removeTokenCookie(): void {
+  document.cookie = `${TOKEN_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax`
 }
 
 function parseToken(token: string): TokenPayload | null {
   try {
     const encodedPayload = token.split(".")[1]
     const base64Payload = encodedPayload.replace(/-/g, "+").replace(/_/g, "/")
-    const payload = JSON.parse(atob(base64Payload.padEnd(Math.ceil(base64Payload.length / 4) * 4, "="))) as Partial<TokenPayload>
+    const payload = JSON.parse(
+      atob(base64Payload.padEnd(Math.ceil(base64Payload.length / 4) * 4, "=")),
+    ) as Record<string, unknown>
+    const userId = payload[NAME_IDENTIFIER_CLAIM]
+    const companyId = payload[COMPANY_ID_CLAIM]
+    const role = payload[ROLE_CLAIM]
 
     if (
-      (payload.rol !== "empleado" && payload.rol !== "empresa") ||
-      typeof payload.userId !== "string" ||
-      (typeof payload.companyId !== "string" && payload.companyId !== null) ||
+      (role !== "User" && role !== "Empleado" && role !== "Empresa") ||
+      typeof userId !== "string" ||
+      typeof companyId !== "string" ||
       typeof payload.exp !== "number"
     ) {
       return null
     }
 
-    return payload as TokenPayload
+    return {
+      userId,
+      companyId,
+      rol: role === "Empresa" ? "empresa" : "empleado",
+      exp: payload.exp,
+    }
   } catch {
     return null
   }
-}
-
-function getAuth(role: UserRole, userId: string) {
-  const payload: TokenPayload = {
-    userId,
-    companyId: role === "empresa" ? userId : null,
-    rol: role,
-    exp: Math.floor(Date.now() / 1000) + 60 * 60,
-  }
-
-  return `${encodeBase64Url({ alg: "HS256", typ: "JWT" })}.${encodeBase64Url(payload)}.FindGrowSingature`
-}
-
-function encodeBase64Url(value: object) {
-  return btoa(JSON.stringify(value)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
 }
 
 export function useAuth() {
