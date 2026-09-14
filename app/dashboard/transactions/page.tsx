@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState, useRef, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
+import Image from "next/image"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -38,7 +39,6 @@ import {
   Sparkles,
   MessageSquare,
   Video,
-  Mail,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
@@ -135,22 +135,28 @@ export default function TransactionsPage() {
   const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false)
   const [ocrImage, setOcrImage] = useState<string | null>(null)
   const [ocrProcessing, setOcrProcessing] = useState(false)
-  const [ocrResult, setOcrResult] = useState<any>(null)
+  const [ocrResult, setOcrResult] = useState<{
+    amount: number
+    description: string
+    category: string
+    date: string
+    confidence: number
+  } | null>(null)
   const [telegramMessage, setTelegramMessage] = useState("")
   const [telegramProcessing, setTelegramProcessing] = useState(false)
-  const [telegramResult, setTelegramResult] = useState<any>(null)
+  const [telegramResult, setTelegramResult] = useState<{
+    type: "income" | "expense"
+    amount: number
+    description: string
+    category: string
+    date: string
+  } | null>(null)
   const [useCameraMode, setUseCameraMode] = useState(false)
   const [stream, setStream] = useState<MediaStream | null>(null)
-  const [mounted, setMounted] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const { toast } = useToast()
-
-  // Evitar hidratación incorrecta
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   // Detectar parámetro mode=ocr en la URL
   useEffect(() => {
@@ -460,7 +466,7 @@ export default function TransactionsPage() {
                   <div className="space-y-4">
                     {ocrImage && (
                       <div className="relative rounded-lg overflow-hidden border">
-                        <img src={ocrImage} alt="Ticket" className="w-full max-h-[300px] object-contain" />
+                        <Image src={ocrImage} alt="Ticket" width={600} height={300} className="w-full max-h-[300px] object-contain" />
                       </div>
                     )}
 
@@ -585,7 +591,7 @@ export default function TransactionsPage() {
                     rows={4}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Ejemplos: "Pagué $500 en supermercado", "Ingreso de $10000 por freelance"
+                    Ejemplos: &quot;Pagué $500 en supermercado&quot;, &quot;Ingreso de $10000 por freelance&quot;
                   </p>
                 </div>
 

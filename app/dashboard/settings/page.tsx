@@ -492,8 +492,8 @@ export default function SettingsPage() {
                     <h4 className="text-sm font-medium">¿Qué puedes hacer con Telegram?</h4>
                     <ul className="space-y-1 text-sm text-muted-foreground">
                       <li>• Recibir notificaciones de transacciones y alertas</li>
-                      <li>• Registrar gastos: "Gasté $500 en supermercado"</li>
-                      <li>• Registrar ingresos: "Ingreso de $10000 por freelance"</li>
+                      <li>• Registrar gastos: &quot;Gasté $500 en supermercado&quot;</li>
+                      <li>• Registrar ingresos: &quot;Ingreso de $10000 por freelance&quot;</li>
                       <li>• Enviar fotos de tickets para procesarlos con OCR</li>
                       <li>• Consultar tu balance actual</li>
                     </ul>
@@ -522,7 +522,7 @@ export default function SettingsPage() {
                       Tu cuenta está vinculada. Ahora puedes enviar mensajes como:
                       <br />
                       <code className="text-xs bg-muted px-2 py-1 rounded mt-2 block">
-                        "Pagué $1500 en el almuerzo con el equipo"
+                        &quot;Pagué $1500 en el almuerzo con el equipo&quot;
                       </code>
                     </AlertDescription>
                   </Alert>

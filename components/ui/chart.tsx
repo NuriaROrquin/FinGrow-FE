@@ -109,8 +109,8 @@ type PayloadItem = {
   name?: string | number
   value?: number | string
   color?: string
-  payload?: any
-  [key: string]: any
+  payload?: { fill?: string } & Record<string, unknown>
+  [key: string]: unknown
 }
 
 interface ChartTooltipContentProps extends React.ComponentProps<'div'> {
@@ -122,14 +122,14 @@ interface ChartTooltipContentProps extends React.ComponentProps<'div'> {
   indicator?: 'line' | 'dot' | 'dashed'
   nameKey?: string
   labelKey?: string
-  labelFormatter?: (value: any, payload: PayloadItem[]) => React.ReactNode
+  labelFormatter?: (value: unknown, payload: PayloadItem[]) => React.ReactNode
   labelClassName?: string
   formatter?: (
-    value: any,
-    name: any,
-    item: any,
+    value: unknown,
+    name: unknown,
+    item: PayloadItem,
     index: number,
-    payload: any
+    payload: PayloadItem['payload']
   ) => React.ReactNode
   color?: string
 }
@@ -279,7 +279,7 @@ type LegendPayloadItem = {
   value?: string | number
   dataKey?: string | number
   color?: string
-  [key: string]: any
+  [key: string]: unknown
 }
 
 interface ChartLegendContentProps extends React.ComponentProps<'div'> {
