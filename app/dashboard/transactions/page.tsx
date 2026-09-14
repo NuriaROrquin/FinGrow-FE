@@ -28,9 +28,7 @@ import {
   FilterIcon,
   DownloadIcon,
   ArrowUpIcon,
-  ArrowDownIcon,
   CreditCardIcon,
-  WalletIcon,
   ScanLine,
   Send,
   Upload,
@@ -39,97 +37,148 @@ import {
   Sparkles,
   MessageSquare,
   Video,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 
-const mockTransactions = [
-  {
-    id: 1,
-    type: "expense",
-    category: "Comida",
-    description: "Supermercado",
-    amount: 8500.5,
-    date: "2025-01-19",
-    paymentMethod: "Tarjeta de Crédito",
-    source: "Manual",
-  },
-  {
-    id: 2,
-    type: "income",
-    category: "Salario",
-    description: "Salario Mensual",
-    amount: 550000.0,
-    date: "2025-01-18",
-    paymentMethod: "Transferencia Bancaria",
-    source: "Manual",
-  },
-  {
-    id: 3,
-    type: "expense",
-    category: "Servicios",
-    description: "Factura de Luz",
-    amount: 12000.0,
-    date: "2025-01-17",
-    paymentMethod: "Débito Automático",
-    source: "Gmail",
-  },
-  {
-    id: 4,
-    type: "expense",
-    category: "Comida",
-    description: "Cena en Restaurante",
-    amount: 4500.0,
-    date: "2025-01-16",
-    paymentMethod: "Tarjeta de Crédito",
-    source: "Telegram",
-  },
-  {
-    id: 5,
-    type: "expense",
-    category: "Transporte",
-    description: "Nafta",
-    amount: 6000.0,
-    date: "2025-01-15",
-    paymentMethod: "Tarjeta de Débito",
-    source: "OCR",
-  },
-  {
-    id: 6,
-    type: "income",
-    category: "Freelance",
-    description: "Proyecto de Diseño Web",
-    amount: 80000.0,
-    date: "2025-01-14",
-    paymentMethod: "PayPal",
-    source: "Telegram",
-  },
-  {
-    id: 7,
-    type: "expense",
-    category: "Entretenimiento",
-    description: "Entradas de Cine",
-    amount: 3000.0,
-    date: "2025-01-13",
-    paymentMethod: "Tarjeta de Crédito",
-    source: "Manual",
-  },
-  {
-    id: 8,
-    type: "expense",
-    category: "Servicios",
-    description: "Factura de Internet",
-    amount: 8000.0,
-    date: "2025-01-12",
-    paymentMethod: "Débito Automático",
-    source: "Gmail",
-  },
-]
+interface TransactionDto {
+  id: string
+  occurredOn: string
+  amount: number
+  currency: string
+  category: string
+  description: string
+  paymentMethod: string
+  type: "Income" | "Expense"
+  source: string
+}
+
+interface TransactionsResponse {
+  items: TransactionDto[]
+  pageNumber: number
+  pageSize: number
+  totalCount: number
+  totalPages: number
+  totalSpent: Record<string, number>
+  totalIncome: Record<string, number>
+}
+
+const mockTransactionsResponse: TransactionsResponse = {
+  items: [
+    {
+      id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa6",
+      occurredOn: "2026-09-10",
+      amount: 4300,
+      currency: "USD",
+      category: "Entretenimiento",
+      description: "Suscripcion de streaming",
+      paymentMethod: "DebitCard",
+      type: "Expense",
+      source: "Manual",
+    },
+    {
+      id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa5",
+      occurredOn: "2026-09-09",
+      amount: 95000,
+      currency: "ARS",
+      category: "Freelance",
+      description: "Trabajo freelance",
+      paymentMethod: "BankTransfer",
+      type: "Income",
+      source: "Gmail",
+    },
+    {
+      id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4",
+      occurredOn: "2026-09-07",
+      amount: 7200,
+      currency: "ARS",
+      category: "Transporte",
+      description: "Carga de transporte",
+      paymentMethod: "DigitalWallet",
+      type: "Expense",
+      source: "Manual",
+    },
+    {
+      id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3",
+      occurredOn: "2026-09-05",
+      amount: 18500.5,
+      currency: "ARS",
+      category: "Alimentos",
+      description: "Compra supermercado",
+      paymentMethod: "CreditCard",
+      type: "Expense",
+      source: "MercadoPago",
+    },
+    {
+      id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2",
+      occurredOn: "2026-09-02",
+      amount: 125000,
+      currency: "ARS",
+      category: "Vivienda",
+      description: "Alquiler septiembre",
+      paymentMethod: "BankTransfer",
+      type: "Expense",
+      source: "Manual",
+    },
+    {
+      id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1",
+      occurredOn: "2026-09-01",
+      amount: 850000,
+      currency: "ARS",
+      category: "Salario",
+      description: "Salario septiembre",
+      paymentMethod: "BankTransfer",
+      type: "Income",
+      source: "Manual",
+    },
+  ],
+  pageNumber: 1,
+  pageSize: 20,
+  totalCount: 6,
+  totalPages: 1,
+  totalSpent: { ARS: 143500.5, USD: 4300 },
+  totalIncome: { ARS: 850000 },
+}
+
+function getMockTransactionsPage(
+  pageNumber: number,
+  pageSize: number,
+  search: string,
+  type: string,
+): TransactionsResponse {
+  const normalizedSearch = search.trim().toLowerCase()
+  const filteredItems = mockTransactionsResponse.items.filter((transaction) => {
+    const searchableFields = [transaction.description, transaction.category, transaction.source]
+    const matchesSearch =
+      !normalizedSearch || searchableFields.some((value) => value.toLowerCase().includes(normalizedSearch))
+    const matchesType =
+      type === "all" || (type === "income" ? transaction.type === "Income" : transaction.type === "Expense")
+    return matchesSearch && matchesType
+  })
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize))
+  const safePageNumber = Math.min(Math.max(pageNumber, 1), totalPages)
+  const startIndex = (safePageNumber - 1) * pageSize
+  const items = filteredItems.slice(startIndex, startIndex + pageSize)
+
+  return {
+    items,
+    pageNumber: safePageNumber,
+    pageSize,
+    totalCount: filteredItems.length,
+    totalPages,
+    totalSpent: mockTransactionsResponse.totalSpent,
+    totalIncome: mockTransactionsResponse.totalIncome,
+  }
+}
 
 export default function TransactionsPage() {
   const searchParams = useSearchParams()
   const [searchQuery, setSearchQuery] = useState("")
   const [filterType, setFilterType] = useState("all")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(3)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isOcrDialogOpen, setIsOcrDialogOpen] = useState(false)
   const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false)
@@ -177,20 +226,30 @@ export default function TransactionsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOcrDialogOpen])
 
-  const filteredTransactions = mockTransactions.filter((transaction) => {
-    const matchesSearch =
-      transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.category.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesType = filterType === "all" || transaction.type === filterType
-    return matchesSearch && matchesType
-  })
-
-  const totalIncome = mockTransactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0)
-  const totalExpense = mockTransactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0)
+  const transactionsResponse = getMockTransactionsPage(currentPage, pageSize, searchQuery, filterType)
+  const filteredTransactions = transactionsResponse.items
+  const totalIncome = mockTransactionsResponse.totalIncome
+  const totalExpense = mockTransactionsResponse.totalSpent
+  const balanceByCurrency = Object.keys({ ...totalIncome, ...totalExpense }).reduce<Record<string, number>>(
+    (balance, currency) => {
+      balance[currency] = (totalIncome[currency] ?? 0) - (totalExpense[currency] ?? 0)
+      return balance
+    },
+    {},
+  )
 
   // Función de formateo consistente
-  const formatCurrency = (amount: number) => {
-    return `$${amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`
+  const formatCurrency = (amount: number, currency: string) =>
+    `${currency === "USD" ? "US$" : "$"}${amount.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`
+
+  const renderTotals = (totals: Record<string, number>) => {
+    const entries = Object.entries(totals)
+    return entries.length > 0 ? entries.map(([currency, amount]) => (
+      <div key={currency} className="flex items-baseline justify-between gap-3">
+        <span className="text-sm font-medium text-muted-foreground">{currency}</span>
+        <span>{formatCurrency(amount, currency)}</span>
+      </div>
+    )) : <span>$0,00 ARS</span>
   }
 
   const handleExportCSV = () => {
@@ -199,9 +258,9 @@ export default function TransactionsPage() {
 
     // Crear filas de datos
     const rows = filteredTransactions.map((transaction) => {
-      const date = new Date(transaction.date).toLocaleDateString("es-ES")
-      const type = transaction.type === "income" ? "Ingreso" : "Gasto"
-      const amount = transaction.type === "income" ? `+${transaction.amount.toFixed(2)}` : `-${transaction.amount.toFixed(2)}`
+      const date = new Date(transaction.occurredOn).toLocaleDateString("es-ES")
+      const type = transaction.type === "Income" ? "Ingreso" : "Gasto"
+      const amount = `${transaction.type === "Income" ? "+" : "-"}${formatCurrency(transaction.amount, transaction.currency)}`
 
       return [date, transaction.description, transaction.category, transaction.paymentMethod, type, transaction.source, amount]
     })
@@ -714,40 +773,22 @@ export default function TransactionsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total Ingresos</CardDescription>
-            <CardTitle className="text-2xl text-success">{formatCurrency(totalIncome)}</CardTitle>
+            <CardTitle className="space-y-1 text-2xl text-success">{renderTotals(totalIncome)}</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <ArrowUpIcon className="size-4" />
-              <span>{mockTransactions.filter((t) => t.type === "income").length} transacciones</span>
-            </div>
-          </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total Gastos</CardDescription>
-            <CardTitle className="text-2xl">{formatCurrency(totalExpense)}</CardTitle>
+            <CardTitle className="space-y-1 text-2xl">{renderTotals(totalExpense)}</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <ArrowDownIcon className="size-4" />
-              <span>{mockTransactions.filter((t) => t.type === "expense").length} transacciones</span>
-            </div>
-          </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Balance Neto</CardDescription>
-            <CardTitle className="text-2xl text-success">{formatCurrency(totalIncome - totalExpense)}</CardTitle>
+            <CardTitle className="space-y-1 text-2xl text-success">{renderTotals(balanceByCurrency)}</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <WalletIcon className="size-4" />
-              <span>Período actual</span>
-            </div>
-          </CardContent>
         </Card>
       </div>
 
@@ -760,11 +801,17 @@ export default function TransactionsPage() {
                 <Input
                   placeholder="Buscar transacciones..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value)
+                    setCurrentPage(1)
+                  }}
                   className="pl-9"
                 />
               </div>
-              <Select value={filterType} onValueChange={setFilterType}>
+              <Select value={filterType} onValueChange={(value) => {
+                setFilterType(value)
+                setCurrentPage(1)
+              }}>
                 <SelectTrigger className="w-[150px]">
                   <FilterIcon className="size-4 mr-2" />
                   <SelectValue />
@@ -803,10 +850,10 @@ export default function TransactionsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTransactions.map((transaction) => (
+              {filteredTransactions.length > 0 ? filteredTransactions.map((transaction) => (
                 <TableRow key={transaction.id}>
                   <TableCell className="font-medium">
-                    {new Date(transaction.date).toLocaleDateString("es-ES", {
+                    {new Date(transaction.occurredOn).toLocaleDateString("es-ES", {
                       month: "short",
                       day: "numeric",
                       year: "numeric",
@@ -816,10 +863,10 @@ export default function TransactionsPage() {
                     <div className="flex items-center gap-2">
                       <div
                         className={`flex size-8 items-center justify-center rounded-full ${
-                          transaction.type === "income" ? "bg-success/10 text-success" : "bg-muted"
+                          transaction.type === "Income" ? "bg-success/10 text-success" : "bg-muted"
                         }`}
                       >
-                        {transaction.type === "income" ? (
+                        {transaction.type === "Income" ? (
                           <ArrowUpIcon className="size-4" />
                         ) : (
                           <CreditCardIcon className="size-4" />
@@ -831,22 +878,76 @@ export default function TransactionsPage() {
                   <TableCell>{transaction.category}</TableCell>
                   <TableCell className="text-muted-foreground">{transaction.paymentMethod}</TableCell>
                   <TableCell>
-                    <Badge variant={transaction.type === "income" ? "default" : "secondary"}>
-                      {transaction.type === "income" ? "Ingreso" : "Gasto"}
+                    <Badge variant={transaction.type === "Income" ? "default" : "secondary"}>
+                      {transaction.type === "Income" ? "Ingreso" : "Gasto"}
                     </Badge>
                   </TableCell>
                   <TableCell>{transaction.source}</TableCell>
                   <TableCell className="text-right">
                     <span
-                      className={`font-semibold ${transaction.type === "income" ? "text-success" : "text-foreground"}`}
+                      className={`font-semibold ${transaction.type === "Income" ? "text-success" : "text-foreground"}`}
                     >
-                      {transaction.type === "income" ? "+" : "-"}${transaction.amount.toFixed(2)}
+                      {transaction.type === "Income" ? "+" : "-"}{formatCurrency(transaction.amount, transaction.currency)}
                     </span>
                   </TableCell>
                 </TableRow>
-              ))}
+              )) : (
+                <TableRow>
+                  <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                    No se encontraron transacciones.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
+          <div className="mt-4 flex flex-col gap-3 border-t pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-1">
+              <span className="font-medium text-foreground">
+                {mockTransactionsResponse.totalCount} transacciones
+              </span>
+              <span>
+              {transactionsResponse.totalCount === 0
+                ? "0 transacciones"
+                : `Mostrando ${(transactionsResponse.pageNumber - 1) * pageSize + 1}-${Math.min(transactionsResponse.pageNumber * pageSize, transactionsResponse.totalCount)} de ${transactionsResponse.totalCount}`}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={String(pageSize)} onValueChange={(value) => {
+                setPageSize(Number(value))
+                setCurrentPage(1)
+              }}>
+                <SelectTrigger className="h-9 w-[130px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="3">3 por página</SelectItem>
+                  <SelectItem value="6">6 por página</SelectItem>
+                  <SelectItem value="20">20 por página</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Página anterior"
+                disabled={transactionsResponse.pageNumber <= 1}
+                onClick={() => setCurrentPage((page) => page - 1)}
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <span className="min-w-[84px] text-center">
+                Página {transactionsResponse.pageNumber} de {transactionsResponse.totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Página siguiente"
+                disabled={transactionsResponse.pageNumber >= transactionsResponse.totalPages}
+                onClick={() => setCurrentPage((page) => page + 1)}
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
