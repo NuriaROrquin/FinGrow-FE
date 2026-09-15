@@ -29,6 +29,7 @@ import {
   Wallet,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
+import { WhatsAppCard } from "@/components/integrations/whatsapp-card"
 import { useTheme } from "next-themes"
 import { useEffect, useState } from "react"
 import { useToast } from "@/hooks/use-toast"
@@ -530,6 +531,8 @@ export default function SettingsPage() {
               )}
             </CardContent>
           </Card>
+
+          <WhatsAppCard />
 
           {/* Gmail Integration */}
           <Card>

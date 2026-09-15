@@ -12,6 +12,7 @@ npm install
 npm run dev      # localhost:3000
 npm run build
 npm run lint
+docker compose up -d --build   # imagen standalone en localhost:3000; NEXT_PUBLIC_* se fijan al buildear
 ```
 
 CI (`.github/workflows/ci.yaml`) corre en cada push a `main` y `dev`: `npm ci`, `npm run lint`,
@@ -29,10 +30,15 @@ no es simplemente esto:
   relaciona con su departamento **por nombre** (`departamento: string`), no por id. En
   FinGrow-BE esa misma relación es por id — cuando se conecte a la API real, renombrar un
   departamento ya no puede romper la relación como rompe acá.
-- No existe todavía una capa de acceso HTTP tipada (`lib/` solo tiene `utils.ts`, no hay
-  `fetch`/cliente API). Es **T-04 (SCRUM-22)**.
+- La capa de acceso HTTP tipada es `lib/api/` (**T-04, SCRUM-22**): `api.get/post/...` adjunta
+  el bearer que haya en `localStorage["fingrow-token"]` y `toastApiError` muestra el error. Las
+  rutas se pasan completas (`/api/integrations/...`); `NEXT_PUBLIC_API_URL` no incluye `/api`.
+  Como el login sigue mock, para probar un endpoint con JWT hay que pegar un token real en ese
+  `localStorage`.
 - `INTEGRACIONES.md` describe Telegram, Gmail y OCR **en modo demo, con datos simulados**: no
-  hay bot ni credenciales reales conectadas todavía.
+  hay bot ni credenciales reales conectadas todavía. La excepción es WhatsApp
+  (`components/integrations/whatsapp-card.tsx`, HU-09): pide el código real a
+  `POST /api/integrations/whatsapp/link-code` de FinGrow-BE.
 
 ## Contratos compartidos con los otros repos
 
