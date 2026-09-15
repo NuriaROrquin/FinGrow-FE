@@ -5,10 +5,22 @@ export interface LoginRequest {
   password: string
 }
 
-export interface LoginResponse {
-  token: string
+export interface SessionResponse {
+  userId: string
+  companyId: string
+  fullName: string
+  role: string
+  expiresAt: string
 }
 
 export function loginEmpleado(credentials: LoginRequest) {
-  return api.post<LoginResponse>("/login/empleado", credentials, { skipAuthRedirect: true })
+  return api.post<SessionResponse>("/login/empleado", credentials, { skipAuthRedirect: true })
+}
+
+export function getSession() {
+  return api.get<SessionResponse>("/session", { skipAuthRedirect: true })
+}
+
+export function logout() {
+  return api.delete("/session", { skipAuthRedirect: true })
 }

@@ -1,8 +1,9 @@
 export type UserRole = "empleado" | "empresa"
 
-export interface TokenPayload {
+export interface SessionUser {
   userId: string
   companyId: string | null
+  fullName: string
   role: UserRole
-  exp: number
+  expiresAt: number
 }

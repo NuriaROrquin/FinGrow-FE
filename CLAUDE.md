@@ -18,23 +18,26 @@ docker compose up -d --build   # imagen standalone en localhost:3000; NEXT_PUBLI
 CI (`.github/workflows/ci.yaml`) corre en cada push a `main` y `dev`: `npm ci`, `npm run lint`,
 `npm run build`.
 
-## Estado actual: todo es mock
+## Estado actual: casi todo es mock
 
-Hoy no hay ninguna llamada real a una API. Antes de "arreglar" algo que parece un bug, revisá si
-no es simplemente esto:
+Salvo el login y WhatsApp, no hay llamadas reales a la API. Antes de "arreglar" algo que parece
+un bug, revisá si no es simplemente esto:
 
-- **`lib/auth-context.tsx`** guarda `role`, `userName` e `isAuthenticated` en `useState`. `login()`
-  no valida nada contra ningún backend y no persiste sesión — un refresh de página desloguea.
-  Se reemplaza en **T-05 (SCRUM-23)**, bloqueada por **T-02 (SCRUM-20)** del backend (JWT).
+- **`lib/auth-context.tsx`** (T-05, SCRUM-23) mantiene la sesión real: `login()` llama a
+  `POST /login/empleado`, el backend responde con la cookie **HttpOnly** `fingrow-session` (que
+  lleva el JWT) y un `SessionResponse` con `userId`, `companyId`, `fullName`, `role` y
+  `expiresAt`. Al cargar la página se rehidrata con `GET /session`; `logout()` llama a
+  `DELETE /session`. El JavaScript nunca ve el token: en `localStorage` solo queda
+  `fingrow-role`, para saber a qué login volver ante un 401. Login de empresa: pendiente.
 - **`lib/company-context.tsx`** guarda departamentos y empleados en memoria. El empleado se
   relaciona con su departamento **por nombre** (`departamento: string`), no por id. En
   FinGrow-BE esa misma relación es por id — cuando se conecte a la API real, renombrar un
   departamento ya no puede romper la relación como rompe acá.
-- La capa de acceso HTTP tipada es `lib/api/` (**T-04, SCRUM-22**): `api.get/post/...` adjunta
-  el bearer que haya en `localStorage["fingrow-token"]` y `toastApiError` muestra el error. Las
-  rutas se pasan completas (`/api/integrations/...`); `NEXT_PUBLIC_API_URL` no incluye `/api`.
-  Como el login sigue mock, para probar un endpoint con JWT hay que pegar un token real en ese
-  `localStorage`.
+- La capa de acceso HTTP tipada es `lib/api/` (**T-04, SCRUM-22**): `api.get/post/...` manda
+  siempre `credentials: "include"` para que viaje la cookie de sesión, y `toastApiError` muestra
+  el error. Las rutas se pasan completas (`/api/integrations/...`); `NEXT_PUBLIC_API_URL` no
+  incluye `/api`. Como la cookie es `SameSite=None; Secure`, el front en `localhost:3000` puede
+  hablar con la API en dev o en local sin configuración extra.
 - `INTEGRACIONES.md` describe Telegram, Gmail y OCR **en modo demo, con datos simulados**: no
   hay bot ni credenciales reales conectadas todavía. La excepción es WhatsApp
   (`components/integrations/whatsapp-card.tsx`, HU-09): pide el código real a

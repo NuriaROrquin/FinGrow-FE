@@ -18,13 +18,7 @@
 export { api, setUnauthorizedHandler, type RequestOptions } from "./client"
 export { ApiError, ClientErrorCodes, isApiError, parseApiError } from "./errors"
 export { toastApiError } from "./notify"
-export {
-  clearSession,
-  getRole,
-  getToken,
-  loginPathForCurrentRole,
-  saveSession,
-  type SessionRole,
-} from "./session"
+export { clearSession, getRole, loginPathForCurrentRole, saveSession, type SessionRole } from "./session"
+export { getSession, loginEmpleado, logout, type LoginRequest, type SessionResponse } from "./auth"
 export { getApiBaseUrl } from "./config"
 export { requestWhatsAppLinkCode, type WhatsAppLinkCode } from "./integrations"

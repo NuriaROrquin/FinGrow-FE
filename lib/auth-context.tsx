@@ -2,11 +2,11 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
-import { loginEmpleado } from "@/lib/api/auth"
+import { getSession, loginEmpleado, logout as logoutRequest } from "@/lib/api/auth"
 import { setUnauthorizedHandler } from "@/lib/api/client"
 import { clearSession as clearStoredSession, saveSession } from "@/lib/api/session"
-import { isTokenValid, parseToken, TOKEN_STORAGE_KEY } from "@/lib/auth/token"
-import type { TokenPayload, UserRole } from "@/lib/auth/types"
+import { isSessionActive, toSessionUser } from "@/lib/auth/session-user"
+import type { SessionUser, UserRole } from "@/lib/auth/types"
 
 interface AuthContextType {
   role: UserRole
@@ -15,7 +15,7 @@ interface AuthContextType {
   isAuthenticated: boolean
   isHydrated: boolean
   login: (email: string, password: string, role?: UserRole) => Promise<void>
-  logout: () => void
+  logout: () => Promise<void>
 }
 
 interface AuthState {
@@ -23,58 +23,79 @@ interface AuthState {
   companyId: string | null
   userName: string
   isAuthenticated: boolean
+  expiresAt: number | null
+}
+
+const unauthenticatedState: AuthState = {
+  role: "empleado",
+  companyId: null,
+  userName: "Usuario",
+  isAuthenticated: false,
+  expiresAt: null,
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [authState, setAuthState] = useState<AuthState>({
-    role: "empleado",
-    companyId: null,
-    userName: "Usuario",
-    isAuthenticated: false,
-  })
+  const [authState, setAuthState] = useState<AuthState>(unauthenticatedState)
   const [isHydrated, setIsHydrated] = useState(false)
   const router = useRouter()
-  const { role, companyId, userName, isAuthenticated } = authState
+  const { role, companyId, userName, isAuthenticated, expiresAt } = authState
 
   useEffect(() => {
-    const token = window.localStorage.getItem(TOKEN_STORAGE_KEY)
-    const payload = token && isTokenValid(token) ? parseToken(token) : null
+    let cancelled = false
 
-    if (payload) {
-      setAuthState(createAuthenticatedState(payload))
-    } else if (token) {
-      clearStoredSession()
+    getSession()
+      .then((session) => {
+        const user = toSessionUser(session)
+        if (cancelled) return
+
+        if (user && isSessionActive(user)) {
+          saveSession(user.role)
+          setAuthState(createAuthenticatedState(user))
+        } else {
+          clearStoredSession()
+        }
+      })
+      .catch(() => {
+        if (!cancelled) clearStoredSession()
+      })
+      .finally(() => {
+        if (!cancelled) setIsHydrated(true)
+      })
+
+    return () => {
+      cancelled = true
     }
-
-    setIsHydrated(true)
   }, [])
 
-const login = async (email: string, password: string, role: UserRole = "empleado") => {
-  if (role === "empresa") {
-    throw new Error("El login de empresa todavía no está disponible.")
+  const login = async (email: string, password: string, role: UserRole = "empleado") => {
+    if (role === "empresa") {
+      throw new Error("El login de empresa todavía no está disponible.")
+    }
+
+    const user = toSessionUser(await loginEmpleado({ email, password }))
+
+    if (!user || !isSessionActive(user)) {
+      throw new Error("La sesión recibida no es válida")
+    }
+
+    saveSession(user.role)
+    setAuthState(createAuthenticatedState(user))
   }
-
-  const { token } = await loginEmpleado({ email, password })
-  const payload = parseToken(token)
-
-  if (!payload || !isTokenValid(token)) {
-    throw new Error("El token recibido no es válido")
-  }
-
-  saveSession(token, payload.role)
-  setAuthState(createAuthenticatedState(payload))
-}
 
   const clearSession = useCallback(() => {
-    setAuthState((current) => ({ ...current, companyId: null, isAuthenticated: false }))
+    clearStoredSession()
+    setAuthState(unauthenticatedState)
     router.replace("/")
   }, [router])
 
-  const logout = () => {
-    clearStoredSession()
-    clearSession()
+  const logout = async () => {
+    try {
+      await logoutRequest()
+    } finally {
+      clearSession()
+    }
   }
 
   useEffect(() => {
@@ -82,25 +103,19 @@ const login = async (email: string, password: string, role: UserRole = "empleado
   }, [clearSession])
 
   useEffect(() => {
-    if (!isAuthenticated) return
+    if (!isAuthenticated || expiresAt === null) return
 
-    const token = window.localStorage.getItem(TOKEN_STORAGE_KEY)
-    const payload = token ? parseToken(token) : null
-    const remainingTime = payload ? payload.exp * 1000 - Date.now() : 0
+    const remainingTime = expiresAt - Date.now()
 
-    if (!payload || remainingTime <= 0) {
-      clearStoredSession()
+    if (remainingTime <= 0) {
       clearSession()
       return
     }
 
-    const timeoutId = window.setTimeout(() => {
-      clearStoredSession()
-      clearSession()
-    }, remainingTime)
+    const timeoutId = window.setTimeout(clearSession, remainingTime)
 
     return () => window.clearTimeout(timeoutId)
-  }, [isAuthenticated, clearSession])
+  }, [isAuthenticated, expiresAt, clearSession])
 
   return (
     <AuthContext.Provider
@@ -119,12 +134,13 @@ const login = async (email: string, password: string, role: UserRole = "empleado
   )
 }
 
-function createAuthenticatedState(user: TokenPayload): AuthState {
+function createAuthenticatedState(user: SessionUser): AuthState {
   return {
     role: user.role,
     companyId: user.companyId,
-    userName: user.userId,
+    userName: user.fullName || user.userId,
     isAuthenticated: true,
+    expiresAt: user.expiresAt,
   }
 }
 
