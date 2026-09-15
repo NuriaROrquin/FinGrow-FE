@@ -9,10 +9,6 @@ export interface Transaction {
   description: string
 }
 
-/**
- * El JWT viaja en la cookie de autenticación.
- * apiFetch agrega credentials: "include" automáticamente.
- */
 export function getTransactions(onUnauthorized?: () => void) {
   return apiFetch<Transaction[]>("/api/transactions", {
     method: "GET",

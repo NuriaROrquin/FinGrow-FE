@@ -1,3 +1,5 @@
+import { TOKEN_STORAGE_KEY } from "@/lib/auth/token"
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ""
 
 interface ApiFetchOptions extends Omit<RequestInit, "body"> {
@@ -7,11 +9,12 @@ interface ApiFetchOptions extends Omit<RequestInit, "body"> {
 
 export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
   const { body, onUnauthorized, headers, ...requestOptions } = options
+  const token = typeof window === "undefined" ? null : window.localStorage.getItem(TOKEN_STORAGE_KEY)
   const response = await fetch(`${API_URL}${path}`, {
     ...requestOptions,
-    credentials: "include",
     headers: {
       ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },
     body: body === undefined ? undefined : JSON.stringify(body),

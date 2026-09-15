@@ -6,18 +6,12 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-  userId: string
-  companyId: string | null
-  rol: "empleado" | "empresa"
+  token: string
 }
 
-/**
- * El backend valida las credenciales y responde con Set-Cookie.
- * El token no se lee desde JavaScript: el navegador guarda la cookie.
- */
-export function login(request: LoginRequest) {
-  return apiFetch<LoginResponse>("/api/auth/login", {
+export function loginRequest(credentials: LoginRequest) {
+  return apiFetch<LoginResponse>("/auth/login", {
     method: "POST",
-    body: request,
+    body: credentials,
   })
 }
