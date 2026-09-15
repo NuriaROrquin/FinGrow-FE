@@ -26,7 +26,7 @@ interface AuthContextType {
   setUserName: (name: string) => void
   isAuthenticated: boolean
   isHydrated: boolean
-  login: (token: string) => boolean
+  loginWithToken: (token: string) => boolean
   logout: () => void
 }
 
