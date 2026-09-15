@@ -1,6 +1,8 @@
 import type { TokenPayload, UserRole } from "@/lib/auth/types"
 
-export const TOKEN_STORAGE_KEY = "fingrow-auth-token"
+// Misma clave que usa `lib/api/session.ts` (T-04): el token que guarda el login
+// es el que `api.*` adjunta como bearer en cada llamada.
+export const TOKEN_STORAGE_KEY = "fingrow-token"
 
 const NAME_IDENTIFIER_CLAIM =
   "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"

@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { loginEmpleado } from "@/lib/api/auth"
+import { clearSession as clearStoredSession, saveSession } from "@/lib/api/session"
 import { isTokenValid, parseToken, TOKEN_STORAGE_KEY } from "@/lib/auth/token"
 import type { TokenPayload, UserRole } from "@/lib/auth/types"
 
@@ -43,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (payload) {
       setAuthState(createAuthenticatedState(payload))
     } else if (token) {
-      window.localStorage.removeItem(TOKEN_STORAGE_KEY)
+      clearStoredSession()
     }
 
     setIsHydrated(true)
@@ -61,12 +62,13 @@ const login = async (email: string, password: string, role: UserRole = "empleado
     throw new Error("El token recibido no es válido")
   }
 
-  window.localStorage.setItem(TOKEN_STORAGE_KEY, token)
+  // Guarda token + rol con la misma clave que lee `api.*` (lib/api/session.ts)
+  saveSession(token, payload.role)
   setAuthState(createAuthenticatedState(payload))
 }
 
   const logout = () => {
-    window.localStorage.removeItem(TOKEN_STORAGE_KEY)
+    clearStoredSession()
     clearSession()
   }
 
@@ -83,13 +85,13 @@ const login = async (email: string, password: string, role: UserRole = "empleado
     const remainingTime = payload ? payload.exp * 1000 - Date.now() : 0
 
     if (!payload || remainingTime <= 0) {
-      window.localStorage.removeItem(TOKEN_STORAGE_KEY)
+      clearStoredSession()
       clearSession()
       return
     }
 
     const timeoutId = window.setTimeout(() => {
-      window.localStorage.removeItem(TOKEN_STORAGE_KEY)
+      clearStoredSession()
       clearSession()
     }, remainingTime)
 
