@@ -9,8 +9,8 @@ export interface LoginResponse {
   token: string
 }
 
-export function loginRequest(credentials: LoginRequest) {
-  return apiFetch<LoginResponse>("/auth/login", {
+export function loginEmpleado(credentials: LoginRequest) {
+  return apiFetch<LoginResponse>("/login/empleado", {
     method: "POST",
     body: credentials,
   })

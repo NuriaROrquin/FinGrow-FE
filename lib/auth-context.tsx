@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
-import { loginRequest } from "@/lib/api/auth"
+import { loginEmpleado } from "@/lib/api/auth"
 import { isTokenValid, parseToken, TOKEN_STORAGE_KEY } from "@/lib/auth/token"
 import type { TokenPayload, UserRole } from "@/lib/auth/types"
 
@@ -12,7 +12,7 @@ interface AuthContextType {
   userName: string
   isAuthenticated: boolean
   isHydrated: boolean
-  login: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string, role?: UserRole) => Promise<void>
   logout: () => void
 }
 
@@ -49,17 +49,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsHydrated(true)
   }, [])
 
-  const login = async (email: string, password: string) => {
-    const { token } = await loginRequest({ email, password })
-    const payload = parseToken(token)
-
-    if (!payload || !isTokenValid(token)) {
-      throw new Error("El token recibido no es válido")
-    }
-
-    window.localStorage.setItem(TOKEN_STORAGE_KEY, token)
-    setAuthState(createAuthenticatedState(payload))
+const login = async (email: string, password: string, role: UserRole = "empleado") => {
+  if (role === "empresa") {
+    throw new Error("El login de empresa todavía no está disponible.")
   }
+
+  const { token } = await loginEmpleado({ email, password })
+  const payload = parseToken(token)
+
+  if (!payload || !isTokenValid(token)) {
+    throw new Error("El token recibido no es válido")
+  }
+
+  window.localStorage.setItem(TOKEN_STORAGE_KEY, token)
+  setAuthState(createAuthenticatedState(payload))
+}
 
   const logout = () => {
     window.localStorage.removeItem(TOKEN_STORAGE_KEY)
