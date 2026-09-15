@@ -1,4 +1,4 @@
-import { apiFetch } from "@/lib/api/client"
+import { api } from "./client"
 
 export interface LoginRequest {
   email: string
@@ -10,8 +10,5 @@ export interface LoginResponse {
 }
 
 export function loginEmpleado(credentials: LoginRequest) {
-  return apiFetch<LoginResponse>("/login/empleado", {
-    method: "POST",
-    body: credentials,
-  })
+  return api.post<LoginResponse>("/login/empleado", credentials, { skipAuthRedirect: true })
 }

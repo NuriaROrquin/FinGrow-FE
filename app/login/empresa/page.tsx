@@ -12,12 +12,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/lib/auth-context"
-import { useToast } from "@/hooks/use-toast"
+import { toastApiError } from "@/lib/api"
 
 export default function EmpresaLoginPage() {
   const router = useRouter()
   const { login } = useAuth()
-  const { toast } = useToast()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -30,12 +29,7 @@ export default function EmpresaLoginPage() {
       await login(email, password, "empresa");
       router.push("/dashboard/company");
     } catch (error) {
-      toast({
-        title: "No disponible",
-        description:
-          error instanceof Error ? error.message : "Intentá nuevamente.",
-        variant: "destructive",
-      });
+      toastApiError(error, error instanceof Error ? error.message : "Intentá nuevamente.")
     } finally {
       setIsLoading(false);
     }

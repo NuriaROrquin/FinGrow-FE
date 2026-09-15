@@ -1,8 +1,9 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { loginEmpleado } from "@/lib/api/auth"
+import { setUnauthorizedHandler } from "@/lib/api/client"
 import { clearSession as clearStoredSession, saveSession } from "@/lib/api/session"
 import { isTokenValid, parseToken, TOKEN_STORAGE_KEY } from "@/lib/auth/token"
 import type { TokenPayload, UserRole } from "@/lib/auth/types"
@@ -62,20 +63,23 @@ const login = async (email: string, password: string, role: UserRole = "empleado
     throw new Error("El token recibido no es válido")
   }
 
-  // Guarda token + rol con la misma clave que lee `api.*` (lib/api/session.ts)
   saveSession(token, payload.role)
   setAuthState(createAuthenticatedState(payload))
 }
+
+  const clearSession = useCallback(() => {
+    setAuthState((current) => ({ ...current, companyId: null, isAuthenticated: false }))
+    router.replace("/")
+  }, [router])
 
   const logout = () => {
     clearStoredSession()
     clearSession()
   }
 
-  function clearSession() {
-    setAuthState((current) => ({ ...current, companyId: null, isAuthenticated: false }))
-    router.replace("/")
-  }
+  useEffect(() => {
+    setUnauthorizedHandler(clearSession)
+  }, [clearSession])
 
   useEffect(() => {
     if (!isAuthenticated) return
@@ -96,7 +100,7 @@ const login = async (email: string, password: string, role: UserRole = "empleado
     }, remainingTime)
 
     return () => window.clearTimeout(timeoutId)
-  }, [isAuthenticated])
+  }, [isAuthenticated, clearSession])
 
   return (
     <AuthContext.Provider

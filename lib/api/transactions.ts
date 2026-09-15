@@ -1,4 +1,4 @@
-import { apiFetch } from "@/lib/api/client"
+import { api } from "./client"
 
 export interface Transaction {
   id: string
@@ -9,9 +9,6 @@ export interface Transaction {
   description: string
 }
 
-export function getTransactions(onUnauthorized?: () => void) {
-  return apiFetch<Transaction[]>("/api/transactions", {
-    method: "GET",
-    onUnauthorized,
-  })
+export function getTransactions() {
+  return api.get<Transaction[]>("/api/transactions")
 }

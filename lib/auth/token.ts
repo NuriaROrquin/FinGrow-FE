@@ -1,7 +1,5 @@
 import type { TokenPayload, UserRole } from "@/lib/auth/types"
 
-// Misma clave que usa `lib/api/session.ts` (T-04): el token que guarda el login
-// es el que `api.*` adjunta como bearer en cada llamada.
 export const TOKEN_STORAGE_KEY = "fingrow-token"
 
 const NAME_IDENTIFIER_CLAIM =
