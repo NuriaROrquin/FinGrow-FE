@@ -27,3 +27,4 @@ export {
   type SessionRole,
 } from "./session"
 export { getApiBaseUrl } from "./config"
+export { requestWhatsAppLinkCode, type WhatsAppLinkCode } from "./integrations"
