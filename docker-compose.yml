@@ -1,0 +1,10 @@
+services:
+  web:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL:-https://dev-be.fingrow.com.ar}"
+        NEXT_PUBLIC_WHATSAPP_NUMBER: "${NEXT_PUBLIC_WHATSAPP_NUMBER:-+5491172387537}"
+    container_name: fingrow-fe
+    ports:
+      - "3000:3000"
