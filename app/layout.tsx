@@ -4,7 +4,8 @@ import type { Metadata } from "next"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/sonner"
+import { Toaster } from "@/components/ui/toaster"
+import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 import { AuthProvider } from "@/lib/auth-context"
 
 import { Geist, Geist_Mono } from 'next/font/google'
@@ -35,7 +36,7 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`} suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <AuthProvider>{children}</AuthProvider>
-          <Toaster richColors closeButton />
+          <SonnerToaster  richColors closeButton />
         </ThemeProvider>
         <Analytics />
         <Toaster />
