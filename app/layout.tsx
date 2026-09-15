@@ -4,6 +4,7 @@ import type { Metadata } from "next"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from "@/lib/auth-context"
 
 import { Geist, Geist_Mono } from 'next/font/google'
@@ -36,6 +37,7 @@ export default function RootLayout({
           <AuthProvider>{children}</AuthProvider>
         </ThemeProvider>
         <Analytics />
+        <Toaster />
       </body>
     </html>
   )
