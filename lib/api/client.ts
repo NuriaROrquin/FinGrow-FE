@@ -20,14 +20,20 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
     body: body === undefined ? undefined : JSON.stringify(body),
   })
 
-  if (response.status === 401) {
-    onUnauthorized?.()
-    throw new Error("La sesión no es válida o expiró")
-  }
+if (response.status === 401) {
+  onUnauthorized?.()
+}
 
-  if (!response.ok) {
-    throw new Error(`Error de API: ${response.status}`)
+if (!response.ok) {
+  let message = `Error de API: ${response.status}`
+  try {
+    const problem = await response.json()
+    if (problem?.detail) message = problem.detail
+  } catch {
+    // el backend no devolvio un body JSON valido
   }
+  throw new Error(message)
+}
 
   if (response.status === 204) return undefined as T
   return (await response.json()) as T
