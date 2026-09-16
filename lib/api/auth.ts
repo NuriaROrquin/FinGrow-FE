@@ -17,6 +17,10 @@ export function loginEmpleado(credentials: LoginRequest) {
   return api.post<SessionResponse>("/login/empleado", credentials, { skipAuthRedirect: true })
 }
 
+export function loginEmpresa(credentials: LoginRequest) {
+  return api.post<SessionResponse>("/login/empresa", credentials, { skipAuthRedirect: true })
+}
+
 export function getSession() {
   return api.get<SessionResponse>("/session", { skipAuthRedirect: true })
 }
