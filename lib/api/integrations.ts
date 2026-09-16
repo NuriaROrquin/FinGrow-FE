@@ -15,6 +15,10 @@ export function getWhatsAppIntegration(signal?: AbortSignal): Promise<WhatsAppIn
   return api.get<WhatsAppIntegration>("/api/integrations/whatsapp", { signal })
 }
 
+export function unlinkWhatsApp(signal?: AbortSignal): Promise<void> {
+  return api.delete("/api/integrations/whatsapp", { signal })
+}
+
 export function requestWhatsAppLinkCode(signal?: AbortSignal): Promise<WhatsAppLinkCode> {
   return api.post<WhatsAppLinkCode>("/api/integrations/whatsapp/link-code", undefined, { signal })
 }

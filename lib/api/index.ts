@@ -24,6 +24,7 @@ export { getApiBaseUrl } from "./config"
 export {
   getWhatsAppIntegration,
   requestWhatsAppLinkCode,
+  unlinkWhatsApp,
   type WhatsAppIntegration,
   type WhatsAppLinkCode,
 } from "./integrations"

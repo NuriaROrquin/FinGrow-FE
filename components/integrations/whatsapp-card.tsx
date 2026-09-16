@@ -1,10 +1,21 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { CheckCircle2, Copy, ExternalLink, Info, MessageCircle } from "lucide-react"
+import { CheckCircle2, Copy, ExternalLink, Info, MessageCircle, Unlink } from "lucide-react"
 import { toast } from "sonner"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,6 +27,7 @@ import {
   getWhatsAppIntegration,
   requestWhatsAppLinkCode,
   toastApiError,
+  unlinkWhatsApp,
   type WhatsAppIntegration,
   type WhatsAppLinkCode,
 } from "@/lib/api"
@@ -33,6 +45,7 @@ export function WhatsAppCard() {
   const [integration, setIntegration] = useState<WhatsAppIntegration | null>(null)
   const [linkCode, setLinkCode] = useState<WhatsAppLinkCode | null>(null)
   const [loading, setLoading] = useState(false)
+  const [unlinking, setUnlinking] = useState(false)
   const secondsLeft = useCountdown(linkCode?.expiresAt)
   const expired = linkCode !== null && secondsLeft === 0
   const linked = integration?.linked ?? false
@@ -89,6 +102,20 @@ export function WhatsAppCard() {
     }
   }
 
+  const unlink = async () => {
+    setUnlinking(true)
+    try {
+      await unlinkWhatsApp()
+      setIntegration(NOT_LINKED)
+      setLinkCode(null)
+      toast.success("WhatsApp desvinculado")
+    } catch (error) {
+      toastApiError(error, "No pudimos desvincular WhatsApp. Intentá de nuevo.")
+    } finally {
+      setUnlinking(false)
+    }
+  }
+
   const copy = (text: string) => {
     navigator.clipboard.writeText(text)
     toast.success("Copiado al portapapeles")
@@ -128,10 +155,33 @@ export function WhatsAppCard() {
                 WhatsApp y tus gastos quedan registrados.
               </AlertDescription>
             </Alert>
-            <Button onClick={generateCode} disabled={loading} variant="outline" className="w-full sm:w-auto">
-              {loading && <Spinner className="mr-2" />}
-              Vincular otro número
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={generateCode} disabled={loading || unlinking} variant="outline">
+                {loading && <Spinner className="mr-2" />}
+                Vincular otro número
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" disabled={loading || unlinking} className="text-destructive">
+                    {unlinking ? <Spinner className="mr-2" /> : <Unlink className="size-4 mr-2" />}
+                    Desvincular
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>¿Desvincular WhatsApp?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      FinGrow va a dejar de reconocer los mensajes de {integration.phoneNumber}. Los gastos que ya
+                      registraste no se borran. Podés volver a vincular el número cuando quieras.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={unlink}>Desvincular</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </div>
         ) : linkCode === null ? (
           <>
