@@ -1,6 +1,6 @@
 import { api } from "./client"
 
-export type IntegrationProvider = "whatsapp" | "telegram"
+export type IntegrationProvider = "whatsapp" | "telegram" | "mercadopago"
 
 export interface LinkCode {
   code: string
@@ -25,4 +25,26 @@ export function requestLinkCode(provider: IntegrationProvider, signal?: AbortSig
 
 export function unlinkIntegration(provider: IntegrationProvider, signal?: AbortSignal): Promise<void> {
   return api.delete(`/api/integrations/${provider}`, { signal })
+}
+
+export interface MercadoPagoAuthorization {
+  authorizationUrl: string
+  expiresAt: string
+}
+
+export interface MercadoPagoSyncSummary {
+  imported: number
+  alreadyKnown: number
+  ignored: number
+  syncedAt: string
+}
+
+export type MercadoPagoLinkResult = "linked" | "error"
+
+export function startMercadoPagoLink(signal?: AbortSignal): Promise<MercadoPagoAuthorization> {
+  return api.post<MercadoPagoAuthorization>("/api/integrations/mercadopago/oauth/start", undefined, { signal })
+}
+
+export function syncMercadoPago(signal?: AbortSignal): Promise<MercadoPagoSyncSummary> {
+  return api.post<MercadoPagoSyncSummary>("/api/integrations/mercadopago/sync", undefined, { signal })
 }
