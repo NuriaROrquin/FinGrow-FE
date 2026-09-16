@@ -23,12 +23,11 @@ import {
   Mail,
   Send,
   ScanLine,
-  Copy,
-  ExternalLink,
   Info,
   Wallet,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
+import { TelegramCard } from "@/components/integrations/telegram-card"
 import { WhatsAppCard } from "@/components/integrations/whatsapp-card"
 import { useTheme } from "next-themes"
 import { useEffect, useState } from "react"
@@ -41,37 +40,14 @@ export default function SettingsPage() {
   const [mounted, setMounted] = useState(false)
 
   // Estados para las integraciones
-  const [telegramLinked, setTelegramLinked] = useState(false)
   const [gmailLinked, setGmailLinked] = useState(false)
   const [mercadoPagoLinked, setMercadoPagoLinked] = useState(false)
-  const [telegramCode, setTelegramCode] = useState("")
-  const [telegramUsername, setTelegramUsername] = useState("")
   const [mercadoPagoEmail, setMercadoPagoEmail] = useState("")
 
   // Evitar hidratación incorrecta
   useEffect(() => {
     setMounted(true)
-    // Simular generación de código de verificación para Telegram
-    setTelegramCode(Math.random().toString(36).substring(2, 10).toUpperCase())
   }, [])
-
-  const handleLinkTelegram = () => {
-    setTelegramLinked(true)
-    setTelegramUsername("@usuario_demo")
-    toast({
-      title: "¡Telegram vinculado!",
-      description: "Ahora recibirás notificaciones en tu celular",
-    })
-  }
-
-  const handleUnlinkTelegram = () => {
-    setTelegramLinked(false)
-    setTelegramUsername("")
-    toast({
-      title: "Telegram desvinculado",
-      description: "Ya no recibirás notificaciones en Telegram",
-    })
-  }
 
   const handleLinkGmail = () => {
     setGmailLinked(true)
@@ -104,14 +80,6 @@ export default function SettingsPage() {
     toast({
       title: "Mercado Pago desvinculado",
       description: "Ya no puedes recibir pagos ni enviar dinero desde la app",
-    })
-  }
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    toast({
-      title: "Copiado al portapapeles",
-      description: "El código ha sido copiado",
     })
   }
 
@@ -420,117 +388,7 @@ export default function SettingsPage() {
 
         {/* Integrations Tab */}
         <TabsContent value="integrations" className="space-y-4">
-          {/* Telegram Integration */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Send className="size-5 text-blue-500" />
-                  <div>
-                    <CardTitle>Telegram Bot</CardTitle>
-                    <CardDescription>Recibe notificaciones y registra gastos mediante Telegram</CardDescription>
-                  </div>
-                </div>
-                {telegramLinked && (
-                  <Badge variant="default" className="gap-1">
-                    <CheckCircle2 className="size-3" />
-                    Vinculado
-                  </Badge>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {!telegramLinked ? (
-                <>
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
-                      Vincula tu cuenta de Telegram para recibir notificaciones en tiempo real y registrar
-                      gastos/ingresos mediante mensajes en lenguaje natural.
-                    </AlertDescription>
-                  </Alert>
-
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Paso 1: Busca nuestro bot en Telegram</Label>
-                      <div className="flex gap-2">
-                        <Input value="@fingrowapp_bot" readOnly />
-                        <Button variant="outline" size="icon" onClick={() => copyToClipboard("@fingrowapp_bot")}>
-                          <Copy className="size-4" />
-                        </Button>
-                        <Button variant="outline" asChild>
-                          <a href="https://t.me/fingrowapp_bot" target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="size-4 mr-2" />
-                            Abrir
-                          </a>
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Paso 2: Envía este código al bot</Label>
-                      <div className="flex gap-2">
-                        <Input value={telegramCode} readOnly className="font-mono text-lg" />
-                        <Button variant="outline" size="icon" onClick={() => copyToClipboard(telegramCode)}>
-                          <Copy className="size-4" />
-                        </Button>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Este código vinculará tu cuenta con el bot
-                      </p>
-                    </div>
-
-                    <div className="pt-2">
-                      <Button onClick={handleLinkTelegram} className="w-full sm:w-auto">
-                        Vincular Telegram
-                      </Button>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium">¿Qué puedes hacer con Telegram?</h4>
-                    <ul className="space-y-1 text-sm text-muted-foreground">
-                      <li>• Recibir notificaciones de transacciones y alertas</li>
-                      <li>• Registrar gastos: &quot;Gasté $500 en supermercado&quot;</li>
-                      <li>• Registrar ingresos: &quot;Ingreso de $10000 por freelance&quot;</li>
-                      <li>• Enviar fotos de tickets para procesarlos con OCR</li>
-                      <li>• Consultar tu balance actual</li>
-                    </ul>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="size-10 rounded-full bg-blue-500 flex items-center justify-center">
-                        <Send className="size-5 text-white" />
-                      </div>
-                      <div>
-                        <p className="font-medium">{telegramUsername}</p>
-                        <p className="text-sm text-muted-foreground">Cuenta vinculada</p>
-                      </div>
-                    </div>
-                    <Button variant="outline" onClick={handleUnlinkTelegram}>
-                      Desvincular
-                    </Button>
-                  </div>
-
-                  <Alert>
-                    <CheckCircle2 className="h-4 w-4" />
-                    <AlertDescription>
-                      Tu cuenta está vinculada. Ahora puedes enviar mensajes como:
-                      <br />
-                      <code className="text-xs bg-muted px-2 py-1 rounded mt-2 block">
-                        &quot;Pagué $1500 en el almuerzo con el equipo&quot;
-                      </code>
-                    </AlertDescription>
-                  </Alert>
-                </>
-              )}
-            </CardContent>
-          </Card>
+          <TelegramCard />
 
           <WhatsAppCard />
 
