@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/lib/auth-context"
+import { toastApiError } from "@/lib/api"
 
 export default function EmpleadoLoginPage() {
   const router = useRouter()
@@ -20,18 +21,19 @@ export default function EmpleadoLoginPage() {
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault()
+  setIsLoading(true)
 
-    // Simular autenticación
-    setTimeout(() => {
-      const userName = email.split('@')[0] || "Usuario"
-      login("empleado", userName.charAt(0).toUpperCase() + userName.slice(1))
-      setIsLoading(false)
-      router.push("/dashboard")
-    }, 1000)
+  try {
+    await login(email, password)
+    router.push("/dashboard")
+  } catch (error) {
+    toastApiError(error, error instanceof Error ? error.message : "Intentá nuevamente.")
+  } finally {
+    setIsLoading(false)
   }
+}
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">

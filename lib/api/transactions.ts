@@ -1,3 +1,5 @@
+import { api } from "./client"
+
 export type TransactionType = "Income" | "Expense"
 
 export type ExpenseCategory =
@@ -43,41 +45,10 @@ export interface CreateTransactionPayload {
   paymentMethod: PaymentMethod
 }
 
-/**
- * Igual que en `lib/api/config.ts` de T-04: se lee `process.env.NEXT_PUBLIC_API_URL` de forma
- * literal porque Next solo inlina esa variable cuando aparece escrita tal cual.
- */
-function getApiBaseUrl(): string {
-  const rawBaseUrl = process.env.NEXT_PUBLIC_API_URL
-
-  if (!rawBaseUrl) {
-    throw new Error("Falta la variable NEXT_PUBLIC_API_URL. Copiala en .env.local y completala.")
-  }
-
-  return rawBaseUrl.replace(/\/+$/, "")
+export function listTransactions(signal?: AbortSignal): Promise<TransactionDto[]> {
+  return api.get<TransactionDto[]>("/api/transactions", { signal })
 }
 
-async function throwIfNotOk(response: Response): Promise<void> {
-  if (response.ok) {
-    return
-  }
-
-  const problem = (await response.json().catch(() => null)) as { title?: string; detail?: string } | null
-  throw new Error(problem?.detail ?? problem?.title ?? `La API respondio ${response.status}.`)
-}
-
-export async function listTransactions(): Promise<TransactionDto[]> {
-  const response = await fetch(`${getApiBaseUrl()}/api/transactions`)
-  await throwIfNotOk(response)
-  return (await response.json()) as TransactionDto[]
-}
-
-export async function createTransaction(payload: CreateTransactionPayload): Promise<TransactionDto> {
-  const response = await fetch(`${getApiBaseUrl()}/api/transactions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  })
-  await throwIfNotOk(response)
-  return (await response.json()) as TransactionDto
+export function createTransaction(payload: CreateTransactionPayload, signal?: AbortSignal): Promise<TransactionDto> {
+  return api.post<TransactionDto>("/api/transactions", payload, { signal })
 }
