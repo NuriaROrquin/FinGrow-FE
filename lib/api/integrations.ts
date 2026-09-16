@@ -1,24 +1,28 @@
 import { api } from "./client"
 
-export interface WhatsAppLinkCode {
+export type IntegrationProvider = "whatsapp" | "telegram"
+
+export interface LinkCode {
   code: string
   expiresAt: string
 }
 
-export interface WhatsAppIntegration {
+export interface Integration {
   linked: boolean
-  phoneNumber: string | null
+  externalAccountId: string | null
   linkedAt: string | null
 }
 
-export function getWhatsAppIntegration(signal?: AbortSignal): Promise<WhatsAppIntegration> {
-  return api.get<WhatsAppIntegration>("/api/integrations/whatsapp", { signal })
+export const NOT_LINKED: Integration = { linked: false, externalAccountId: null, linkedAt: null }
+
+export function getIntegration(provider: IntegrationProvider, signal?: AbortSignal): Promise<Integration> {
+  return api.get<Integration>(`/api/integrations/${provider}`, { signal })
 }
 
-export function unlinkWhatsApp(signal?: AbortSignal): Promise<void> {
-  return api.delete("/api/integrations/whatsapp", { signal })
+export function requestLinkCode(provider: IntegrationProvider, signal?: AbortSignal): Promise<LinkCode> {
+  return api.post<LinkCode>(`/api/integrations/${provider}/link-code`, undefined, { signal })
 }
 
-export function requestWhatsAppLinkCode(signal?: AbortSignal): Promise<WhatsAppLinkCode> {
-  return api.post<WhatsAppLinkCode>("/api/integrations/whatsapp/link-code", undefined, { signal })
+export function unlinkIntegration(provider: IntegrationProvider, signal?: AbortSignal): Promise<void> {
+  return api.delete(`/api/integrations/${provider}`, { signal })
 }
