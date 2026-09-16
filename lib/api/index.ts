@@ -22,9 +22,11 @@ export { clearSession, getRole, loginPathForCurrentRole, saveSession, type Sessi
 export { getSession, loginEmpleado, logout, type LoginRequest, type SessionResponse } from "./auth"
 export { getApiBaseUrl } from "./config"
 export {
-  getWhatsAppIntegration,
-  requestWhatsAppLinkCode,
-  unlinkWhatsApp,
-  type WhatsAppIntegration,
-  type WhatsAppLinkCode,
+  getIntegration,
+  NOT_LINKED,
+  requestLinkCode,
+  unlinkIntegration,
+  type Integration,
+  type IntegrationProvider,
+  type LinkCode,
 } from "./integrations"

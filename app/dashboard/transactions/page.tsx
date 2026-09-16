@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Dialog,
   DialogContent,
@@ -42,139 +41,15 @@ import {
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
+import { createTransaction, listTransactions, type TransactionDto } from "@/lib/api/transactions"
+import { AddTransactionForm } from "@/components/transactions/add-transaction-form"
 
-interface TransactionDto {
-  id: string
-  occurredOn: string
-  amount: number
-  currency: string
-  category: string
-  description: string
-  paymentMethod: string
-  type: "Income" | "Expense"
-  source: string
-}
-
-interface TransactionsResponse {
-  items: TransactionDto[]
-  pageNumber: number
-  pageSize: number
-  totalCount: number
-  totalPages: number
-  totalSpent: Record<string, number>
-  totalIncome: Record<string, number>
-}
-
-const mockTransactionsResponse: TransactionsResponse = {
-  items: [
-    {
-      id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa6",
-      occurredOn: "2026-09-10",
-      amount: 4300,
-      currency: "USD",
-      category: "Entretenimiento",
-      description: "Suscripcion de streaming",
-      paymentMethod: "DebitCard",
-      type: "Expense",
-      source: "Manual",
-    },
-    {
-      id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa5",
-      occurredOn: "2026-09-09",
-      amount: 95000,
-      currency: "ARS",
-      category: "Freelance",
-      description: "Trabajo freelance",
-      paymentMethod: "BankTransfer",
-      type: "Income",
-      source: "Gmail",
-    },
-    {
-      id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4",
-      occurredOn: "2026-09-07",
-      amount: 7200,
-      currency: "ARS",
-      category: "Transporte",
-      description: "Carga de transporte",
-      paymentMethod: "DigitalWallet",
-      type: "Expense",
-      source: "Manual",
-    },
-    {
-      id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3",
-      occurredOn: "2026-09-05",
-      amount: 18500.5,
-      currency: "ARS",
-      category: "Alimentos",
-      description: "Compra supermercado",
-      paymentMethod: "CreditCard",
-      type: "Expense",
-      source: "MercadoPago",
-    },
-    {
-      id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2",
-      occurredOn: "2026-09-02",
-      amount: 125000,
-      currency: "ARS",
-      category: "Vivienda",
-      description: "Alquiler septiembre",
-      paymentMethod: "BankTransfer",
-      type: "Expense",
-      source: "Manual",
-    },
-    {
-      id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1",
-      occurredOn: "2026-09-01",
-      amount: 850000,
-      currency: "ARS",
-      category: "Salario",
-      description: "Salario septiembre",
-      paymentMethod: "BankTransfer",
-      type: "Income",
-      source: "Manual",
-    },
-  ],
-  pageNumber: 1,
-  pageSize: 20,
-  totalCount: 6,
-  totalPages: 1,
-  totalSpent: { ARS: 143500.5, USD: 4300 },
-  totalIncome: { ARS: 850000 },
-}
-
-function getMockTransactionsPage(
-  pageNumber: number,
-  pageSize: number,
-  search: string,
-  type: string,
-): TransactionsResponse {
-  const normalizedSearch = search.trim().toLowerCase()
-  const filteredItems = mockTransactionsResponse.items.filter((transaction) => {
-    const searchableFields = [transaction.description, transaction.category, transaction.source]
-    const matchesSearch =
-      !normalizedSearch || searchableFields.some((value) => value.toLowerCase().includes(normalizedSearch))
-    const matchesType =
-      type === "all" || (type === "income" ? transaction.type === "Income" : transaction.type === "Expense")
-    return matchesSearch && matchesType
-  })
-  const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize))
-  const safePageNumber = Math.min(Math.max(pageNumber, 1), totalPages)
-  const startIndex = (safePageNumber - 1) * pageSize
-  const items = filteredItems.slice(startIndex, startIndex + pageSize)
-
-  return {
-    items,
-    pageNumber: safePageNumber,
-    pageSize,
-    totalCount: filteredItems.length,
-    totalPages,
-    totalSpent: mockTransactionsResponse.totalSpent,
-    totalIncome: mockTransactionsResponse.totalIncome,
-  }
-}
+type Transaction = TransactionDto
 
 export default function TransactionsPage() {
   const searchParams = useSearchParams()
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [filterType, setFilterType] = useState("all")
   const [currentPage, setCurrentPage] = useState(1)
@@ -215,6 +90,21 @@ export default function TransactionsPage() {
     }
   }, [searchParams])
 
+  // Carga el listado real desde la API 
+  useEffect(() => {
+    listTransactions()
+      .then(setTransactions)
+      .catch((error: unknown) => {
+        toast({
+          title: "No se pudo cargar el listado",
+          description: error instanceof Error ? error.message : "Intenta de nuevo en unos segundos.",
+          variant: "destructive",
+        })
+      })
+      .finally(() => setIsLoadingTransactions(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Limpiar stream de cámara al cerrar modal
   useEffect(() => {
     if (!isOcrDialogOpen) {
@@ -226,17 +116,16 @@ export default function TransactionsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOcrDialogOpen])
 
-  const transactionsResponse = getMockTransactionsPage(currentPage, pageSize, searchQuery, filterType)
-  const filteredTransactions = transactionsResponse.items
-  const totalIncome = mockTransactionsResponse.totalIncome
-  const totalExpense = mockTransactionsResponse.totalSpent
-  const balanceByCurrency = Object.keys({ ...totalIncome, ...totalExpense }).reduce<Record<string, number>>(
-    (balance, currency) => {
-      balance[currency] = (totalIncome[currency] ?? 0) - (totalExpense[currency] ?? 0)
-      return balance
-    },
-    {},
-  )
+  const filteredTransactions = transactions.filter((transaction) => {
+    const matchesSearch =
+      transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      transaction.category.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesType = filterType === "all" || transaction.type === filterType
+    return matchesSearch && matchesType
+  })
+
+  const totalIncome = transactions.filter((t) => t.type === "Income").reduce((sum, t) => sum + t.amount, 0)
+  const totalExpense = transactions.filter((t) => t.type === "Expense").reduce((sum, t) => sum + t.amount, 0)
 
   // Función de formateo consistente
   const formatCurrency = (amount: number, currency: string) =>
@@ -260,7 +149,7 @@ export default function TransactionsPage() {
     const rows = filteredTransactions.map((transaction) => {
       const date = new Date(transaction.occurredOn).toLocaleDateString("es-ES")
       const type = transaction.type === "Income" ? "Ingreso" : "Gasto"
-      const amount = `${transaction.type === "Income" ? "+" : "-"}${formatCurrency(transaction.amount, transaction.currency)}`
+      const amount = transaction.type === "Income" ? `+${transaction.amount.toFixed(2)}` : `-${transaction.amount.toFixed(2)}`
 
       return [date, transaction.description, transaction.category, transaction.paymentMethod, type, transaction.source, amount]
     })
@@ -763,7 +652,17 @@ export default function TransactionsPage() {
                 <DialogTitle>Agregar Nueva Transacción</DialogTitle>
                 <DialogDescription>Registra un nuevo ingreso o gasto</DialogDescription>
               </DialogHeader>
-              <AddTransactionForm onClose={() => setIsAddDialogOpen(false)} />
+              <AddTransactionForm
+                onAdd={async (payload) => {
+                  const created = await createTransaction(payload)
+                  setTransactions((prev) => [created, ...prev])
+                  toast({
+                    title: "Transacción guardada",
+                    description: "La transacción ha sido agregada exitosamente",
+                  })
+                }}
+                onClose={() => setIsAddDialogOpen(false)}
+              />
             </DialogContent>
           </Dialog>
         </div>
@@ -775,6 +674,12 @@ export default function TransactionsPage() {
             <CardDescription>Total Ingresos</CardDescription>
             <CardTitle className="space-y-1 text-2xl text-success">{renderTotals(totalIncome)}</CardTitle>
           </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <ArrowUpIcon className="size-4" />
+              <span>{transactions.filter((t) => t.type === "Income").length} transacciones</span>
+            </div>
+          </CardContent>
         </Card>
 
         <Card>
@@ -782,6 +687,12 @@ export default function TransactionsPage() {
             <CardDescription>Total Gastos</CardDescription>
             <CardTitle className="space-y-1 text-2xl">{renderTotals(totalExpense)}</CardTitle>
           </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <ArrowDownIcon className="size-4" />
+              <span>{transactions.filter((t) => t.type === "Expense").length} transacciones</span>
+            </div>
+          </CardContent>
         </Card>
 
         <Card>
@@ -818,8 +729,8 @@ export default function TransactionsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos los Tipos</SelectItem>
-                  <SelectItem value="income">Ingresos</SelectItem>
-                  <SelectItem value="expense">Gastos</SelectItem>
+                  <SelectItem value="Income">Ingresos</SelectItem>
+                  <SelectItem value="Expense">Gastos</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -850,7 +761,20 @@ export default function TransactionsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTransactions.length > 0 ? filteredTransactions.map((transaction) => (
+              {isLoadingTransactions ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    Cargando movimientos...
+                  </TableCell>
+                </TableRow>
+              ) : filteredTransactions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    Todavia no cargaste ningun movimiento.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredTransactions.map((transaction) => (
                 <TableRow key={transaction.id}>
                   <TableCell className="font-medium">
                     {new Date(transaction.occurredOn).toLocaleDateString("es-ES", {
@@ -887,16 +811,12 @@ export default function TransactionsPage() {
                     <span
                       className={`font-semibold ${transaction.type === "Income" ? "text-success" : "text-foreground"}`}
                     >
-                      {transaction.type === "Income" ? "+" : "-"}{formatCurrency(transaction.amount, transaction.currency)}
+                      {transaction.type === "Income" ? "+" : "-"}${transaction.amount.toFixed(2)}{" "}
+                      {transaction.currency}
                     </span>
                   </TableCell>
                 </TableRow>
-              )) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
-                    No se encontraron transacciones.
-                  </TableCell>
-                </TableRow>
+                ))
               )}
             </TableBody>
           </Table>
@@ -951,93 +871,5 @@ export default function TransactionsPage() {
         </CardContent>
       </Card>
     </div>
-  )
-}
-
-function AddTransactionForm({ onClose }: { onClose: () => void }) {
-  const [transactionType, setTransactionType] = useState("expense")
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onClose()
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <Tabs value={transactionType} onValueChange={setTransactionType}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="expense">Gasto</TabsTrigger>
-          <TabsTrigger value="income">Ingreso</TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      <div className="space-y-2">
-        <Label htmlFor="amount">Monto</Label>
-        <Input id="amount" type="number" placeholder="0.00" step="0.01" required />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="description">Descripción</Label>
-        <Input id="description" placeholder="Ingresa descripción" required />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="category">Categoría</Label>
-        <Select>
-          <SelectTrigger id="category">
-            <SelectValue placeholder="Selecciona categoría" />
-          </SelectTrigger>
-          <SelectContent>
-            {transactionType === "expense" ? (
-              <>
-                <SelectItem value="food">Comida y Restaurantes</SelectItem>
-                <SelectItem value="transport">Transporte</SelectItem>
-                <SelectItem value="bills">Servicios y Facturas</SelectItem>
-                <SelectItem value="entertainment">Entretenimiento</SelectItem>
-                <SelectItem value="shopping">Compras</SelectItem>
-                <SelectItem value="health">Salud</SelectItem>
-                <SelectItem value="other">Otros</SelectItem>
-              </>
-            ) : (
-              <>
-                <SelectItem value="salary">Salario</SelectItem>
-                <SelectItem value="freelance">Freelance</SelectItem>
-                <SelectItem value="investment">Inversión</SelectItem>
-                <SelectItem value="gift">Regalo</SelectItem>
-                <SelectItem value="other">Otros</SelectItem>
-              </>
-            )}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="date">Fecha</Label>
-        <Input id="date" type="date" required />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="payment">Método de Pago</Label>
-        <Select>
-          <SelectTrigger id="payment">
-            <SelectValue placeholder="Selecciona método de pago" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="cash">Efectivo</SelectItem>
-            <SelectItem value="credit">Tarjeta de Crédito</SelectItem>
-            <SelectItem value="debit">Tarjeta de Débito</SelectItem>
-            <SelectItem value="bank">Transferencia Bancaria</SelectItem>
-            <SelectItem value="digital">Billetera Digital</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex gap-2 justify-end pt-4">
-        <Button type="button" variant="outline" onClick={onClose}>
-          Cancelar
-        </Button>
-        <Button type="submit">Agregar Transacción</Button>
-      </div>
-    </form>
   )
 }
