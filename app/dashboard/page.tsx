@@ -25,8 +25,10 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useState } from "react"
+import { useToast } from "@/hooks/use-toast"
+import { createTransaction } from "@/lib/api/transactions"
+import { AddTransactionForm } from "@/components/transactions/add-transaction-form"
 
 const monthlySpendingData = [
   { month: "Ene", amount: 240000 },
@@ -94,6 +96,7 @@ const categoryChartConfig = {
 
 export default function DashboardPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [openTransaction, setOpenTransaction] = useState(false)
   const [openSavings, setOpenSavings] = useState(false)
 
@@ -177,46 +180,16 @@ export default function DashboardPage() {
                   <DialogTitle>Nueva Transacción</DialogTitle>
                   <DialogDescription>Registra un nuevo ingreso o gasto</DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="type">Tipo</Label>
-                    <Select>
-                      <SelectTrigger id="type">
-                        <SelectValue placeholder="Seleccionar tipo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="income">Ingreso</SelectItem>
-                        <SelectItem value="expense">Gasto</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="amount">Monto</Label>
-                    <Input id="amount" type="number" placeholder="0.00" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Descripción</Label>
-                    <Input id="description" placeholder="Ej: Supermercado" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="category">Categoría</Label>
-                    <Select>
-                      <SelectTrigger id="category">
-                        <SelectValue placeholder="Seleccionar categoría" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="food">Comida</SelectItem>
-                        <SelectItem value="transport">Transporte</SelectItem>
-                        <SelectItem value="entertainment">Entretenimiento</SelectItem>
-                        <SelectItem value="services">Servicios</SelectItem>
-                        <SelectItem value="other">Otros</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button className="w-full" onClick={() => setOpenTransaction(false)}>
-                    Guardar Transacción
-                  </Button>
-                </div>
+                <AddTransactionForm
+                  onAdd={async (payload) => {
+                    await createTransaction(payload)
+                    toast({
+                      title: "Transacción guardada",
+                      description: "La transacción ha sido agregada exitosamente",
+                    })
+                  }}
+                  onClose={() => setOpenTransaction(false)}
+                />
               </DialogContent>
             </Dialog>
 

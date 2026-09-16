@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Dialog,
   DialogContent,
@@ -42,92 +41,15 @@ import {
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
+import { createTransaction, listTransactions, type TransactionDto } from "@/lib/api/transactions"
+import { AddTransactionForm } from "@/components/transactions/add-transaction-form"
 
-const mockTransactions = [
-  {
-    id: 1,
-    type: "expense",
-    category: "Comida",
-    description: "Supermercado",
-    amount: 8500.5,
-    date: "2025-01-19",
-    paymentMethod: "Tarjeta de Crédito",
-    source: "Manual",
-  },
-  {
-    id: 2,
-    type: "income",
-    category: "Salario",
-    description: "Salario Mensual",
-    amount: 550000.0,
-    date: "2025-01-18",
-    paymentMethod: "Transferencia Bancaria",
-    source: "Manual",
-  },
-  {
-    id: 3,
-    type: "expense",
-    category: "Servicios",
-    description: "Factura de Luz",
-    amount: 12000.0,
-    date: "2025-01-17",
-    paymentMethod: "Débito Automático",
-    source: "Gmail",
-  },
-  {
-    id: 4,
-    type: "expense",
-    category: "Comida",
-    description: "Cena en Restaurante",
-    amount: 4500.0,
-    date: "2025-01-16",
-    paymentMethod: "Tarjeta de Crédito",
-    source: "Telegram",
-  },
-  {
-    id: 5,
-    type: "expense",
-    category: "Transporte",
-    description: "Nafta",
-    amount: 6000.0,
-    date: "2025-01-15",
-    paymentMethod: "Tarjeta de Débito",
-    source: "OCR",
-  },
-  {
-    id: 6,
-    type: "income",
-    category: "Freelance",
-    description: "Proyecto de Diseño Web",
-    amount: 80000.0,
-    date: "2025-01-14",
-    paymentMethod: "PayPal",
-    source: "Telegram",
-  },
-  {
-    id: 7,
-    type: "expense",
-    category: "Entretenimiento",
-    description: "Entradas de Cine",
-    amount: 3000.0,
-    date: "2025-01-13",
-    paymentMethod: "Tarjeta de Crédito",
-    source: "Manual",
-  },
-  {
-    id: 8,
-    type: "expense",
-    category: "Servicios",
-    description: "Factura de Internet",
-    amount: 8000.0,
-    date: "2025-01-12",
-    paymentMethod: "Débito Automático",
-    source: "Gmail",
-  },
-]
+type Transaction = TransactionDto
 
 export default function TransactionsPage() {
   const searchParams = useSearchParams()
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [filterType, setFilterType] = useState("all")
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
@@ -166,6 +88,21 @@ export default function TransactionsPage() {
     }
   }, [searchParams])
 
+  // Carga el listado real desde la API 
+  useEffect(() => {
+    listTransactions()
+      .then(setTransactions)
+      .catch((error: unknown) => {
+        toast({
+          title: "No se pudo cargar el listado",
+          description: error instanceof Error ? error.message : "Intenta de nuevo en unos segundos.",
+          variant: "destructive",
+        })
+      })
+      .finally(() => setIsLoadingTransactions(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Limpiar stream de cámara al cerrar modal
   useEffect(() => {
     if (!isOcrDialogOpen) {
@@ -177,7 +114,7 @@ export default function TransactionsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOcrDialogOpen])
 
-  const filteredTransactions = mockTransactions.filter((transaction) => {
+  const filteredTransactions = transactions.filter((transaction) => {
     const matchesSearch =
       transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       transaction.category.toLowerCase().includes(searchQuery.toLowerCase())
@@ -185,8 +122,8 @@ export default function TransactionsPage() {
     return matchesSearch && matchesType
   })
 
-  const totalIncome = mockTransactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0)
-  const totalExpense = mockTransactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0)
+  const totalIncome = transactions.filter((t) => t.type === "Income").reduce((sum, t) => sum + t.amount, 0)
+  const totalExpense = transactions.filter((t) => t.type === "Expense").reduce((sum, t) => sum + t.amount, 0)
 
   // Función de formateo consistente
   const formatCurrency = (amount: number) => {
@@ -199,9 +136,9 @@ export default function TransactionsPage() {
 
     // Crear filas de datos
     const rows = filteredTransactions.map((transaction) => {
-      const date = new Date(transaction.date).toLocaleDateString("es-ES")
-      const type = transaction.type === "income" ? "Ingreso" : "Gasto"
-      const amount = transaction.type === "income" ? `+${transaction.amount.toFixed(2)}` : `-${transaction.amount.toFixed(2)}`
+      const date = new Date(transaction.occurredOn).toLocaleDateString("es-ES")
+      const type = transaction.type === "Income" ? "Ingreso" : "Gasto"
+      const amount = transaction.type === "Income" ? `+${transaction.amount.toFixed(2)}` : `-${transaction.amount.toFixed(2)}`
 
       return [date, transaction.description, transaction.category, transaction.paymentMethod, type, transaction.source, amount]
     })
@@ -704,7 +641,17 @@ export default function TransactionsPage() {
                 <DialogTitle>Agregar Nueva Transacción</DialogTitle>
                 <DialogDescription>Registra un nuevo ingreso o gasto</DialogDescription>
               </DialogHeader>
-              <AddTransactionForm onClose={() => setIsAddDialogOpen(false)} />
+              <AddTransactionForm
+                onAdd={async (payload) => {
+                  const created = await createTransaction(payload)
+                  setTransactions((prev) => [created, ...prev])
+                  toast({
+                    title: "Transacción guardada",
+                    description: "La transacción ha sido agregada exitosamente",
+                  })
+                }}
+                onClose={() => setIsAddDialogOpen(false)}
+              />
             </DialogContent>
           </Dialog>
         </div>
@@ -719,7 +666,7 @@ export default function TransactionsPage() {
           <CardContent>
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
               <ArrowUpIcon className="size-4" />
-              <span>{mockTransactions.filter((t) => t.type === "income").length} transacciones</span>
+              <span>{transactions.filter((t) => t.type === "Income").length} transacciones</span>
             </div>
           </CardContent>
         </Card>
@@ -732,7 +679,7 @@ export default function TransactionsPage() {
           <CardContent>
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
               <ArrowDownIcon className="size-4" />
-              <span>{mockTransactions.filter((t) => t.type === "expense").length} transacciones</span>
+              <span>{transactions.filter((t) => t.type === "Expense").length} transacciones</span>
             </div>
           </CardContent>
         </Card>
@@ -771,8 +718,8 @@ export default function TransactionsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos los Tipos</SelectItem>
-                  <SelectItem value="income">Ingresos</SelectItem>
-                  <SelectItem value="expense">Gastos</SelectItem>
+                  <SelectItem value="Income">Ingresos</SelectItem>
+                  <SelectItem value="Expense">Gastos</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -803,10 +750,23 @@ export default function TransactionsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTransactions.map((transaction) => (
+              {isLoadingTransactions ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    Cargando movimientos...
+                  </TableCell>
+                </TableRow>
+              ) : filteredTransactions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    Todavia no cargaste ningun movimiento.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredTransactions.map((transaction) => (
                 <TableRow key={transaction.id}>
                   <TableCell className="font-medium">
-                    {new Date(transaction.date).toLocaleDateString("es-ES", {
+                    {new Date(transaction.occurredOn).toLocaleDateString("es-ES", {
                       month: "short",
                       day: "numeric",
                       year: "numeric",
@@ -816,10 +776,10 @@ export default function TransactionsPage() {
                     <div className="flex items-center gap-2">
                       <div
                         className={`flex size-8 items-center justify-center rounded-full ${
-                          transaction.type === "income" ? "bg-success/10 text-success" : "bg-muted"
+                          transaction.type === "Income" ? "bg-success/10 text-success" : "bg-muted"
                         }`}
                       >
-                        {transaction.type === "income" ? (
+                        {transaction.type === "Income" ? (
                           <ArrowUpIcon className="size-4" />
                         ) : (
                           <CreditCardIcon className="size-4" />
@@ -831,112 +791,26 @@ export default function TransactionsPage() {
                   <TableCell>{transaction.category}</TableCell>
                   <TableCell className="text-muted-foreground">{transaction.paymentMethod}</TableCell>
                   <TableCell>
-                    <Badge variant={transaction.type === "income" ? "default" : "secondary"}>
-                      {transaction.type === "income" ? "Ingreso" : "Gasto"}
+                    <Badge variant={transaction.type === "Income" ? "default" : "secondary"}>
+                      {transaction.type === "Income" ? "Ingreso" : "Gasto"}
                     </Badge>
                   </TableCell>
                   <TableCell>{transaction.source}</TableCell>
                   <TableCell className="text-right">
                     <span
-                      className={`font-semibold ${transaction.type === "income" ? "text-success" : "text-foreground"}`}
+                      className={`font-semibold ${transaction.type === "Income" ? "text-success" : "text-foreground"}`}
                     >
-                      {transaction.type === "income" ? "+" : "-"}${transaction.amount.toFixed(2)}
+                      {transaction.type === "Income" ? "+" : "-"}${transaction.amount.toFixed(2)}{" "}
+                      {transaction.currency}
                     </span>
                   </TableCell>
                 </TableRow>
-              ))}
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
     </div>
-  )
-}
-
-function AddTransactionForm({ onClose }: { onClose: () => void }) {
-  const [transactionType, setTransactionType] = useState("expense")
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onClose()
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <Tabs value={transactionType} onValueChange={setTransactionType}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="expense">Gasto</TabsTrigger>
-          <TabsTrigger value="income">Ingreso</TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      <div className="space-y-2">
-        <Label htmlFor="amount">Monto</Label>
-        <Input id="amount" type="number" placeholder="0.00" step="0.01" required />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="description">Descripción</Label>
-        <Input id="description" placeholder="Ingresa descripción" required />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="category">Categoría</Label>
-        <Select>
-          <SelectTrigger id="category">
-            <SelectValue placeholder="Selecciona categoría" />
-          </SelectTrigger>
-          <SelectContent>
-            {transactionType === "expense" ? (
-              <>
-                <SelectItem value="food">Comida y Restaurantes</SelectItem>
-                <SelectItem value="transport">Transporte</SelectItem>
-                <SelectItem value="bills">Servicios y Facturas</SelectItem>
-                <SelectItem value="entertainment">Entretenimiento</SelectItem>
-                <SelectItem value="shopping">Compras</SelectItem>
-                <SelectItem value="health">Salud</SelectItem>
-                <SelectItem value="other">Otros</SelectItem>
-              </>
-            ) : (
-              <>
-                <SelectItem value="salary">Salario</SelectItem>
-                <SelectItem value="freelance">Freelance</SelectItem>
-                <SelectItem value="investment">Inversión</SelectItem>
-                <SelectItem value="gift">Regalo</SelectItem>
-                <SelectItem value="other">Otros</SelectItem>
-              </>
-            )}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="date">Fecha</Label>
-        <Input id="date" type="date" required />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="payment">Método de Pago</Label>
-        <Select>
-          <SelectTrigger id="payment">
-            <SelectValue placeholder="Selecciona método de pago" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="cash">Efectivo</SelectItem>
-            <SelectItem value="credit">Tarjeta de Crédito</SelectItem>
-            <SelectItem value="debit">Tarjeta de Débito</SelectItem>
-            <SelectItem value="bank">Transferencia Bancaria</SelectItem>
-            <SelectItem value="digital">Billetera Digital</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex gap-2 justify-end pt-4">
-        <Button type="button" variant="outline" onClick={onClose}>
-          Cancelar
-        </Button>
-        <Button type="submit">Agregar Transacción</Button>
-      </div>
-    </form>
   )
 }
