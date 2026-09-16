@@ -21,4 +21,9 @@ export { toastApiError } from "./notify"
 export { clearSession, getRole, loginPathForCurrentRole, saveSession, type SessionRole } from "./session"
 export { getSession, loginEmpleado, logout, type LoginRequest, type SessionResponse } from "./auth"
 export { getApiBaseUrl } from "./config"
-export { requestWhatsAppLinkCode, type WhatsAppLinkCode } from "./integrations"
+export {
+  getWhatsAppIntegration,
+  requestWhatsAppLinkCode,
+  type WhatsAppIntegration,
+  type WhatsAppLinkCode,
+} from "./integrations"
