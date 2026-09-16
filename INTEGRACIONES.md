@@ -8,20 +8,22 @@ Este documento describe las nuevas funcionalidades de integración implementadas
 
 **Ubicación**: Configuración > Integraciones > Telegram Bot
 
+Es una integración **real** (HU-08): la card consulta a FinGrow-BE si el chat está vinculado,
+pide el código de un solo uso y lo detecta apenas el bot lo valida.
+
 #### Características:
-- ✅ Vinculación de cuenta mediante código único
-- ✅ Recepción de notificaciones en tiempo real
-- ✅ Registro de transacciones mediante lenguaje natural
-- ✅ Procesamiento de tickets con OCR desde Telegram
-- ✅ Consulta de balance actual
+- ✅ Vinculación de cuenta mediante código único (vence a los 10 minutos)
+- ✅ Estado real y desvinculación desde la misma card
+- ⏳ Registro de transacciones mediante lenguaje natural (HU-13)
+- ⏳ Procesamiento de tickets con OCR desde Telegram
+- ⏳ Recepción de notificaciones y consulta de balance
 
 #### Cómo usar:
 1. Ve a **Configuración > Integraciones**
 2. Haz clic en **Vincular Telegram**
-3. Copia el código de verificación
-4. Busca `@FingrowBot` en Telegram
-5. Envía el código al bot
-6. ¡Listo! Tu cuenta está vinculada
+3. Tocá **Abrir**: se abre el bot (`NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`) con el código ya cargado
+4. Tocá **Iniciar** en Telegram; si ya tenías el chat abierto, pegá el código y mandalo
+5. El bot confirma y la card pasa a **Vinculado** sola
 
 #### Ejemplos de mensajes:
 ```

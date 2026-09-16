@@ -20,7 +20,7 @@ CI (`.github/workflows/ci.yaml`) corre en cada push a `main` y `dev`: `npm ci`, 
 
 ## Estado actual: casi todo es mock
 
-Salvo el login y WhatsApp, no hay llamadas reales a la API. Antes de "arreglar" algo que parece
+Salvo el login, WhatsApp y Telegram, no hay llamadas reales a la API. Antes de "arreglar" algo que parece
 un bug, revisá si no es simplemente esto:
 
 - **`lib/auth-context.tsx`** (T-05, SCRUM-23) mantiene la sesión real: `login()` llama a
@@ -38,10 +38,14 @@ un bug, revisá si no es simplemente esto:
   el error. Las rutas se pasan completas (`/api/integrations/...`); `NEXT_PUBLIC_API_URL` no
   incluye `/api`. Como la cookie es `SameSite=None; Secure`, el front en `localhost:3000` puede
   hablar con la API en dev o en local sin configuración extra.
-- `INTEGRACIONES.md` describe Telegram, Gmail y OCR **en modo demo, con datos simulados**: no
-  hay bot ni credenciales reales conectadas todavía. La excepción es WhatsApp
-  (`components/integrations/whatsapp-card.tsx`, HU-09): pide el código real a
-  `POST /api/integrations/whatsapp/link-code` de FinGrow-BE.
+- `INTEGRACIONES.md` describe Gmail, Mercado Pago y OCR **en modo demo, con datos simulados**:
+  no hay credenciales reales conectadas todavía. Las excepciones son WhatsApp (HU-09) y Telegram
+  (HU-08): `components/integrations/link-code-integration-card.tsx` es la card genérica de
+  vinculación por código (estado real vía `GET /api/integrations/{provider}`, código con
+  `POST .../link-code`, sondeo hasta que el chat quede vinculado, desvincular con `DELETE`), y
+  `whatsapp-card.tsx` / `telegram-card.tsx` solo aportan textos, ícono y el paso de "abrir el
+  chat". El bot de Telegram se configura con `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` y el link
+  `https://t.me/<bot>?start=<código>` hace que Telegram mande el código solo.
 
 ## Contratos compartidos con los otros repos
 
