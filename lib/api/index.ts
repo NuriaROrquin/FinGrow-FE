@@ -25,8 +25,13 @@ export {
   getIntegration,
   NOT_LINKED,
   requestLinkCode,
+  startMercadoPagoLink,
+  syncMercadoPago,
   unlinkIntegration,
   type Integration,
   type IntegrationProvider,
   type LinkCode,
+  type MercadoPagoAuthorization,
+  type MercadoPagoLinkResult,
+  type MercadoPagoSyncSummary,
 } from "./integrations"
