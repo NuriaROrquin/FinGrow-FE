@@ -23,12 +23,12 @@ CI (`.github/workflows/ci.yaml`) corre en cada push a `main` y `dev`: `npm ci`, 
 Salvo el login, WhatsApp y Telegram, no hay llamadas reales a la API. Antes de "arreglar" algo que parece
 un bug, revisá si no es simplemente esto:
 
-- **`lib/auth-context.tsx`** (T-05, SCRUM-23) mantiene la sesión real: `login()` llama a
-  `POST /login/empleado`, el backend responde con la cookie **HttpOnly** `fingrow-session` (que
-  lleva el JWT) y un `SessionResponse` con `userId`, `companyId`, `fullName`, `role` y
-  `expiresAt`. Al cargar la página se rehidrata con `GET /session`; `logout()` llama a
-  `DELETE /session`. El JavaScript nunca ve el token: en `localStorage` solo queda
-  `fingrow-role`, para saber a qué login volver ante un 401. Login de empresa: pendiente.
+- **`lib/auth-context.tsx`** (T-05, SCRUM-23; login de empresa: HU-46) mantiene la sesión real:
+`login()` llama a `POST /login/empleado` o `POST /login/empresa` según el rol, el backend
+responde con la cookie **HttpOnly** `fingrow-session` (que lleva el JWT) y un `SessionResponse`
+con `userId`, `companyId`, `fullName`, `role` y `expiresAt`. Al cargar la página se rehidrata
+con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve el token: en
+`localStorage` solo queda `fingrow-role`, para saber a qué login volver ante un 401.
 - **`lib/company-context.tsx`** guarda departamentos y empleados en memoria. El empleado se
   relaciona con su departamento **por nombre** (`departamento: string`), no por id. En
   FinGrow-BE esa misma relación es por id — cuando se conecte a la API real, renombrar un
