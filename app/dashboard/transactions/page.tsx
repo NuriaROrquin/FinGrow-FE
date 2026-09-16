@@ -27,6 +27,7 @@ import {
   FilterIcon,
   DownloadIcon,
   ArrowUpIcon,
+  ArrowDownIcon,
   CreditCardIcon,
   ScanLine,
   Send,
@@ -41,14 +42,42 @@ import {
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
-import { createTransaction, listTransactions, type TransactionDto } from "@/lib/api/transactions"
+import {
+  createTransaction,
+  getTransactionSummary,
+  listTransactions,
+  type TransactionDto,
+  type TransactionSummaryResponse,
+  type TransactionsResponse,
+} from "@/lib/api/transactions"
 import { AddTransactionForm } from "@/components/transactions/add-transaction-form"
 
 type Transaction = TransactionDto
 
+const emptyTransactionsResponse: TransactionsResponse = {
+  items: [],
+  pageNumber: 1,
+  pageSize: 20,
+  totalCount: 0,
+  totalPages: 1,
+}
+
+const emptyTransactionSummary: TransactionSummaryResponse = {
+  totalExpenseArs: 0,
+  totalExpenseUsd: 0,
+  totalIncomeArs: 0,
+  totalIncomeUsd: 0,
+  totalTransactions: 0,
+  totalExpenseTransactions: 0,
+  totalIncomeTransactions: 0,
+}
+
 export default function TransactionsPage() {
   const searchParams = useSearchParams()
-  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [transactionsResponse, setTransactionsResponse] = useState(emptyTransactionsResponse)
+  const [transactionSummary, setTransactionSummary] = useState(emptyTransactionSummary)
+  const [summaryRefreshKey, setSummaryRefreshKey] = useState(0)
+  const [isSummaryReady, setIsSummaryReady] = useState(false)
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [filterType, setFilterType] = useState("all")
@@ -77,10 +106,29 @@ export default function TransactionsPage() {
   } | null>(null)
   const [useCameraMode, setUseCameraMode] = useState(false)
   const [stream, setStream] = useState<MediaStream | null>(null)
+  const summaryRequestKey = useRef<number | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const { toast } = useToast()
+
+  useEffect(() => {
+    if (summaryRequestKey.current === summaryRefreshKey) return
+    summaryRequestKey.current = summaryRefreshKey
+
+    getTransactionSummary()
+      .then(setTransactionSummary)
+      .catch((error: unknown) => {
+        toast({
+          title: "No se pudo cargar el resumen",
+          description: error instanceof Error ? error.message : "Intenta de nuevo en unos segundos.",
+          variant: "destructive",
+        })
+      })
+      .finally(() => {
+        setIsSummaryReady(true)
+      })
+  }, [summaryRefreshKey, toast])
 
   // Detectar parámetro mode=ocr en la URL
   useEffect(() => {
@@ -92,18 +140,35 @@ export default function TransactionsPage() {
 
   // Carga el listado real desde la API 
   useEffect(() => {
-    listTransactions()
-      .then(setTransactions)
+    if (!isSummaryReady) return
+
+    const search = searchQuery.trim()
+    if (search.length > 0 && search.length < 3) return
+
+    const controller = new AbortController()
+    const timeoutId = window.setTimeout(() => {
+      setIsLoadingTransactions(true)
+      const apiType = filterType === "Income" ? "ingreso" : filterType === "Expense" ? "gasto" : undefined
+      listTransactions(currentPage, pageSize, search || undefined, apiType, controller.signal)
+        .then(setTransactionsResponse)
       .catch((error: unknown) => {
+        if (controller.signal.aborted) return
         toast({
           title: "No se pudo cargar el listado",
           description: error instanceof Error ? error.message : "Intenta de nuevo en unos segundos.",
           variant: "destructive",
         })
       })
-      .finally(() => setIsLoadingTransactions(false))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+        .finally(() => {
+          if (!controller.signal.aborted) setIsLoadingTransactions(false)
+        })
+    }, 300)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+      controller.abort()
+    }
+  }, [currentPage, filterType, isSummaryReady, pageSize, searchQuery, toast])
 
   // Limpiar stream de cámara al cerrar modal
   useEffect(() => {
@@ -116,30 +181,32 @@ export default function TransactionsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOcrDialogOpen])
 
-  const filteredTransactions = transactions.filter((transaction) => {
-    const matchesSearch =
-      transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.category.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesType = filterType === "all" || transaction.type === filterType
-    return matchesSearch && matchesType
-  })
+  const transactions = transactionsResponse.items
+  const filteredTransactions = transactions
 
-  const totalIncome = transactions.filter((t) => t.type === "Income").reduce((sum, t) => sum + t.amount, 0)
-  const totalExpense = transactions.filter((t) => t.type === "Expense").reduce((sum, t) => sum + t.amount, 0)
+  const totalIncome = {
+    ARS: transactionSummary.totalIncomeArs,
+    USD: transactionSummary.totalIncomeUsd,
+  }
+  const totalExpense = {
+    ARS: transactionSummary.totalExpenseArs,
+    USD: transactionSummary.totalExpenseUsd,
+  }
+  const balanceByCurrency = {
+    ARS: totalIncome.ARS - totalExpense.ARS,
+    USD: totalIncome.USD - totalExpense.USD,
+  }
 
   // Función de formateo consistente
   const formatCurrency = (amount: number, currency: string) =>
     `${currency === "USD" ? "US$" : "$"}${amount.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`
 
-  const renderTotals = (totals: Record<string, number>) => {
-    const entries = Object.entries(totals)
-    return entries.length > 0 ? entries.map(([currency, amount]) => (
-      <div key={currency} className="flex items-baseline justify-between gap-3">
-        <span className="text-sm font-medium text-muted-foreground">{currency}</span>
-        <span>{formatCurrency(amount, currency)}</span>
-      </div>
-    )) : <span>$0,00 ARS</span>
-  }
+  const renderCurrencyTotals = (totals: Record<string, number>) => (
+    <div className="space-y-1">
+      <div>{formatCurrency(totals.ARS ?? 0, "ARS")}</div>
+      <div className="text-base text-muted-foreground">{formatCurrency(totals.USD ?? 0, "USD")}</div>
+    </div>
+  )
 
   const handleExportCSV = () => {
     // Crear encabezados del CSV
@@ -655,7 +722,12 @@ export default function TransactionsPage() {
               <AddTransactionForm
                 onAdd={async (payload) => {
                   const created = await createTransaction(payload)
-                  setTransactions((prev) => [created, ...prev])
+                  setTransactionsResponse((previous) => ({
+                    ...previous,
+                    items: [created, ...previous.items].slice(0, pageSize),
+                    totalCount: previous.totalCount + 1,
+                  }))
+                  setSummaryRefreshKey((key) => key + 1)
                   toast({
                     title: "Transacción guardada",
                     description: "La transacción ha sido agregada exitosamente",
@@ -672,12 +744,12 @@ export default function TransactionsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total Ingresos</CardDescription>
-            <CardTitle className="space-y-1 text-2xl text-success">{renderTotals(totalIncome)}</CardTitle>
+            <CardTitle className="space-y-1 text-2xl text-success">{renderCurrencyTotals(totalIncome)}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
               <ArrowUpIcon className="size-4" />
-              <span>{transactions.filter((t) => t.type === "Income").length} transacciones</span>
+              <span>{transactionSummary.totalIncomeTransactions} ingresos</span>
             </div>
           </CardContent>
         </Card>
@@ -685,12 +757,12 @@ export default function TransactionsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total Gastos</CardDescription>
-            <CardTitle className="space-y-1 text-2xl">{renderTotals(totalExpense)}</CardTitle>
+            <CardTitle className="space-y-1 text-2xl">{renderCurrencyTotals(totalExpense)}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
               <ArrowDownIcon className="size-4" />
-              <span>{transactions.filter((t) => t.type === "Expense").length} transacciones</span>
+              <span>{transactionSummary.totalExpenseTransactions} gastos</span>
             </div>
           </CardContent>
         </Card>
@@ -698,8 +770,14 @@ export default function TransactionsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Balance Neto</CardDescription>
-            <CardTitle className="space-y-1 text-2xl text-success">{renderTotals(balanceByCurrency)}</CardTitle>
+            <CardTitle className="space-y-1 text-2xl text-success">{renderCurrencyTotals(balanceByCurrency)}</CardTitle>
           </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <ArrowUpIcon className="size-4" />
+              <span>{transactionSummary.totalTransactions} transacciones totales</span>
+            </div>
+          </CardContent>
         </Card>
       </div>
 
@@ -823,7 +901,7 @@ export default function TransactionsPage() {
           <div className="mt-4 flex flex-col gap-3 border-t pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-col gap-1">
               <span className="font-medium text-foreground">
-                {mockTransactionsResponse.totalCount} transacciones
+                {transactionsResponse.totalCount} transacciones
               </span>
               <span>
               {transactionsResponse.totalCount === 0
