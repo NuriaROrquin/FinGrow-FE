@@ -1,6 +1,6 @@
 import { buildUrl } from "./config"
 import { ApiError, ClientErrorCodes, parseApiError } from "./errors"
-import { clearSession, getToken, loginPathForCurrentRole } from "./session"
+import { clearSession, loginPathForCurrentRole } from "./session"
 
 export interface RequestOptions {
   /** Parámetros de query. Los `undefined` y `null` se omiten. */
@@ -44,8 +44,6 @@ async function request<TResponse>(
   body?: unknown,
   options: RequestOptions = {},
 ): Promise<TResponse> {
-  const token = getToken()
-
   const headers: Record<string, string> = {
     Accept: "application/json",
     ...options.headers,
@@ -53,10 +51,6 @@ async function request<TResponse>(
 
   if (body !== undefined) {
     headers["Content-Type"] = "application/json"
-  }
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`
   }
 
   let response: Response
@@ -67,7 +61,6 @@ async function request<TResponse>(
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: options.signal,
-      // El backend habilita AllowCredentials en la política FinGrowFrontend.
       credentials: "include",
     })
   } catch (error) {
