@@ -24,9 +24,9 @@ import {
   Send,
   ScanLine,
   Info,
-  Wallet,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
+import { MercadoPagoCard } from "@/components/integrations/mercado-pago-card"
 import { TelegramCard } from "@/components/integrations/telegram-card"
 import { WhatsAppCard } from "@/components/integrations/whatsapp-card"
 import { useTheme } from "next-themes"
@@ -41,8 +41,6 @@ export default function SettingsPage() {
 
   // Estados para las integraciones
   const [gmailLinked, setGmailLinked] = useState(false)
-  const [mercadoPagoLinked, setMercadoPagoLinked] = useState(false)
-  const [mercadoPagoEmail, setMercadoPagoEmail] = useState("")
 
   // Evitar hidratación incorrecta
   useEffect(() => {
@@ -62,24 +60,6 @@ export default function SettingsPage() {
     toast({
       title: "Gmail desvinculado",
       description: "Ya no se procesarán facturas automáticamente",
-    })
-  }
-
-  const handleLinkMercadoPago = () => {
-    setMercadoPagoLinked(true)
-    setMercadoPagoEmail("usuario@ejemplo.com")
-    toast({
-      title: "¡Mercado Pago vinculado!",
-      description: "Ahora puedes recibir pagos y enviar dinero fácilmente",
-    })
-  }
-
-  const handleUnlinkMercadoPago = () => {
-    setMercadoPagoLinked(false)
-    setMercadoPagoEmail("")
-    toast({
-      title: "Mercado Pago desvinculado",
-      description: "Ya no puedes recibir pagos ni enviar dinero desde la app",
     })
   }
 
@@ -486,80 +466,7 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Mercado Pago Integration */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Wallet className="size-5 text-cyan-500" />
-                  <div>
-                    <CardTitle>Mercado Pago</CardTitle>
-                    <CardDescription>Sincronizá los movimientos que realizás en Mercado Pago de forma automática</CardDescription>
-                  </div>
-                </div>
-                {mercadoPagoLinked && (
-                  <Badge variant="default" className="gap-1">
-                    <CheckCircle2 className="size-3" />
-                    Vinculado
-                  </Badge>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {!mercadoPagoLinked ? (
-                <>
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
-                      Vincula tu cuenta de Mercado Pago para empezar a sincronizar tus movimientos de forma automática.
-                    </AlertDescription>
-                  </Alert>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="mercadoPagoEmail">Email de Mercado Pago</Label>
-                    <Input
-                      id="mercadoPagoEmail"
-                      type="email"
-                      placeholder="tucorreo@ejemplo.com"
-                      value={mercadoPagoEmail}
-                      onChange={(e) => setMercadoPagoEmail(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="pt-2">
-                    <Button onClick={handleLinkMercadoPago} className="w-full sm:w-auto gap-2">
-                      <Wallet className="size-4" />
-                      Vincular Mercado Pago
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="size-10 rounded-full bg-cyan-500 flex items-center justify-center">
-                        <Wallet className="size-5 text-white" />
-                      </div>
-                      <div>
-                        <p className="font-medium">{mercadoPagoEmail}</p>
-                        <p className="text-sm text-muted-foreground">Cuenta vinculada</p>
-                      </div>
-                    </div>
-                    <Button variant="outline" onClick={handleUnlinkMercadoPago}>
-                      Desvincular
-                    </Button>
-                  </div>
-
-                  <Alert>
-                    <CheckCircle2 className="h-4 w-4" />
-                    <AlertDescription>
-                      Tu cuenta de Mercado Pago está vinculada. Los movimientos se sincronizan automáticamente cada hora.
-                    </AlertDescription>
-                  </Alert>
-                </>
-              )}
-            </CardContent>
-          </Card>
+          <MercadoPagoCard />
 
           {/* OCR Integration */}
           <Card>

@@ -19,14 +19,19 @@ export { api, setUnauthorizedHandler, type RequestOptions } from "./client"
 export { ApiError, ClientErrorCodes, isApiError, parseApiError } from "./errors"
 export { toastApiError } from "./notify"
 export { clearSession, getRole, loginPathForCurrentRole, saveSession, type SessionRole } from "./session"
-export { getSession, loginEmpleado, logout, type LoginRequest, type SessionResponse } from "./auth"
+export { getSession, loginEmpleado, loginEmpresa, logout, type LoginRequest, type SessionResponse } from "./auth"
 export { getApiBaseUrl } from "./config"
 export {
   getIntegration,
   NOT_LINKED,
   requestLinkCode,
+  startMercadoPagoLink,
+  syncMercadoPago,
   unlinkIntegration,
   type Integration,
   type IntegrationProvider,
   type LinkCode,
+  type MercadoPagoAuthorization,
+  type MercadoPagoLinkResult,
+  type MercadoPagoSyncSummary,
 } from "./integrations"

@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
-import { getSession, loginEmpleado, logout as logoutRequest } from "@/lib/api/auth"
+import { getSession, loginEmpleado, loginEmpresa, logout as logoutRequest } from "@/lib/api/auth"
 import { setUnauthorizedHandler } from "@/lib/api/client"
 import { clearSession as clearStoredSession, saveSession } from "@/lib/api/session"
 import { isSessionActive, toSessionUser } from "@/lib/auth/session-user"
@@ -70,11 +70,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = async (email: string, password: string, role: UserRole = "empleado") => {
-    if (role === "empresa") {
-      throw new Error("El login de empresa todavía no está disponible.")
-    }
-
-    const user = toSessionUser(await loginEmpleado({ email, password }))
+    const session = role === "empresa" ? await loginEmpresa({ email, password }) : await loginEmpleado({ email, password })
+    const user = toSessionUser(session)
 
     if (!user || !isSessionActive(user)) {
       throw new Error("La sesión recibida no es válida")
