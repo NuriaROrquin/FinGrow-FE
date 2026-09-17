@@ -19,6 +19,20 @@ export type IncomeCategory = "Salario" | "Freelance" | "Inversiones" | "Regalo" 
 export type Currency = "ARS" | "USD" | "EUR" | "BRL"
 
 export type PaymentMethod = "Cash" | "CreditCard" | "DebitCard" | "BankTransfer" | "DigitalWallet"
+export type PaymentMethodLabel =
+  | "Efectivo"
+  | "Tarjeta de Crédito"
+  | "Tarjeta de Débito"
+  | "Transferencia Bancaria"
+  | "Billetera Digital"
+
+export const paymentMethodLabels: Record<PaymentMethod, PaymentMethodLabel> = {
+  Cash: "Efectivo",
+  CreditCard: "Tarjeta de Crédito",
+  DebitCard: "Tarjeta de Débito",
+  BankTransfer: "Transferencia Bancaria",
+  DigitalWallet: "Billetera Digital",
+}
 
 export interface TransactionDto {
   id: string
@@ -28,7 +42,7 @@ export interface TransactionDto {
   category: string
   description: string
   occurredOn: string
-  paymentMethod: PaymentMethod
+  paymentMethod: PaymentMethodLabel
   source: string
   status: string
   createdAt: string
@@ -63,6 +77,13 @@ export interface TransactionSummaryResponse {
   totalIncomeTransactions: number
 }
 
+function translateTransaction(transaction: Omit<TransactionDto, "paymentMethod"> & { paymentMethod: PaymentMethod }) {
+  return {
+    ...transaction,
+    paymentMethod: paymentMethodLabels[transaction.paymentMethod] ?? transaction.paymentMethod,
+  }
+}
+
 export type TransactionHistoryType = "ingreso" | "gasto" | "income" | "expense"
 
 export function getTransactionSummary(signal?: AbortSignal): Promise<TransactionSummaryResponse> {
@@ -76,12 +97,17 @@ export function listTransactions(
   type?: TransactionHistoryType,
   signal?: AbortSignal,
 ): Promise<TransactionsResponse> {
-  return api.get<TransactionsResponse>("/api/transactions", {
+  return api.get<{ items: (Omit<TransactionDto, "paymentMethod"> & { paymentMethod: PaymentMethod })[]; pageNumber: number; pageSize: number; totalCount: number; totalPages: number }>("/api/transactions", {
     query: { pageNumber, pageSize, search, type },
     signal,
-  })
+  }).then((response) => ({
+    ...response,
+    items: response.items.map(translateTransaction),
+  }))
 }
 
 export function createTransaction(payload: CreateTransactionPayload, signal?: AbortSignal): Promise<TransactionDto> {
-  return api.post<TransactionDto>("/api/transactions", payload, { signal })
+  return api
+    .post<Omit<TransactionDto, "paymentMethod"> & { paymentMethod: PaymentMethod }>("/api/transactions", payload, { signal })
+    .then(translateTransaction)
 }
