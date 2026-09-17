@@ -77,17 +77,17 @@ export interface TransactionSummaryResponse {
   totalIncomeTransactions: number
 }
 
+export type TransactionHistoryType = "ingreso" | "gasto" | "income" | "expense"
+
+export function getTransactionSummary(signal?: AbortSignal): Promise<TransactionSummaryResponse> {
+  return api.get<TransactionSummaryResponse>("/api/transactions/summary", { signal })
+}
+
 function translateTransaction(transaction: Omit<TransactionDto, "paymentMethod"> & { paymentMethod: PaymentMethod }) {
   return {
     ...transaction,
     paymentMethod: paymentMethodLabels[transaction.paymentMethod] ?? transaction.paymentMethod,
   }
-}
-
-export type TransactionHistoryType = "ingreso" | "gasto" | "income" | "expense"
-
-export function getTransactionSummary(signal?: AbortSignal): Promise<TransactionSummaryResponse> {
-  return api.get<TransactionSummaryResponse>("/api/transactions/summary", { signal })
 }
 
 export function listTransactions(
