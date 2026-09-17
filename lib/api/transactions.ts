@@ -92,7 +92,7 @@ function translateTransaction(transaction: Omit<TransactionDto, "paymentMethod">
 
 export function listTransactions(
   pageNumber = 1,
-  pageSize = 20,
+  pageSize = 10,
   search?: string,
   type?: TransactionHistoryType,
   signal?: AbortSignal,

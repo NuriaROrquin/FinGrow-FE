@@ -46,18 +46,15 @@ import {
   createTransaction,
   getTransactionSummary,
   listTransactions,
-  type TransactionDto,
   type TransactionSummaryResponse,
   type TransactionsResponse,
 } from "@/lib/api/transactions"
 import { AddTransactionForm } from "@/components/transactions/add-transaction-form"
 
-type Transaction = TransactionDto
-
 const emptyTransactionsResponse: TransactionsResponse = {
   items: [],
   pageNumber: 1,
-  pageSize: 20,
+  pageSize: 10,
   totalCount: 0,
   totalPages: 1,
 }
@@ -82,7 +79,7 @@ export default function TransactionsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [filterType, setFilterType] = useState("all")
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(3)
+  const [pageSize, setPageSize] = useState(10)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isOcrDialogOpen, setIsOcrDialogOpen] = useState(false)
   const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false)
@@ -119,6 +116,7 @@ export default function TransactionsPage() {
     getTransactionSummary()
       .then(setTransactionSummary)
       .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return
         toast({
           title: "No se pudo cargar el resumen",
           description: error instanceof Error ? error.message : "Intenta de nuevo en unos segundos.",
@@ -145,28 +143,26 @@ export default function TransactionsPage() {
     const search = searchQuery.trim()
     if (search.length > 0 && search.length < 3) return
 
-    const controller = new AbortController()
     const timeoutId = window.setTimeout(() => {
       setIsLoadingTransactions(true)
       const apiType = filterType === "Income" ? "ingreso" : filterType === "Expense" ? "gasto" : undefined
-      listTransactions(currentPage, pageSize, search || undefined, apiType, controller.signal)
+      listTransactions(currentPage, pageSize, search || undefined, apiType)
         .then(setTransactionsResponse)
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) return
-        toast({
-          title: "No se pudo cargar el listado",
-          description: error instanceof Error ? error.message : "Intenta de nuevo en unos segundos.",
-          variant: "destructive",
+        .catch((error: unknown) => {
+          if (error instanceof DOMException && error.name === "AbortError") return
+          toast({
+            title: "No se pudo cargar el listado",
+            description: error instanceof Error ? error.message : "Intenta de nuevo en unos segundos.",
+            variant: "destructive",
+          })
         })
-      })
         .finally(() => {
-          if (!controller.signal.aborted) setIsLoadingTransactions(false)
+          setIsLoadingTransactions(false)
         })
     }, 300)
 
     return () => {
       window.clearTimeout(timeoutId)
-      controller.abort()
     }
   }, [currentPage, filterType, isSummaryReady, pageSize, searchQuery, toast])
 
@@ -918,9 +914,9 @@ export default function TransactionsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="3">3 por página</SelectItem>
-                  <SelectItem value="6">6 por página</SelectItem>
+                  <SelectItem value="10">10 por página</SelectItem>
                   <SelectItem value="20">20 por página</SelectItem>
+                  <SelectItem value="30">30 por página</SelectItem>
                 </SelectContent>
               </Select>
               <Button
