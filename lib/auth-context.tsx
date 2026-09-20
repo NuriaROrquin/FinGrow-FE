@@ -1,44 +1,144 @@
 "use client"
 
-import { createContext, useContext, useState, type ReactNode } from "react"
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
-
-type UserRole = "empleado" | "empresa"
+import { getSession, loginEmpleado, loginEmpresa, logout as logoutRequest } from "@/lib/api/auth"
+import { setUnauthorizedHandler } from "@/lib/api/client"
+import { clearSession as clearStoredSession, saveSession } from "@/lib/api/session"
+import { isSessionActive, toSessionUser } from "@/lib/auth/session-user"
+import type { SessionUser, UserRole } from "@/lib/auth/types"
 
 interface AuthContextType {
   role: UserRole
-  setRole: (role: UserRole) => void
+  companyId: string | null
   userName: string
-  setUserName: (name: string) => void
   isAuthenticated: boolean
-  login: (role: UserRole, name: string) => void
-  logout: () => void
+  isHydrated: boolean
+  login: (email: string, password: string, role?: UserRole) => Promise<void>
+  logout: () => Promise<void>
+}
+
+interface AuthState {
+  role: UserRole
+  companyId: string | null
+  userName: string
+  isAuthenticated: boolean
+  expiresAt: number | null
+}
+
+const unauthenticatedState: AuthState = {
+  role: "empleado",
+  companyId: null,
+  userName: "Usuario",
+  isAuthenticated: false,
+  expiresAt: null,
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [role, setRole] = useState<UserRole>("empleado")
-  const [userName, setUserName] = useState("Usuario")
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [authState, setAuthState] = useState<AuthState>(unauthenticatedState)
+  const [isHydrated, setIsHydrated] = useState(false)
   const router = useRouter()
+  const { role, companyId, userName, isAuthenticated, expiresAt } = authState
 
-  const login = (userRole: UserRole, name: string) => {
-    setRole(userRole)
-    setUserName(name)
-    setIsAuthenticated(true)
+  useEffect(() => {
+    let cancelled = false
+
+    getSession()
+      .then((session) => {
+        const user = toSessionUser(session)
+        if (cancelled) return
+
+        if (user && isSessionActive(user)) {
+          saveSession(user.role)
+          setAuthState(createAuthenticatedState(user))
+        } else {
+          clearStoredSession()
+        }
+      })
+      .catch(() => {
+        if (!cancelled) clearStoredSession()
+      })
+      .finally(() => {
+        if (!cancelled) setIsHydrated(true)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const login = async (email: string, password: string, role: UserRole = "empleado") => {
+    const session = role === "empresa" ? await loginEmpresa({ email, password }) : await loginEmpleado({ email, password })
+    const user = toSessionUser(session)
+
+    if (!user || !isSessionActive(user)) {
+      throw new Error("La sesión recibida no es válida")
+    }
+
+    saveSession(user.role)
+    setAuthState(createAuthenticatedState(user))
   }
 
-  const logout = () => {
-    setIsAuthenticated(false)
-    router.push("/")
+  const clearSession = useCallback(() => {
+    clearStoredSession()
+    setAuthState(unauthenticatedState)
+    router.replace("/")
+  }, [router])
+
+  const logout = async () => {
+    try {
+      await logoutRequest()
+    } finally {
+      clearSession()
+    }
   }
+
+  useEffect(() => {
+    setUnauthorizedHandler(clearSession)
+  }, [clearSession])
+
+  useEffect(() => {
+    if (!isAuthenticated || expiresAt === null) return
+
+    const remainingTime = expiresAt - Date.now()
+
+    if (remainingTime <= 0) {
+      clearSession()
+      return
+    }
+
+    const timeoutId = window.setTimeout(clearSession, remainingTime)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [isAuthenticated, expiresAt, clearSession])
 
   return (
-    <AuthContext.Provider value={{ role, setRole, userName, setUserName, isAuthenticated, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        role,
+        companyId,
+        userName,
+        isAuthenticated,
+        isHydrated,
+        login,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )
+}
+
+function createAuthenticatedState(user: SessionUser): AuthState {
+  return {
+    role: user.role,
+    companyId: user.companyId,
+    userName: user.fullName || user.userId,
+    isAuthenticated: true,
+    expiresAt: user.expiresAt,
+  }
 }
 
 export function useAuth() {

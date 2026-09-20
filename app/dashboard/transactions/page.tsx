@@ -4,12 +4,12 @@ import type React from "react"
 
 import { useState, useRef, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
+import Image from "next/image"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Dialog,
   DialogContent,
@@ -29,7 +29,6 @@ import {
   ArrowUpIcon,
   ArrowDownIcon,
   CreditCardIcon,
-  WalletIcon,
   ScanLine,
   Send,
   Upload,
@@ -38,119 +37,96 @@ import {
   Sparkles,
   MessageSquare,
   Video,
-  Mail,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
+import {
+  createTransaction,
+  getTransactionSummary,
+  listTransactions,
+  type TransactionSummaryResponse,
+  type TransactionsResponse,
+} from "@/lib/api/transactions"
+import { AddTransactionForm } from "@/components/transactions/add-transaction-form"
 
-const mockTransactions = [
-  {
-    id: 1,
-    type: "expense",
-    category: "Comida",
-    description: "Supermercado",
-    amount: 8500.5,
-    date: "2025-01-19",
-    paymentMethod: "Tarjeta de Crédito",
-    source: "Manual",
-  },
-  {
-    id: 2,
-    type: "income",
-    category: "Salario",
-    description: "Salario Mensual",
-    amount: 550000.0,
-    date: "2025-01-18",
-    paymentMethod: "Transferencia Bancaria",
-    source: "Manual",
-  },
-  {
-    id: 3,
-    type: "expense",
-    category: "Servicios",
-    description: "Factura de Luz",
-    amount: 12000.0,
-    date: "2025-01-17",
-    paymentMethod: "Débito Automático",
-    source: "Gmail",
-  },
-  {
-    id: 4,
-    type: "expense",
-    category: "Comida",
-    description: "Cena en Restaurante",
-    amount: 4500.0,
-    date: "2025-01-16",
-    paymentMethod: "Tarjeta de Crédito",
-    source: "Telegram",
-  },
-  {
-    id: 5,
-    type: "expense",
-    category: "Transporte",
-    description: "Nafta",
-    amount: 6000.0,
-    date: "2025-01-15",
-    paymentMethod: "Tarjeta de Débito",
-    source: "OCR",
-  },
-  {
-    id: 6,
-    type: "income",
-    category: "Freelance",
-    description: "Proyecto de Diseño Web",
-    amount: 80000.0,
-    date: "2025-01-14",
-    paymentMethod: "PayPal",
-    source: "Telegram",
-  },
-  {
-    id: 7,
-    type: "expense",
-    category: "Entretenimiento",
-    description: "Entradas de Cine",
-    amount: 3000.0,
-    date: "2025-01-13",
-    paymentMethod: "Tarjeta de Crédito",
-    source: "Manual",
-  },
-  {
-    id: 8,
-    type: "expense",
-    category: "Servicios",
-    description: "Factura de Internet",
-    amount: 8000.0,
-    date: "2025-01-12",
-    paymentMethod: "Débito Automático",
-    source: "Gmail",
-  },
-]
+const emptyTransactionsResponse: TransactionsResponse = {
+  items: [],
+  pageNumber: 1,
+  pageSize: 10,
+  totalCount: 0,
+  totalPages: 1,
+}
+
+const emptyTransactionSummary: TransactionSummaryResponse = {
+  totalExpenseArs: 0,
+  totalExpenseUsd: 0,
+  totalIncomeArs: 0,
+  totalIncomeUsd: 0,
+  totalTransactions: 0,
+  totalExpenseTransactions: 0,
+  totalIncomeTransactions: 0,
+}
 
 export default function TransactionsPage() {
   const searchParams = useSearchParams()
+  const [transactionsResponse, setTransactionsResponse] = useState(emptyTransactionsResponse)
+  const [transactionSummary, setTransactionSummary] = useState(emptyTransactionSummary)
+  const [summaryRefreshKey, setSummaryRefreshKey] = useState(0)
+  const [isSummaryReady, setIsSummaryReady] = useState(false)
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [filterType, setFilterType] = useState("all")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isOcrDialogOpen, setIsOcrDialogOpen] = useState(false)
   const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false)
   const [ocrImage, setOcrImage] = useState<string | null>(null)
   const [ocrProcessing, setOcrProcessing] = useState(false)
-  const [ocrResult, setOcrResult] = useState<any>(null)
+  const [ocrResult, setOcrResult] = useState<{
+    amount: number
+    description: string
+    category: string
+    date: string
+    confidence: number
+  } | null>(null)
   const [telegramMessage, setTelegramMessage] = useState("")
   const [telegramProcessing, setTelegramProcessing] = useState(false)
-  const [telegramResult, setTelegramResult] = useState<any>(null)
+  const [telegramResult, setTelegramResult] = useState<{
+    type: "income" | "expense"
+    amount: number
+    description: string
+    category: string
+    date: string
+  } | null>(null)
   const [useCameraMode, setUseCameraMode] = useState(false)
   const [stream, setStream] = useState<MediaStream | null>(null)
-  const [mounted, setMounted] = useState(false)
+  const summaryRequestKey = useRef<number | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const { toast } = useToast()
 
-  // Evitar hidratación incorrecta
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    if (summaryRequestKey.current === summaryRefreshKey) return
+    summaryRequestKey.current = summaryRefreshKey
+
+    getTransactionSummary()
+      .then(setTransactionSummary)
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return
+        toast({
+          title: "No se pudo cargar el resumen",
+          description: error instanceof Error ? error.message : "Intenta de nuevo en unos segundos.",
+          variant: "destructive",
+        })
+      })
+      .finally(() => {
+        setIsSummaryReady(true)
+      })
+  }, [summaryRefreshKey, toast])
 
   // Detectar parámetro mode=ocr en la URL
   useEffect(() => {
@@ -159,6 +135,36 @@ export default function TransactionsPage() {
       setIsOcrDialogOpen(true)
     }
   }, [searchParams])
+
+  // Carga el listado real desde la API 
+  useEffect(() => {
+    if (!isSummaryReady) return
+
+    const search = searchQuery.trim()
+    if (search.length > 0 && search.length < 3) return
+
+    const timeoutId = window.setTimeout(() => {
+      setIsLoadingTransactions(true)
+      const apiType = filterType === "Income" ? "ingreso" : filterType === "Expense" ? "gasto" : undefined
+      listTransactions(currentPage, pageSize, search || undefined, apiType)
+        .then(setTransactionsResponse)
+        .catch((error: unknown) => {
+          if (error instanceof DOMException && error.name === "AbortError") return
+          toast({
+            title: "No se pudo cargar el listado",
+            description: error instanceof Error ? error.message : "Intenta de nuevo en unos segundos.",
+            variant: "destructive",
+          })
+        })
+        .finally(() => {
+          setIsLoadingTransactions(false)
+        })
+    }, 300)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [currentPage, filterType, isSummaryReady, pageSize, searchQuery, toast])
 
   // Limpiar stream de cámara al cerrar modal
   useEffect(() => {
@@ -171,21 +177,32 @@ export default function TransactionsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOcrDialogOpen])
 
-  const filteredTransactions = mockTransactions.filter((transaction) => {
-    const matchesSearch =
-      transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.category.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesType = filterType === "all" || transaction.type === filterType
-    return matchesSearch && matchesType
-  })
+  const transactions = transactionsResponse.items
+  const filteredTransactions = transactions
 
-  const totalIncome = mockTransactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0)
-  const totalExpense = mockTransactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0)
+  const totalIncome = {
+    ARS: transactionSummary.totalIncomeArs,
+    USD: transactionSummary.totalIncomeUsd,
+  }
+  const totalExpense = {
+    ARS: transactionSummary.totalExpenseArs,
+    USD: transactionSummary.totalExpenseUsd,
+  }
+  const balanceByCurrency = {
+    ARS: totalIncome.ARS - totalExpense.ARS,
+    USD: totalIncome.USD - totalExpense.USD,
+  }
 
   // Función de formateo consistente
-  const formatCurrency = (amount: number) => {
-    return `$${amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`
-  }
+  const formatCurrency = (amount: number, currency: string) =>
+    `${currency === "USD" ? "US$" : "$"}${amount.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`
+
+  const renderCurrencyTotals = (totals: Record<string, number>) => (
+    <div className="space-y-1">
+      <div>{formatCurrency(totals.ARS ?? 0, "ARS")}</div>
+      <div className="text-base text-muted-foreground">{formatCurrency(totals.USD ?? 0, "USD")}</div>
+    </div>
+  )
 
   const handleExportCSV = () => {
     // Crear encabezados del CSV
@@ -193,9 +210,9 @@ export default function TransactionsPage() {
 
     // Crear filas de datos
     const rows = filteredTransactions.map((transaction) => {
-      const date = new Date(transaction.date).toLocaleDateString("es-ES")
-      const type = transaction.type === "income" ? "Ingreso" : "Gasto"
-      const amount = transaction.type === "income" ? `+${transaction.amount.toFixed(2)}` : `-${transaction.amount.toFixed(2)}`
+      const date = new Date(transaction.occurredOn).toLocaleDateString("es-ES")
+      const type = transaction.type === "Income" ? "Ingreso" : "Gasto"
+      const amount = transaction.type === "Income" ? `+${transaction.amount.toFixed(2)}` : `-${transaction.amount.toFixed(2)}`
 
       return [date, transaction.description, transaction.category, transaction.paymentMethod, type, transaction.source, amount]
     })
@@ -460,7 +477,7 @@ export default function TransactionsPage() {
                   <div className="space-y-4">
                     {ocrImage && (
                       <div className="relative rounded-lg overflow-hidden border">
-                        <img src={ocrImage} alt="Ticket" className="w-full max-h-[300px] object-contain" />
+                        <Image src={ocrImage} alt="Ticket" width={600} height={300} className="w-full max-h-[300px] object-contain" />
                       </div>
                     )}
 
@@ -585,7 +602,7 @@ export default function TransactionsPage() {
                     rows={4}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Ejemplos: "Pagué $500 en supermercado", "Ingreso de $10000 por freelance"
+                    Ejemplos: &quot;Pagué $500 en supermercado&quot;, &quot;Ingreso de $10000 por freelance&quot;
                   </p>
                 </div>
 
@@ -698,7 +715,22 @@ export default function TransactionsPage() {
                 <DialogTitle>Agregar Nueva Transacción</DialogTitle>
                 <DialogDescription>Registra un nuevo ingreso o gasto</DialogDescription>
               </DialogHeader>
-              <AddTransactionForm onClose={() => setIsAddDialogOpen(false)} />
+              <AddTransactionForm
+                onAdd={async (payload) => {
+                  const created = await createTransaction(payload)
+                  setTransactionsResponse((previous) => ({
+                    ...previous,
+                    items: [created, ...previous.items].slice(0, pageSize),
+                    totalCount: previous.totalCount + 1,
+                  }))
+                  setSummaryRefreshKey((key) => key + 1)
+                  toast({
+                    title: "Transacción guardada",
+                    description: "La transacción ha sido agregada exitosamente",
+                  })
+                }}
+                onClose={() => setIsAddDialogOpen(false)}
+              />
             </DialogContent>
           </Dialog>
         </div>
@@ -708,12 +740,12 @@ export default function TransactionsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total Ingresos</CardDescription>
-            <CardTitle className="text-2xl text-success">{formatCurrency(totalIncome)}</CardTitle>
+            <CardTitle className="space-y-1 text-2xl text-success">{renderCurrencyTotals(totalIncome)}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
               <ArrowUpIcon className="size-4" />
-              <span>{mockTransactions.filter((t) => t.type === "income").length} transacciones</span>
+              <span>{transactionSummary.totalIncomeTransactions} ingresos</span>
             </div>
           </CardContent>
         </Card>
@@ -721,12 +753,12 @@ export default function TransactionsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total Gastos</CardDescription>
-            <CardTitle className="text-2xl">{formatCurrency(totalExpense)}</CardTitle>
+            <CardTitle className="space-y-1 text-2xl">{renderCurrencyTotals(totalExpense)}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
               <ArrowDownIcon className="size-4" />
-              <span>{mockTransactions.filter((t) => t.type === "expense").length} transacciones</span>
+              <span>{transactionSummary.totalExpenseTransactions} gastos</span>
             </div>
           </CardContent>
         </Card>
@@ -734,12 +766,12 @@ export default function TransactionsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Balance Neto</CardDescription>
-            <CardTitle className="text-2xl text-success">{formatCurrency(totalIncome - totalExpense)}</CardTitle>
+            <CardTitle className="space-y-1 text-2xl text-success">{renderCurrencyTotals(balanceByCurrency)}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <WalletIcon className="size-4" />
-              <span>Período actual</span>
+              <ArrowUpIcon className="size-4" />
+              <span>{transactionSummary.totalTransactions} transacciones totales</span>
             </div>
           </CardContent>
         </Card>
@@ -754,19 +786,25 @@ export default function TransactionsPage() {
                 <Input
                   placeholder="Buscar transacciones..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value)
+                    setCurrentPage(1)
+                  }}
                   className="pl-9"
                 />
               </div>
-              <Select value={filterType} onValueChange={setFilterType}>
+              <Select value={filterType} onValueChange={(value) => {
+                setFilterType(value)
+                setCurrentPage(1)
+              }}>
                 <SelectTrigger className="w-[150px]">
                   <FilterIcon className="size-4 mr-2" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos los Tipos</SelectItem>
-                  <SelectItem value="income">Ingresos</SelectItem>
-                  <SelectItem value="expense">Gastos</SelectItem>
+                  <SelectItem value="Income">Ingresos</SelectItem>
+                  <SelectItem value="Expense">Gastos</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -797,10 +835,23 @@ export default function TransactionsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTransactions.map((transaction) => (
+              {isLoadingTransactions ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    Cargando movimientos...
+                  </TableCell>
+                </TableRow>
+              ) : filteredTransactions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    Todavia no cargaste ningun movimiento.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredTransactions.map((transaction) => (
                 <TableRow key={transaction.id}>
                   <TableCell className="font-medium">
-                    {new Date(transaction.date).toLocaleDateString("es-ES", {
+                    {new Date(transaction.occurredOn).toLocaleDateString("es-ES", {
                       month: "short",
                       day: "numeric",
                       year: "numeric",
@@ -810,10 +861,10 @@ export default function TransactionsPage() {
                     <div className="flex items-center gap-2">
                       <div
                         className={`flex size-8 items-center justify-center rounded-full ${
-                          transaction.type === "income" ? "bg-success/10 text-success" : "bg-muted"
+                          transaction.type === "Income" ? "bg-success/10 text-success" : "bg-muted"
                         }`}
                       >
-                        {transaction.type === "income" ? (
+                        {transaction.type === "Income" ? (
                           <ArrowUpIcon className="size-4" />
                         ) : (
                           <CreditCardIcon className="size-4" />
@@ -825,112 +876,74 @@ export default function TransactionsPage() {
                   <TableCell>{transaction.category}</TableCell>
                   <TableCell className="text-muted-foreground">{transaction.paymentMethod}</TableCell>
                   <TableCell>
-                    <Badge variant={transaction.type === "income" ? "default" : "secondary"}>
-                      {transaction.type === "income" ? "Ingreso" : "Gasto"}
+                    <Badge variant={transaction.type === "Income" ? "default" : "secondary"}>
+                      {transaction.type === "Income" ? "Ingreso" : "Gasto"}
                     </Badge>
                   </TableCell>
                   <TableCell>{transaction.source}</TableCell>
                   <TableCell className="text-right">
                     <span
-                      className={`font-semibold ${transaction.type === "income" ? "text-success" : "text-foreground"}`}
+                      className={`font-semibold ${transaction.type === "Income" ? "text-success" : "text-foreground"}`}
                     >
-                      {transaction.type === "income" ? "+" : "-"}${transaction.amount.toFixed(2)}
+                      {transaction.type === "Income" ? "+" : "-"}${transaction.amount.toFixed(2)}{" "}
+                      {transaction.currency}
                     </span>
                   </TableCell>
                 </TableRow>
-              ))}
+                ))
+              )}
             </TableBody>
           </Table>
+          <div className="mt-4 flex flex-col gap-3 border-t pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-1">
+              <span className="font-medium text-foreground">
+                {transactionsResponse.totalCount} transacciones
+              </span>
+              <span>
+              {transactionsResponse.totalCount === 0
+                ? "0 transacciones"
+                : `Mostrando ${(transactionsResponse.pageNumber - 1) * pageSize + 1}-${Math.min(transactionsResponse.pageNumber * pageSize, transactionsResponse.totalCount)} de ${transactionsResponse.totalCount}`}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={String(pageSize)} onValueChange={(value) => {
+                setPageSize(Number(value))
+                setCurrentPage(1)
+              }}>
+                <SelectTrigger className="h-9 w-[130px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10 por página</SelectItem>
+                  <SelectItem value="20">20 por página</SelectItem>
+                  <SelectItem value="30">30 por página</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Página anterior"
+                disabled={transactionsResponse.pageNumber <= 1}
+                onClick={() => setCurrentPage((page) => page - 1)}
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <span className="min-w-[84px] text-center">
+                Página {transactionsResponse.pageNumber} de {transactionsResponse.totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Página siguiente"
+                disabled={transactionsResponse.pageNumber >= transactionsResponse.totalPages}
+                onClick={() => setCurrentPage((page) => page + 1)}
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
-  )
-}
-
-function AddTransactionForm({ onClose }: { onClose: () => void }) {
-  const [transactionType, setTransactionType] = useState("expense")
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onClose()
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <Tabs value={transactionType} onValueChange={setTransactionType}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="expense">Gasto</TabsTrigger>
-          <TabsTrigger value="income">Ingreso</TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      <div className="space-y-2">
-        <Label htmlFor="amount">Monto</Label>
-        <Input id="amount" type="number" placeholder="0.00" step="0.01" required />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="description">Descripción</Label>
-        <Input id="description" placeholder="Ingresa descripción" required />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="category">Categoría</Label>
-        <Select>
-          <SelectTrigger id="category">
-            <SelectValue placeholder="Selecciona categoría" />
-          </SelectTrigger>
-          <SelectContent>
-            {transactionType === "expense" ? (
-              <>
-                <SelectItem value="food">Comida y Restaurantes</SelectItem>
-                <SelectItem value="transport">Transporte</SelectItem>
-                <SelectItem value="bills">Servicios y Facturas</SelectItem>
-                <SelectItem value="entertainment">Entretenimiento</SelectItem>
-                <SelectItem value="shopping">Compras</SelectItem>
-                <SelectItem value="health">Salud</SelectItem>
-                <SelectItem value="other">Otros</SelectItem>
-              </>
-            ) : (
-              <>
-                <SelectItem value="salary">Salario</SelectItem>
-                <SelectItem value="freelance">Freelance</SelectItem>
-                <SelectItem value="investment">Inversión</SelectItem>
-                <SelectItem value="gift">Regalo</SelectItem>
-                <SelectItem value="other">Otros</SelectItem>
-              </>
-            )}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="date">Fecha</Label>
-        <Input id="date" type="date" required />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="payment">Método de Pago</Label>
-        <Select>
-          <SelectTrigger id="payment">
-            <SelectValue placeholder="Selecciona método de pago" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="cash">Efectivo</SelectItem>
-            <SelectItem value="credit">Tarjeta de Crédito</SelectItem>
-            <SelectItem value="debit">Tarjeta de Débito</SelectItem>
-            <SelectItem value="bank">Transferencia Bancaria</SelectItem>
-            <SelectItem value="digital">Billetera Digital</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex gap-2 justify-end pt-4">
-        <Button type="button" variant="outline" onClick={onClose}>
-          Cancelar
-        </Button>
-        <Button type="submit">Agregar Transacción</Button>
-      </div>
-    </form>
   )
 }

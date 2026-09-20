@@ -253,7 +253,9 @@ export default function InvestmentsPage() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ nombre, percent }: any) => `${nombre} ${(percent * 100).toFixed(0)}%`}
+                      label={({ nombre, percent }: { nombre?: string; percent?: number }) =>
+                        `${nombre} ${((percent ?? 0) * 100).toFixed(0)}%`
+                      }
                       outerRadius={90}
                       fill="#8884d8"
                       dataKey="valor"

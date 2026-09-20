@@ -25,8 +25,10 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useToast } from "@/hooks/use-toast"
+import { createTransaction, listTransactions, type TransactionDto } from "@/lib/api/transactions"
+import { AddTransactionForm } from "@/components/transactions/add-transaction-form"
 
 const monthlySpendingData = [
   { month: "Ene", amount: 240000 },
@@ -94,8 +96,50 @@ const categoryChartConfig = {
 
 export default function DashboardPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [openTransaction, setOpenTransaction] = useState(false)
   const [openSavings, setOpenSavings] = useState(false)
+  const [recentTransactions, setRecentTransactions] = useState<TransactionDto[]>([])
+  const [recentTransactionsRefreshKey, setRecentTransactionsRefreshKey] = useState(0)
+
+  const refreshRecentTransactions = () => setRecentTransactionsRefreshKey((current) => current + 1)
+
+  useEffect(() => {
+    listTransactions(1, 5)
+      .then((response) => {
+        setRecentTransactions(response.items.slice(0, 5))
+      })
+      .catch((error: unknown) => {
+        toast({
+          title: "No se pudo cargar las transacciones recientes",
+          description: error instanceof Error ? error.message : "Intenta de nuevo en unos segundos.",
+          variant: "destructive",
+        })
+      })
+  }, [recentTransactionsRefreshKey, toast])
+
+  const formatRelativeDate = (value: string) => {
+    const transactionDate = new Date(value)
+    if (Number.isNaN(transactionDate.getTime())) return "Fecha inválida"
+
+    const today = new Date()
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+    const startOfTransactionDate = new Date(
+      transactionDate.getFullYear(),
+      transactionDate.getMonth(),
+      transactionDate.getDate(),
+    )
+
+    const diffInDays = Math.round(
+      (startOfToday.getTime() - startOfTransactionDate.getTime()) / (1000 * 60 * 60 * 24),
+    )
+
+    if (diffInDays === 0) return "Hoy"
+    if (diffInDays === 1) return "Ayer"
+    if (diffInDays > 1) return `Hace ${diffInDays} días`
+
+    return `En ${Math.abs(diffInDays)} días`
+  }
 
   return (
     <div className="space-y-6">
@@ -177,46 +221,17 @@ export default function DashboardPage() {
                   <DialogTitle>Nueva Transacción</DialogTitle>
                   <DialogDescription>Registra un nuevo ingreso o gasto</DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="type">Tipo</Label>
-                    <Select>
-                      <SelectTrigger id="type">
-                        <SelectValue placeholder="Seleccionar tipo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="income">Ingreso</SelectItem>
-                        <SelectItem value="expense">Gasto</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="amount">Monto</Label>
-                    <Input id="amount" type="number" placeholder="0.00" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Descripción</Label>
-                    <Input id="description" placeholder="Ej: Supermercado" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="category">Categoría</Label>
-                    <Select>
-                      <SelectTrigger id="category">
-                        <SelectValue placeholder="Seleccionar categoría" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="food">Comida</SelectItem>
-                        <SelectItem value="transport">Transporte</SelectItem>
-                        <SelectItem value="entertainment">Entretenimiento</SelectItem>
-                        <SelectItem value="services">Servicios</SelectItem>
-                        <SelectItem value="other">Otros</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button className="w-full" onClick={() => setOpenTransaction(false)}>
-                    Guardar Transacción
-                  </Button>
-                </div>
+                <AddTransactionForm
+                  onAdd={async (payload) => {
+                    await createTransaction(payload)
+                    refreshRecentTransactions()
+                    toast({
+                      title: "Transacción guardada",
+                      description: "La transacción ha sido agregada exitosamente",
+                    })
+                  }}
+                  onClose={() => setOpenTransaction(false)}
+                />
               </DialogContent>
             </Dialog>
 
@@ -356,7 +371,9 @@ export default function DashboardPage() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }: { name?: string; percent?: number }) =>
+                        `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
+                      }
                       outerRadius={100}
                       fill="#8884d8"
                       dataKey="value"
@@ -394,38 +411,35 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {[
-              { name: "Supermercado", amount: -8500.5, date: "Hoy", category: "Comida", icon: CreditCardIcon },
-              { name: "Depósito de Salario", amount: 550000.0, date: "Ayer", category: "Ingresos", icon: ArrowUpIcon },
-              {
-                name: "Factura de Luz",
-                amount: -12000.0,
-                date: "Hace 2 días",
-                category: "Servicios",
-                icon: CreditCardIcon,
-              },
-              { name: "Restaurante", amount: -4500.0, date: "Hace 3 días", category: "Comida", icon: CreditCardIcon },
-              { name: "Nafta", amount: -6000.0, date: "Hace 4 días", category: "Transporte", icon: CreditCardIcon },
-            ].map((transaction, index) => (
-              <div key={index} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`flex size-10 items-center justify-center rounded-full ${transaction.amount > 0 ? "bg-success/10 text-success" : "bg-muted"}`}
-                  >
-                    <transaction.icon className="size-5" />
+            {recentTransactions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No hay transacciones recientes.</p>
+            ) : (
+              recentTransactions.map((transaction) => {
+                const isIncome = transaction.type === "Income"
+                const transactionDate = formatRelativeDate(transaction.occurredOn)
+
+                return (
+                  <div key={transaction.id} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`flex size-10 items-center justify-center rounded-full ${isIncome ? "bg-success/10 text-success" : "bg-muted"}`}
+                      >
+                        {isIncome ? <ArrowUpIcon className="size-5" /> : <CreditCardIcon className="size-5" />}
+                      </div>
+                      <div>
+                        <p className="font-medium">{transaction.description}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {transactionDate} • {transaction.category}
+                        </p>
+                      </div>
+                    </div>
+                    <span className={`font-semibold ${isIncome ? "text-success" : "text-foreground"}`}>
+                      {isIncome ? "+" : "-"}${Math.abs(transaction.amount).toFixed(2)} {transaction.currency}
+                    </span>
                   </div>
-                  <div>
-                    <p className="font-medium">{transaction.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {transaction.date} • {transaction.category}
-                    </p>
-                  </div>
-                </div>
-                <span className={`font-semibold ${transaction.amount > 0 ? "text-success" : "text-foreground"}`}>
-                  {transaction.amount > 0 ? "+" : ""}${Math.abs(transaction.amount).toFixed(2)}
-                </span>
-              </div>
-            ))}
+                )
+              })
+            )}
           </div>
         </CardContent>
       </Card>

@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/lib/auth-context"
+import { toastApiError } from "@/lib/api"
 
 export default function EmpresaLoginPage() {
   const router = useRouter()
@@ -21,16 +22,17 @@ export default function EmpresaLoginPage() {
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+    e.preventDefault();
+    setIsLoading(true);
 
-    // Simular autenticación
-    setTimeout(() => {
-      const companyName = email.split('@')[1]?.split('.')[0] || "Empresa"
-      login("empresa", companyName.charAt(0).toUpperCase() + companyName.slice(1))
-      setIsLoading(false)
-      router.push("/dashboard/company")
-    }, 1000)
+    try {
+      await login(email, password, "empresa");
+      router.push("/dashboard/company");
+    } catch (error) {
+      toastApiError(error, error instanceof Error ? error.message : "Intentá nuevamente.")
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
