@@ -18,11 +18,11 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { PlusIcon, TrendingUpIcon, AlertCircleIcon, CheckCircleIcon, PiggyBankIcon, HandCoinsIcon } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { PlusIcon, TrendingUpIcon, AlertCircleIcon, CheckCircleIcon, PiggyBankIcon, TrophyIcon } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { GoalContributionsDialog } from "@/components/goals/goal-contributions-dialog"
+import { AchievedGoalCard, InProgressGoalCard } from "@/components/goals/goal-cards"
 import { createGoal, GOAL_NAME_MAX_LENGTH, listGoals, toastApiError, type GoalDto } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
 
@@ -83,23 +83,6 @@ function todayLocal(): string {
   return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10)
 }
 
-function formatDeadline(deadline: string): string {
-  return new Date(`${deadline}T00:00:00`).toLocaleDateString("es-AR", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  })
-}
-
-function describeTimeLeft(goal: GoalDto, deadlineLabel: string): string {
-  if (goal.status === "Achieved") return `Meta alcanzada · límite ${deadlineLabel}`
-  if (goal.status === "Cancelled") return "Meta cancelada"
-  if (goal.isOverdue) return `Vencida el ${deadlineLabel}`
-  if (goal.daysRemaining === 0) return `Vence hoy · ${deadlineLabel}`
-  if (goal.daysRemaining === 1) return `1 día restante · ${deadlineLabel}`
-  return `${goal.daysRemaining} días restantes · ${deadlineLabel}`
-}
-
 export default function BudgetsPage() {
   const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false)
   const [isSavingsDialogOpen, setIsSavingsDialogOpen] = useState(false)
@@ -107,6 +90,10 @@ export default function BudgetsPage() {
   const [isLoadingGoals, setIsLoadingGoals] = useState(true)
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null)
   const selectedGoal = savingsGoals.find((goal) => goal.id === selectedGoalId) ?? null
+  const goalsInProgress = savingsGoals.filter((goal) => goal.status === "Active")
+  const achievedGoals = savingsGoals
+    .filter((goal) => goal.status === "Achieved")
+    .sort((a, b) => (b.achievedAt ?? "").localeCompare(a.achievedAt ?? ""))
 
   useEffect(() => {
     const controller = new AbortController()
@@ -175,7 +162,7 @@ export default function BudgetsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Metas de Ahorro</CardDescription>
-            <CardTitle className="text-2xl">{savingsGoals.filter((g) => g.status === "Active").length}</CardTitle>
+            <CardTitle className="text-2xl">{goalsInProgress.length}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">Metas activas</p>
@@ -296,56 +283,45 @@ export default function BudgetsPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {savingsGoals.map((goal) => {
-                const deadlineLabel = formatDeadline(goal.deadline)
+            <div className="space-y-6">
+              <section className="space-y-3">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  En curso ({goalsInProgress.length})
+                </h3>
+                {goalsInProgress.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No tenés metas en curso. Creá una nueva con &quot;Agregar Meta&quot;.
+                  </p>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {goalsInProgress.map((goal) => (
+                      <InProgressGoalCard
+                        key={goal.id}
+                        goal={goal}
+                        onOpenContributions={() => setSelectedGoalId(goal.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
 
-                return (
-                  <Card key={goal.id} className={goal.isOverdue ? "border-destructive/50" : undefined}>
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="text-3xl">🎯</div>
-                          <div>
-                            <CardTitle className="text-lg">{goal.name}</CardTitle>
-                            <CardDescription className={goal.isOverdue ? "text-destructive" : undefined}>
-                              {describeTimeLeft(goal, deadlineLabel)}
-                            </CardDescription>
-                          </div>
-                        </div>
-                        {goal.status === "Achieved" ? (
-                          <Badge className="bg-success text-white">Completado</Badge>
-                        ) : goal.isOverdue ? (
-                          <Badge variant="destructive">Vencida</Badge>
-                        ) : (
-                          <Badge variant="outline">{goal.progressPercentage.toFixed(0)}%</Badge>
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-2xl font-bold text-success">${goal.currentAmount.toLocaleString()}</span>
-                        <span className="text-sm text-muted-foreground">
-                          de ${goal.targetAmount.toLocaleString()} {goal.currency}
-                        </span>
-                      </div>
-                      <Progress value={goal.progressPercentage} className="h-2" />
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          {goal.remainingAmount > 0
-                            ? `$${goal.remainingAmount.toLocaleString()} pendiente`
-                            : "Objetivo cubierto"}
-                        </span>
-                        <span className="font-medium">{goal.progressPercentage.toFixed(1)}% alcanzado</span>
-                      </div>
-                      <Button variant="outline" className="w-full" onClick={() => setSelectedGoalId(goal.id)}>
-                        <HandCoinsIcon className="size-4" />
-                        {goal.status === "Active" ? "Registrar aporte" : "Ver aportes"}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )
-              })}
+              {achievedGoals.length > 0 && (
+                <section className="space-y-3">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-success">
+                    <TrophyIcon className="size-4" />
+                    Alcanzadas ({achievedGoals.length})
+                  </h3>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {achievedGoals.map((goal) => (
+                      <AchievedGoalCard
+                        key={goal.id}
+                        goal={goal}
+                        onOpenContributions={() => setSelectedGoalId(goal.id)}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
             </div>
           )}
 

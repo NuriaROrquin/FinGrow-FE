@@ -19,6 +19,7 @@ export interface GoalDto {
   daysRemaining: number
   isOverdue: boolean
   status: GoalStatus
+  achievedAt: string | null
   createdAt: string
 }
 
