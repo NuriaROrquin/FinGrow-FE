@@ -22,6 +22,13 @@ export { clearSession, getRole, loginPathForCurrentRole, saveSession, type Sessi
 export { getSession, loginEmpleado, loginEmpresa, logout, type LoginRequest, type SessionResponse } from "./auth"
 export { getApiBaseUrl } from "./config"
 export {
+  createGoal,
+  GOAL_NAME_MAX_LENGTH,
+  type CreateGoalPayload,
+  type GoalDto,
+  type GoalStatus,
+} from "./goals"
+export {
   getIntegration,
   NOT_LINKED,
   requestLinkCode,
