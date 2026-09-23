@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -18,10 +18,12 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { PlusIcon, TrendingUpIcon, AlertCircleIcon, CheckCircleIcon, PiggyBankIcon } from "lucide-react"
+import { PlusIcon, TrendingUpIcon, AlertCircleIcon, CheckCircleIcon, PiggyBankIcon, HandCoinsIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { createGoal, GOAL_NAME_MAX_LENGTH, toastApiError, type GoalDto } from "@/lib/api"
+import { GoalContributionsDialog } from "@/components/goals/goal-contributions-dialog"
+import { createGoal, GOAL_NAME_MAX_LENGTH, listGoals, toastApiError, type GoalDto } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
 
 const mockBudgets = [
@@ -68,59 +70,6 @@ const mockBudgets = [
 ]
 
 
-type SavingsGoal = GoalDto & { icon?: string }
-
-const mockSavingsGoals: SavingsGoal[] = [
-  {
-    id: "mock-1",
-    name: "Fondo de Emergencia",
-    targetAmount: 1000000,
-    currentAmount: 650000,
-    currency: "ARS",
-    progressPercentage: 65,
-    deadline: "2025-12-31",
-    status: "Active",
-    createdAt: "2025-01-01T00:00:00Z",
-    icon: "🏥",
-  },
-  {
-    id: "mock-2",
-    name: "Vacaciones en Europa",
-    targetAmount: 500000,
-    currentAmount: 280000,
-    currency: "ARS",
-    progressPercentage: 56,
-    deadline: "2025-08-15",
-    status: "Active",
-    createdAt: "2025-01-01T00:00:00Z",
-    icon: "✈️",
-  },
-  {
-    id: "mock-3",
-    name: "Laptop Nueva",
-    targetAmount: 200000,
-    currentAmount: 165000,
-    currency: "ARS",
-    progressPercentage: 82.5,
-    deadline: "2025-06-30",
-    status: "Active",
-    createdAt: "2025-01-01T00:00:00Z",
-    icon: "💻",
-  },
-  {
-    id: "mock-4",
-    name: "Entrada para Casa",
-    targetAmount: 5000000,
-    currentAmount: 1850000,
-    currency: "ARS",
-    progressPercentage: 37,
-    deadline: "2027-01-01",
-    status: "Active",
-    createdAt: "2025-01-01T00:00:00Z",
-    icon: "🏠",
-  },
-]
-
 const currencyLabels: Record<Currency, string> = {
   ARS: "ARS ($)",
   USD: "USD ($)",
@@ -139,7 +88,29 @@ function parseDeadline(deadline: string): Date {
 export default function BudgetsPage() {
   const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false)
   const [isSavingsDialogOpen, setIsSavingsDialogOpen] = useState(false)
-  const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>(mockSavingsGoals)
+  const [savingsGoals, setSavingsGoals] = useState<GoalDto[]>([])
+  const [isLoadingGoals, setIsLoadingGoals] = useState(true)
+  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null)
+  const selectedGoal = savingsGoals.find((goal) => goal.id === selectedGoalId) ?? null
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    listGoals(controller.signal)
+      .then(setSavingsGoals)
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return
+        toastApiError(error, "No se pudieron cargar tus metas de ahorro.")
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoadingGoals(false)
+      })
+
+    return () => controller.abort()
+  }, [])
+
+  const replaceGoal = (updated: GoalDto) =>
+    setSavingsGoals((current) => current.map((goal) => (goal.id === updated.id ? updated : goal)))
 
   const getBudgetStatus = (spent: number, limit: number) => {
     const percentage = (spent / limit) * 100
@@ -203,7 +174,8 @@ export default function BudgetsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              {((totalSavingsCurrent / totalSavingsTarget) * 100).toFixed(1)}% del objetivo
+              {(totalSavingsTarget > 0 ? (totalSavingsCurrent / totalSavingsTarget) * 100 : 0).toFixed(1)}% del
+              objetivo
             </p>
           </CardContent>
         </Card>
@@ -297,58 +269,84 @@ export default function BudgetsPage() {
             </Dialog>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            {savingsGoals.map((goal) => {
-              const percentage = goal.progressPercentage
-              const daysLeft = Math.ceil(
-                (parseDeadline(goal.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24),
-              )
-
-              return (
-                <Card key={goal.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="text-3xl">{goal.icon ?? "🎯"}</div>
-                        <div>
-                          <CardTitle className="text-lg">{goal.name}</CardTitle>
-                          <CardDescription>
-                            {daysLeft > 0 ? `${daysLeft} días restantes` : "Fecha límite pasada"}
-                          </CardDescription>
+          {isLoadingGoals ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              <Skeleton className="h-48 w-full" />
+              <Skeleton className="h-48 w-full" />
+            </div>
+          ) : savingsGoals.length === 0 ? (
+            <Card>
+              <CardContent className="py-10 text-center text-muted-foreground">
+                Todavía no tenés metas de ahorro. Creá la primera con &quot;Agregar Meta&quot;.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {savingsGoals.map((goal) => {
+                const percentage = goal.progressPercentage
+                const daysLeft = Math.ceil(
+                  (parseDeadline(goal.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24),
+                )
+  
+                return (
+                  <Card key={goal.id}>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="text-3xl">🎯</div>
+                          <div>
+                            <CardTitle className="text-lg">{goal.name}</CardTitle>
+                            <CardDescription>
+                              {daysLeft > 0 ? `${daysLeft} días restantes` : "Fecha límite pasada"}
+                            </CardDescription>
+                          </div>
                         </div>
+                        {goal.status === "Achieved" || percentage >= 100 ? (
+                          <Badge className="bg-success text-white">Completado</Badge>
+                        ) : (
+                          <Badge variant="outline">{percentage.toFixed(0)}%</Badge>
+                        )}
                       </div>
-                      {goal.status === "Achieved" || percentage >= 100 ? (
-                        <Badge className="bg-success text-white">Completado</Badge>
-                      ) : (
-                        <Badge variant="outline">{percentage.toFixed(0)}%</Badge>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-2xl font-bold text-success">${goal.currentAmount.toLocaleString()}</span>
-                      <span className="text-sm text-muted-foreground">
-                        de ${goal.targetAmount.toLocaleString()} {goal.currency}
-                      </span>
-                    </div>
-                    <Progress value={percentage} className="h-2" />
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        ${Math.max(0, goal.targetAmount - goal.currentAmount).toLocaleString()} por alcanzar
-                      </span>
-                      <span className="text-muted-foreground">
-                        {parseDeadline(goal.deadline).toLocaleDateString("es-ES", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-2xl font-bold text-success">${goal.currentAmount.toLocaleString()}</span>
+                        <span className="text-sm text-muted-foreground">
+                          de ${goal.targetAmount.toLocaleString()} {goal.currency}
+                        </span>
+                      </div>
+                      <Progress value={percentage} className="h-2" />
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          ${Math.max(0, goal.targetAmount - goal.currentAmount).toLocaleString()} por alcanzar
+                        </span>
+                        <span className="text-muted-foreground">
+                          {parseDeadline(goal.deadline).toLocaleDateString("es-ES", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </span>
+                      </div>
+                      <Button variant="outline" className="w-full" onClick={() => setSelectedGoalId(goal.id)}>
+                        <HandCoinsIcon className="size-4" />
+                        {goal.status === "Active" ? "Registrar aporte" : "Ver aportes"}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+
+          {selectedGoal && (
+            <GoalContributionsDialog
+              goal={selectedGoal}
+              open
+              onOpenChange={(open) => !open && setSelectedGoalId(null)}
+              onGoalChange={replaceGoal}
+            />
+          )}
         </TabsContent>
       </Tabs>
 
