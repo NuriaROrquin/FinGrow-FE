@@ -77,6 +77,8 @@ const currencyLabels: Record<Currency, string> = {
   BRL: "BRL (R$)",
 }
 
+const scrollableGoalGrid = "grid max-h-[560px] gap-4 overflow-y-auto p-1 pr-2 md:grid-cols-2"
+
 function todayLocal(): string {
   const now = new Date()
   const offsetMs = now.getTimezoneOffset() * 60 * 1000
@@ -293,7 +295,7 @@ export default function BudgetsPage() {
                     No tenés metas en curso. Creá una nueva con &quot;Agregar Meta&quot;.
                   </p>
                 ) : (
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className={scrollableGoalGrid}>
                     {goalsInProgress.map((goal) => (
                       <InProgressGoalCard
                         key={goal.id}
@@ -311,7 +313,7 @@ export default function BudgetsPage() {
                     <TrophyIcon className="size-4" />
                     Alcanzadas ({achievedGoals.length})
                   </h3>
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className={scrollableGoalGrid}>
                     {achievedGoals.map((goal) => (
                       <AchievedGoalCard
                         key={goal.id}
