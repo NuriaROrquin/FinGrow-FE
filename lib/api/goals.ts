@@ -12,9 +12,12 @@ export interface GoalDto {
   name: string
   targetAmount: number
   currentAmount: number
+  remainingAmount: number
   currency: Currency
   progressPercentage: number
   deadline: string
+  daysRemaining: number
+  isOverdue: boolean
   status: GoalStatus
   createdAt: string
 }

@@ -77,12 +77,27 @@ const currencyLabels: Record<Currency, string> = {
   BRL: "BRL (R$)",
 }
 
-function todayUtc(): string {
-  return new Date().toISOString().slice(0, 10)
+function todayLocal(): string {
+  const now = new Date()
+  const offsetMs = now.getTimezoneOffset() * 60 * 1000
+  return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10)
 }
 
-function parseDeadline(deadline: string): Date {
-  return new Date(`${deadline}T00:00:00`)
+function formatDeadline(deadline: string): string {
+  return new Date(`${deadline}T00:00:00`).toLocaleDateString("es-AR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  })
+}
+
+function describeTimeLeft(goal: GoalDto, deadlineLabel: string): string {
+  if (goal.status === "Achieved") return `Meta alcanzada · límite ${deadlineLabel}`
+  if (goal.status === "Cancelled") return "Meta cancelada"
+  if (goal.isOverdue) return `Vencida el ${deadlineLabel}`
+  if (goal.daysRemaining === 0) return `Vence hoy · ${deadlineLabel}`
+  if (goal.daysRemaining === 1) return `1 día restante · ${deadlineLabel}`
+  return `${goal.daysRemaining} días restantes · ${deadlineLabel}`
 }
 
 export default function BudgetsPage() {
@@ -283,28 +298,27 @@ export default function BudgetsPage() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               {savingsGoals.map((goal) => {
-                const percentage = goal.progressPercentage
-                const daysLeft = Math.ceil(
-                  (parseDeadline(goal.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24),
-                )
-  
+                const deadlineLabel = formatDeadline(goal.deadline)
+
                 return (
-                  <Card key={goal.id}>
+                  <Card key={goal.id} className={goal.isOverdue ? "border-destructive/50" : undefined}>
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3">
                           <div className="text-3xl">🎯</div>
                           <div>
                             <CardTitle className="text-lg">{goal.name}</CardTitle>
-                            <CardDescription>
-                              {daysLeft > 0 ? `${daysLeft} días restantes` : "Fecha límite pasada"}
+                            <CardDescription className={goal.isOverdue ? "text-destructive" : undefined}>
+                              {describeTimeLeft(goal, deadlineLabel)}
                             </CardDescription>
                           </div>
                         </div>
-                        {goal.status === "Achieved" || percentage >= 100 ? (
+                        {goal.status === "Achieved" ? (
                           <Badge className="bg-success text-white">Completado</Badge>
+                        ) : goal.isOverdue ? (
+                          <Badge variant="destructive">Vencida</Badge>
                         ) : (
-                          <Badge variant="outline">{percentage.toFixed(0)}%</Badge>
+                          <Badge variant="outline">{goal.progressPercentage.toFixed(0)}%</Badge>
                         )}
                       </div>
                     </CardHeader>
@@ -315,18 +329,14 @@ export default function BudgetsPage() {
                           de ${goal.targetAmount.toLocaleString()} {goal.currency}
                         </span>
                       </div>
-                      <Progress value={percentage} className="h-2" />
+                      <Progress value={goal.progressPercentage} className="h-2" />
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">
-                          ${Math.max(0, goal.targetAmount - goal.currentAmount).toLocaleString()} por alcanzar
+                          {goal.remainingAmount > 0
+                            ? `$${goal.remainingAmount.toLocaleString()} pendiente`
+                            : "Objetivo cubierto"}
                         </span>
-                        <span className="text-muted-foreground">
-                          {parseDeadline(goal.deadline).toLocaleDateString("es-ES", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
-                        </span>
+                        <span className="font-medium">{goal.progressPercentage.toFixed(1)}% alcanzado</span>
                       </div>
                       <Button variant="outline" className="w-full" onClick={() => setSelectedGoalId(goal.id)}>
                         <HandCoinsIcon className="size-4" />
@@ -537,7 +547,7 @@ function AddSavingsGoalForm({
         <Input
           id="goal-deadline"
           type="date"
-          min={todayUtc()}
+          min={todayLocal()}
           value={deadline}
           onChange={(e) => setDeadline(e.target.value)}
           required
