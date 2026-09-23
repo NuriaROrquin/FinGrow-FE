@@ -9,34 +9,15 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import type {
-  CreateTransactionPayload,
-  Currency,
-  ExpenseCategory,
-  IncomeCategory,
-  PaymentMethod,
+import {
+  expenseCategoryLabels,
+  incomeCategoryLabels,
+  type CreateTransactionPayload,
+  type Currency,
+  type ExpenseCategory,
+  type IncomeCategory,
+  type PaymentMethod,
 } from "@/lib/api/transactions"
-
-const expenseCategoryLabels: Record<ExpenseCategory, string> = {
-  Alimentos: "Alimentos",
-  Transporte: "Transporte",
-  Vivienda: "Vivienda",
-  Servicios: "Servicios",
-  Salud: "Salud",
-  Educacion: "Educación",
-  Entretenimiento: "Entretenimiento",
-  Indumentaria: "Indumentaria",
-  AhorroInversion: "Ahorro e Inversión",
-  Otros: "Otros",
-}
-
-const incomeCategoryLabels: Record<IncomeCategory, string> = {
-  Salario: "Salario",
-  Freelance: "Freelance",
-  Inversiones: "Inversiones",
-  Regalo: "Regalo",
-  Otros: "Otros",
-}
 
 const paymentMethodLabels: Record<PaymentMethod, string> = {
   Cash: "Efectivo",

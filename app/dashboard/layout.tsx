@@ -182,7 +182,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </SidebarFooter>
         </Sidebar>
 
-        <SidebarInset>
+        <SidebarInset className="min-w-0 flex-1">
           <header className="grid grid-cols-3 h-14 items-center border-b bg-background px-6">
             <div className="flex items-center gap-4">
               <SidebarTrigger />
@@ -245,7 +245,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </DropdownMenu>
             </div>
           </header>
-          <main className="p-6">{children}</main>
+          <main className="w-full min-w-0 overflow-x-hidden p-6">{children}</main>
         </SidebarInset>
       </SidebarProvider>
     </CompanyProvider>

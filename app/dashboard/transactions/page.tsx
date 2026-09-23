@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useLayoutEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import Image from "next/image"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
@@ -20,6 +20,15 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   PlusIcon,
@@ -28,28 +37,40 @@ import {
   DownloadIcon,
   ArrowUpIcon,
   ArrowDownIcon,
-  CreditCardIcon,
   ScanLine,
   Send,
   Upload,
   Camera,
   CheckCircle2,
+  Check,
+  ChevronsUpDown,
+  Info,
+  ScaleIcon,
+  Clock,
   Sparkles,
   MessageSquare,
   Video,
   ChevronLeft,
   ChevronRight,
+  Trash2,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import {
   createTransaction,
+  expenseCategoryLabels,
   getTransactionSummary,
+  incomeCategoryLabels,
   listTransactions,
+  paymentMethodLabels,
+  transactionStatusLabels,
+  type PaymentMethod,
   type TransactionSummaryResponse,
   type TransactionsResponse,
 } from "@/lib/api/transactions"
 import { AddTransactionForm } from "@/components/transactions/add-transaction-form"
+import { TransactionActionsMenu } from "@/components/transactions/transaction-actions-menu"
+import { getCategoryIcon, getPaymentMethodIcon } from "@/components/transactions/transaction-icons"
 
 const emptyTransactionsResponse: TransactionsResponse = {
   items: [],
@@ -69,6 +90,60 @@ const emptyTransactionSummary: TransactionSummaryResponse = {
   totalIncomeTransactions: 0,
 }
 
+// Métodos de pago para el filtro, ordenados alfabéticamente
+const paymentMethodFilterOptions = (Object.entries(paymentMethodLabels) as [PaymentMethod, string][]).sort(
+  ([, labelA], [, labelB]) => labelA.localeCompare(labelB, "es"),
+)
+
+const monthNames = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+]
+
+const transactionTableHeadClassName = "py-3 pr-2 text-left align-middle whitespace-nowrap"
+const transactionTableCellClassName = "py-3 pr-2 align-middle whitespace-nowrap"
+
+function formatDateInput(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+function parseDateInput(value: string): Date {
+  const [year, month, day] = value.split("-").map(Number)
+  return new Date(year, month - 1, day)
+}
+
+function getCurrentMonthStart(): string {
+  const now = new Date()
+  return formatDateInput(new Date(now.getFullYear(), now.getMonth(), 1))
+}
+
+function getToday(): string {
+  return formatDateInput(new Date())
+}
+
+function getPeriodLabel(dateFrom: string, dateTo: string): string {
+  if (!dateFrom && !dateTo) return "Mostrando todos los períodos"
+  if (!dateFrom || !dateTo) {
+    const from = dateFrom ? parseDateInput(dateFrom).toLocaleDateString("es-AR") : "el inicio"
+    const to = dateTo ? parseDateInput(dateTo).toLocaleDateString("es-AR") : "hoy"
+    return `Período: desde ${from} hasta ${to}`
+  }
+
+  const from = parseDateInput(dateFrom)
+  const to = parseDateInput(dateTo)
+  const isFullCalendarMonth =
+    from.getDate() === 1 && from.getFullYear() === to.getFullYear() && from.getMonth() === to.getMonth()
+
+  if (isFullCalendarMonth) {
+    return `Período: mes de ${monthNames[from.getMonth()]} ${from.getFullYear()}`
+  }
+
+  return `Período: ${from.toLocaleDateString("es-AR")} – ${to.toLocaleDateString("es-AR")}`
+}
+
 export default function TransactionsPage() {
   const searchParams = useSearchParams()
   const [transactionsResponse, setTransactionsResponse] = useState(emptyTransactionsResponse)
@@ -77,7 +152,15 @@ export default function TransactionsPage() {
   const [isSummaryReady, setIsSummaryReady] = useState(false)
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
-  const [filterType, setFilterType] = useState("all")
+  const [filterType, setFilterType] = useState<"all" | "Income" | "Expense">("all")
+  const [filterCategory, setFilterCategory] = useState("all")
+  const [filterStatus, setFilterStatus] = useState("all")
+  const [filterPaymentMethod, setFilterPaymentMethod] = useState("all")
+  const [isCategoryPickerOpen, setIsCategoryPickerOpen] = useState(false)
+  const [dateFrom, setDateFrom] = useState(() => getCurrentMonthStart())
+  const [dateTo, setDateTo] = useState(() => getToday())
+  const [dateFromDraft, setDateFromDraft] = useState(() => getCurrentMonthStart())
+  const [dateToDraft, setDateToDraft] = useState(() => getToday())
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
@@ -103,17 +186,45 @@ export default function TransactionsPage() {
   } | null>(null)
   const [useCameraMode, setUseCameraMode] = useState(false)
   const [stream, setStream] = useState<MediaStream | null>(null)
-  const summaryRequestKey = useRef<number | null>(null)
+  const summaryRequestKey = useRef<string | null>(null)
+  const scrollPositionRef = useRef<number | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const { toast } = useToast()
 
-  useEffect(() => {
-    if (summaryRequestKey.current === summaryRefreshKey) return
-    summaryRequestKey.current = summaryRefreshKey
+  useLayoutEffect(() => {
+    const scrollPosition = scrollPositionRef.current
+    if (scrollPosition !== null) {
+      const frameId = window.requestAnimationFrame(() => {
+        window.scrollTo({ top: scrollPosition, left: window.scrollX, behavior: "auto" })
+        scrollPositionRef.current = null
+      })
 
-    getTransactionSummary()
+      return () => window.cancelAnimationFrame(frameId)
+    }
+
+    return () => {
+      scrollPositionRef.current = window.scrollY
+    }
+  }, [
+    currentPage,
+    dateFrom,
+    dateTo,
+    filterCategory,
+    filterPaymentMethod,
+    filterStatus,
+    filterType,
+    pageSize,
+    searchQuery,
+  ])
+
+  useEffect(() => {
+    const requestKey = `${summaryRefreshKey}|${dateFrom}|${dateTo}`
+    if (summaryRequestKey.current === requestKey) return
+    summaryRequestKey.current = requestKey
+
+    getTransactionSummary({ dateFrom: dateFrom || undefined, dateTo: dateTo || undefined })
       .then(setTransactionSummary)
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return
@@ -126,7 +237,7 @@ export default function TransactionsPage() {
       .finally(() => {
         setIsSummaryReady(true)
       })
-  }, [summaryRefreshKey, toast])
+  }, [dateFrom, dateTo, summaryRefreshKey, toast])
 
   // Detectar parámetro mode=ocr en la URL
   useEffect(() => {
@@ -145,8 +256,23 @@ export default function TransactionsPage() {
 
     const timeoutId = window.setTimeout(() => {
       setIsLoadingTransactions(true)
-      const apiType = filterType === "Income" ? "ingreso" : filterType === "Expense" ? "gasto" : undefined
-      listTransactions(currentPage, pageSize, search || undefined, apiType)
+      const apiType = filterType === "all" ? undefined : filterType
+      listTransactions(currentPage, pageSize, {
+        search: search || undefined,
+        type: apiType,
+        expenseCategory:
+          filterType === "Expense" && filterCategory !== "all"
+            ? (filterCategory as keyof typeof expenseCategoryLabels)
+            : undefined,
+        incomeCategory:
+          filterType === "Income" && filterCategory !== "all"
+            ? (filterCategory as keyof typeof incomeCategoryLabels)
+            : undefined,
+        status: filterStatus === "all" ? undefined : (filterStatus as "Confirmed" | "Pending"),
+        paymentMethod: filterPaymentMethod === "all" ? undefined : (filterPaymentMethod as PaymentMethod),
+        dateFrom: dateFrom || undefined,
+        dateTo: dateTo || undefined,
+      })
         .then(setTransactionsResponse)
         .catch((error: unknown) => {
           if (error instanceof DOMException && error.name === "AbortError") return
@@ -164,7 +290,19 @@ export default function TransactionsPage() {
     return () => {
       window.clearTimeout(timeoutId)
     }
-  }, [currentPage, filterType, isSummaryReady, pageSize, searchQuery, toast])
+  }, [
+    currentPage,
+    dateFrom,
+    dateTo,
+    filterCategory,
+    filterPaymentMethod,
+    filterStatus,
+    filterType,
+    isSummaryReady,
+    pageSize,
+    searchQuery,
+    toast,
+  ])
 
   // Limpiar stream de cámara al cerrar modal
   useEffect(() => {
@@ -179,6 +317,47 @@ export default function TransactionsPage() {
 
   const transactions = transactionsResponse.items
   const filteredTransactions = transactions
+  const categoryFilterOptions = filterType === "Expense"
+    ? Object.entries(expenseCategoryLabels)
+    : filterType === "Income"
+      ? Object.entries(incomeCategoryLabels)
+      : []
+
+  const defaultDateFrom = getCurrentMonthStart()
+  const defaultDateTo = getToday()
+  const periodLabel = getPeriodLabel(dateFrom, dateTo)
+  const shouldShowPagination = transactionsResponse.totalPages > 1
+  const visibleResultsStart = transactionsResponse.totalCount === 0 ? 0 : (transactionsResponse.pageNumber - 1) * pageSize + 1
+  const visibleResultsEnd = transactionsResponse.totalCount === 0 ? 0 : Math.min(transactionsResponse.pageNumber * pageSize, transactionsResponse.totalCount)
+
+  const hasActiveFilters =
+    searchQuery.trim().length > 0 ||
+    filterType !== "all" ||
+    filterCategory !== "all" ||
+    filterStatus !== "all" ||
+    filterPaymentMethod !== "all" ||
+    dateFrom !== defaultDateFrom ||
+    dateTo !== defaultDateTo
+
+  const clearFilters = () => {
+    setSearchQuery("")
+    setFilterType("all")
+    setFilterCategory("all")
+    setFilterStatus("all")
+    setFilterPaymentMethod("all")
+    setDateFrom(defaultDateFrom)
+    setDateTo(defaultDateTo)
+    setDateFromDraft(defaultDateFrom)
+    setDateToDraft(defaultDateTo)
+    setCurrentPage(1)
+  }
+
+  const applyDateFilter = () => {
+    setDateFrom(dateFromDraft)
+    setDateTo(dateToDraft)
+    setCurrentPage(1)
+    setSummaryRefreshKey((key) => key + 1)
+  }
 
   const totalIncome = {
     ARS: transactionSummary.totalIncomeArs,
@@ -398,417 +577,614 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-col md:flex-row">
+    <div className="w-full max-w-full space-y-6 overflow-x-hidden pr-1 sm:pr-2">
+      <div className="w-full max-w-full space-y-4">
         <div>
           <h1 className="text-3xl font-bold text-balance">Transacciones</h1>
           <p className="text-muted-foreground mt-1">Rastrea y gestiona tus ingresos y gastos</p>
-        </div>
-        <div className="flex gap-2 flex-wrap mt-4">
-          <Dialog open={isOcrDialogOpen} onOpenChange={setIsOcrDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <ScanLine className="size-4" />
-                Escanear Ticket
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>Escanear Ticket con OCR</DialogTitle>
-                <DialogDescription>Sube una foto o usa la cámara para escanear tu ticket</DialogDescription>
-              </DialogHeader>
 
-              <div className="space-y-4">
-                {!ocrImage && !useCameraMode ? (
-                  <div className="space-y-4">
-                    <div className="border-2 border-dashed rounded-lg p-8 text-center">
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleImageUpload}
-                        accept="image/*"
-                        className="hidden"
-                      />
-                      <Camera className="size-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Arrastra una imagen o usa una de las opciones
-                      </p>
-                      <div className="flex gap-2 justify-center">
-                        <Button onClick={() => fileInputRef.current?.click()} variant="outline">
-                          <Upload className="size-4 mr-2" />
-                          Subir Imagen
-                        </Button>
-                        <Button onClick={startCamera}>
-                          <Video className="size-4 mr-2" />
-                          Usar Cámara
-                        </Button>
+          <Card className="mt-4 w-full border-border/70 bg-white shadow-sm">
+            <CardContent className="p-4">
+              <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <Dialog open={isOcrDialogOpen} onOpenChange={setIsOcrDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="w-full">
+                  <ScanLine className="size-4" />
+                  Escanear Ticket
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>Escanear Ticket con OCR</DialogTitle>
+                  <DialogDescription>Sube una foto o usa la cámara para escanear tu ticket</DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                  {!ocrImage && !useCameraMode ? (
+                    <div className="space-y-4">
+                      <div className="border-2 border-dashed rounded-lg p-8 text-center">
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          onChange={handleImageUpload}
+                          accept="image/*"
+                          className="hidden"
+                        />
+                        <Camera className="size-12 mx-auto text-muted-foreground mb-4" />
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Arrastra una imagen o usa una de las opciones
+                        </p>
+                        <div className="flex gap-2 justify-center">
+                          <Button onClick={() => fileInputRef.current?.click()} variant="outline">
+                            <Upload className="size-4 mr-2" />
+                            Subir Imagen
+                          </Button>
+                          <Button onClick={startCamera}>
+                            <Video className="size-4 mr-2" />
+                            Usar Cámara
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ) : useCameraMode ? (
-                  <div className="space-y-4">
-                    <div className="relative rounded-lg overflow-hidden border">
-                      <video
-                        ref={videoRef}
-                        autoPlay
-                        playsInline
-                        className="w-full max-h-[400px] object-contain"
-                      />
-                      <canvas ref={canvasRef} className="hidden" />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button onClick={capturePhoto} className="flex-1">
-                        <Camera className="size-4 mr-2" />
-                        Tomar Foto
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          stopCamera()
-                          setUseCameraMode(false)
-                        }}
-                        className="flex-1"
-                      >
-                        Cancelar
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {ocrImage && (
+                  ) : useCameraMode ? (
+                    <div className="space-y-4">
                       <div className="relative rounded-lg overflow-hidden border">
-                        <Image src={ocrImage} alt="Ticket" width={600} height={300} className="w-full max-h-[300px] object-contain" />
+                        <video
+                          ref={videoRef}
+                          autoPlay
+                          playsInline
+                          className="w-full max-h-[400px] object-contain"
+                        />
+                        <canvas ref={canvasRef} className="hidden" />
                       </div>
-                    )}
+                      <div className="flex gap-2">
+                        <Button onClick={capturePhoto} className="flex-1">
+                          <Camera className="size-4 mr-2" />
+                          Tomar Foto
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            stopCamera()
+                            setUseCameraMode(false)
+                          }}
+                          className="flex-1"
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {ocrImage && (
+                        <div className="relative rounded-lg overflow-hidden border">
+                          <Image src={ocrImage} alt="Ticket" width={600} height={300} className="w-full max-h-[300px] object-contain" />
+                        </div>
+                      )}
 
-                    {!ocrResult && !ocrProcessing && (
-                      <Button onClick={processOCR} className="w-full">
-                        <Sparkles className="size-4 mr-2" />
-                        Procesar con OCR
-                      </Button>
-                    )}
+                      {!ocrResult && !ocrProcessing && (
+                        <Button onClick={processOCR} className="w-full">
+                          <Sparkles className="size-4 mr-2" />
+                          Procesar con OCR
+                        </Button>
+                      )}
 
-                    {ocrProcessing && (
-                      <Alert>
-                        <Sparkles className="h-4 w-4 animate-pulse" />
-                        <AlertDescription>
-                          Procesando imagen... Esto puede tomar unos segundos.
-                        </AlertDescription>
-                      </Alert>
-                    )}
-
-                    {ocrResult && (
-                      <div className="space-y-4">
+                      {ocrProcessing && (
                         <Alert>
-                          <CheckCircle2 className="h-4 w-4" />
+                          <Sparkles className="h-4 w-4 animate-pulse" />
                           <AlertDescription>
-                            Datos extraídos con {ocrResult.confidence}% de confianza
+                            Procesando imagen... Esto puede tomar unos segundos.
                           </AlertDescription>
                         </Alert>
+                      )}
 
-                        <div className="grid gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="ocr-amount">Monto</Label>
-                            <Input
-                              id="ocr-amount"
-                              type="number"
-                              defaultValue={ocrResult.amount}
-                              step="0.01"
-                            />
+                      {ocrResult && (
+                        <div className="space-y-4">
+                          <Alert>
+                            <CheckCircle2 className="h-4 w-4" />
+                            <AlertDescription>
+                              Datos extraídos con {ocrResult.confidence}% de confianza
+                            </AlertDescription>
+                          </Alert>
+
+                          <div className="grid gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="ocr-amount">Monto</Label>
+                              <Input
+                                id="ocr-amount"
+                                type="number"
+                                defaultValue={ocrResult.amount}
+                                step="0.01"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="ocr-description">Descripción</Label>
+                              <Input
+                                id="ocr-description"
+                                defaultValue={ocrResult.description}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="ocr-category">Categoría</Label>
+                              <Select defaultValue={ocrResult.category}>
+                                <SelectTrigger id="ocr-category">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Comida">Comida</SelectItem>
+                                  <SelectItem value="Transporte">Transporte</SelectItem>
+                                  <SelectItem value="Servicios">Servicios</SelectItem>
+                                  <SelectItem value="Entretenimiento">Entretenimiento</SelectItem>
+                                  <SelectItem value="Otros">Otros</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="ocr-date">Fecha</Label>
+                              <Input
+                                id="ocr-date"
+                                type="date"
+                                defaultValue={ocrResult.date}
+                              />
+                            </div>
                           </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="ocr-description">Descripción</Label>
-                            <Input
-                              id="ocr-description"
-                              defaultValue={ocrResult.description}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="ocr-category">Categoría</Label>
-                            <Select defaultValue={ocrResult.category}>
-                              <SelectTrigger id="ocr-category">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Comida">Comida</SelectItem>
-                                <SelectItem value="Transporte">Transporte</SelectItem>
-                                <SelectItem value="Servicios">Servicios</SelectItem>
-                                <SelectItem value="Entretenimiento">Entretenimiento</SelectItem>
-                                <SelectItem value="Otros">Otros</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="ocr-date">Fecha</Label>
-                            <Input
-                              id="ocr-date"
-                              type="date"
-                              defaultValue={ocrResult.date}
-                            />
+
+                          <div className="flex gap-2">
+                            <Button onClick={saveOcrTransaction} className="flex-1">
+                              Guardar Transacción
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setOcrImage(null)
+                                setOcrResult(null)
+                              }}
+                            >
+                              Nueva Imagen
+                            </Button>
                           </div>
                         </div>
-
-                        <div className="flex gap-2">
-                          <Button onClick={saveOcrTransaction} className="flex-1">
-                            Guardar Transacción
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={() => {
-                              setOcrImage(null)
-                              setOcrResult(null)
-                            }}
-                          >
-                            Nueva Imagen
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={isTelegramDialogOpen} onOpenChange={setIsTelegramDialogOpen}>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                onClick={(e) => {
-                  e.preventDefault()
-                  window.open('https://t.me/fingrowapp_bot', '_blank')
-                }}
-              >
-                <Send className="size-4" />
-                Mensaje Telegram
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Procesar Mensaje de Telegram</DialogTitle>
-                <DialogDescription>
-                  Escribe un mensaje en lenguaje natural para registrar una transacción
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="telegram-message">Mensaje</Label>
-                  <Textarea
-                    id="telegram-message"
-                    placeholder="Ej: Gasté $1500 en el almuerzo con el equipo"
-                    value={telegramMessage}
-                    onChange={(e) => setTelegramMessage(e.target.value)}
-                    rows={4}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Ejemplos: &quot;Pagué $500 en supermercado&quot;, &quot;Ingreso de $10000 por freelance&quot;
-                  </p>
+                      )}
+                    </div>
+                  )}
                 </div>
+              </DialogContent>
+            </Dialog>
 
-                {!telegramResult && !telegramProcessing && (
-                  <Button
-                    onClick={processTelegramMessage}
-                    className="w-full"
-                    disabled={!telegramMessage.trim()}
-                  >
-                    <MessageSquare className="size-4 mr-2" />
-                    Procesar Mensaje
-                  </Button>
-                )}
+            <Dialog open={isTelegramDialogOpen} onOpenChange={setIsTelegramDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    window.open('https://t.me/fingrowapp_bot', '_blank')
+                  }}
+                >
+                  <Send className="size-4" />
+                  Mensaje Telegram
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>Procesar Mensaje de Telegram</DialogTitle>
+                  <DialogDescription>
+                    Escribe un mensaje en lenguaje natural para registrar una transacción
+                  </DialogDescription>
+                </DialogHeader>
 
-                {telegramProcessing && (
-                  <Alert>
-                    <Sparkles className="h-4 w-4 animate-pulse" />
-                    <AlertDescription>
-                      Analizando mensaje con IA...
-                    </AlertDescription>
-                  </Alert>
-                )}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="telegram-message">Mensaje</Label>
+                    <Textarea
+                      id="telegram-message"
+                      placeholder="Ej: Gasté $1500 en el almuerzo con el equipo"
+                      value={telegramMessage}
+                      onChange={(e) => setTelegramMessage(e.target.value)}
+                      rows={4}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Ejemplos: &quot;Pagué $500 en supermercado&quot;, &quot;Ingreso de $10000 por freelance&quot;
+                    </p>
+                  </div>
 
-                {telegramResult && (
-                  <div className="space-y-4">
+                  {!telegramResult && !telegramProcessing && (
+                    <Button
+                      onClick={processTelegramMessage}
+                      className="w-full"
+                      disabled={!telegramMessage.trim()}
+                    >
+                      <MessageSquare className="size-4 mr-2" />
+                      Procesar Mensaje
+                    </Button>
+                  )}
+
+                  {telegramProcessing && (
                     <Alert>
-                      <CheckCircle2 className="h-4 w-4" />
+                      <Sparkles className="h-4 w-4 animate-pulse" />
                       <AlertDescription>
-                        {telegramResult.type === "income" ? "Ingreso" : "Gasto"} detectado correctamente
+                        Analizando mensaje con IA...
                       </AlertDescription>
                     </Alert>
+                  )}
 
-                    <div className="grid gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="tg-type">Tipo</Label>
-                        <Select defaultValue={telegramResult.type}>
-                          <SelectTrigger id="tg-type">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="income">Ingreso</SelectItem>
-                            <SelectItem value="expense">Gasto</SelectItem>
-                          </SelectContent>
-                        </Select>
+                  {telegramResult && (
+                    <div className="space-y-4">
+                      <Alert>
+                        <CheckCircle2 className="h-4 w-4" />
+                        <AlertDescription>
+                          {telegramResult.type === "income" ? "Ingreso" : "Gasto"} detectado correctamente
+                        </AlertDescription>
+                      </Alert>
+
+                      <div className="grid gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="tg-type">Tipo</Label>
+                          <Select defaultValue={telegramResult.type}>
+                            <SelectTrigger id="tg-type">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="income">Ingreso</SelectItem>
+                              <SelectItem value="expense">Gasto</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="tg-amount">Monto</Label>
+                          <Input
+                            id="tg-amount"
+                            type="number"
+                            defaultValue={telegramResult.amount}
+                            step="0.01"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="tg-description">Descripción</Label>
+                          <Input
+                            id="tg-description"
+                            defaultValue={telegramResult.description}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="tg-category">Categoría</Label>
+                          <Select defaultValue={telegramResult.category}>
+                            <SelectTrigger id="tg-category">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Comida">Comida</SelectItem>
+                              <SelectItem value="Transporte">Transporte</SelectItem>
+                              <SelectItem value="Servicios">Servicios</SelectItem>
+                              <SelectItem value="Entretenimiento">Entretenimiento</SelectItem>
+                              <SelectItem value="Freelance">Freelance</SelectItem>
+                              <SelectItem value="Salario">Salario</SelectItem>
+                              <SelectItem value="Otros">Otros</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="tg-amount">Monto</Label>
-                        <Input
-                          id="tg-amount"
-                          type="number"
-                          defaultValue={telegramResult.amount}
-                          step="0.01"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="tg-description">Descripción</Label>
-                        <Input
-                          id="tg-description"
-                          defaultValue={telegramResult.description}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="tg-category">Categoría</Label>
-                        <Select defaultValue={telegramResult.category}>
-                          <SelectTrigger id="tg-category">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Comida">Comida</SelectItem>
-                            <SelectItem value="Transporte">Transporte</SelectItem>
-                            <SelectItem value="Servicios">Servicios</SelectItem>
-                            <SelectItem value="Entretenimiento">Entretenimiento</SelectItem>
-                            <SelectItem value="Freelance">Freelance</SelectItem>
-                            <SelectItem value="Salario">Salario</SelectItem>
-                            <SelectItem value="Otros">Otros</SelectItem>
-                          </SelectContent>
-                        </Select>
+
+                      <div className="flex gap-2">
+                        <Button onClick={saveTelegramTransaction} className="flex-1">
+                          Guardar Transacción
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setTelegramMessage("")
+                            setTelegramResult(null)
+                          }}
+                        >
+                          Nuevo Mensaje
+                        </Button>
                       </div>
                     </div>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
 
-                    <div className="flex gap-2">
-                      <Button onClick={saveTelegramTransaction} className="flex-1">
-                        Guardar Transacción
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setTelegramMessage("")
-                          setTelegramResult(null)
-                        }}
-                      >
-                        Nuevo Mensaje
-                      </Button>
-                    </div>
-                  </div>
-                )}
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="w-full">
+                  <PlusIcon className="size-4" />
+                  Agregar Transacción
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>Agregar Nueva Transacción</DialogTitle>
+                  <DialogDescription>Registra un nuevo ingreso o gasto</DialogDescription>
+                </DialogHeader>
+                <AddTransactionForm
+                  onAdd={async (payload) => {
+                    const created = await createTransaction(payload)
+                    setTransactionsResponse((previous) => ({
+                      ...previous,
+                      items: [created, ...previous.items].slice(0, pageSize),
+                      totalCount: previous.totalCount + 1,
+                    }))
+                    setSummaryRefreshKey((key) => key + 1)
+                    toast({
+                      title: "Transacción guardada",
+                      description: "La transacción ha sido agregada exitosamente",
+                    })
+                  }}
+                  onClose={() => setIsAddDialogOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
               </div>
-            </DialogContent>
-          </Dialog>
+            </CardContent>
+          </Card>
 
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <PlusIcon className="size-4" />
-                Agregar Transacción
+          <div className="mt-4 w-full max-w-3xl space-y-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,170px)_minmax(0,170px)_minmax(0,1fr)_auto] sm:items-end">
+              <div className="flex min-w-0 flex-col gap-1">
+                <Label htmlFor="date-from" className="text-xs text-muted-foreground">
+                  Desde
+                </Label>
+                <Input
+                  id="date-from"
+                  type="date"
+                  value={dateFromDraft}
+                  max={dateToDraft || undefined}
+                  onChange={(e) => setDateFromDraft(e.target.value)}
+                  className="w-full bg-white"
+                />
+              </div>
+              <div className="flex min-w-0 flex-col gap-1">
+                <Label htmlFor="date-to" className="text-xs text-muted-foreground">
+                  Hasta
+                </Label>
+                <Input
+                  id="date-to"
+                  type="date"
+                  value={dateToDraft}
+                  min={dateFromDraft || undefined}
+                  onChange={(e) => setDateToDraft(e.target.value)}
+                  className="w-full bg-white"
+                />
+              </div>
+              <div className="rounded-md border border-border/60 bg-white px-3 py-2 text-sm text-muted-foreground">
+                {periodLabel}
+              </div>
+              <Button size="sm" className="h-8 w-full px-3 sm:w-auto" onClick={applyDateFilter}>
+                <FilterIcon className="size-4" />
+                Filtrar
               </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Agregar Nueva Transacción</DialogTitle>
-                <DialogDescription>Registra un nuevo ingreso o gasto</DialogDescription>
-              </DialogHeader>
-              <AddTransactionForm
-                onAdd={async (payload) => {
-                  const created = await createTransaction(payload)
-                  setTransactionsResponse((previous) => ({
-                    ...previous,
-                    items: [created, ...previous.items].slice(0, pageSize),
-                    totalCount: previous.totalCount + 1,
-                  }))
-                  setSummaryRefreshKey((key) => key + 1)
-                  toast({
-                    title: "Transacción guardada",
-                    description: "La transacción ha sido agregada exitosamente",
-                  })
-                }}
-                onClose={() => setIsAddDialogOpen(false)}
-              />
-            </DialogContent>
-          </Dialog>
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Ingresos</CardDescription>
-            <CardTitle className="space-y-1 text-2xl text-success">{renderCurrencyTotals(totalIncome)}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <ArrowUpIcon className="size-4" />
+        <Card className="border border-border bg-white shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-3">
+              <ArrowUpIcon className="size-5 shrink-0 text-success" />
+              <div>
+                <CardDescription className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  Ingresos
+                </CardDescription>
+                <CardTitle className="mt-1 space-y-1 text-2xl text-success">{renderCurrencyTotals(totalIncome)}</CardTitle>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center gap-1 text-xs font-medium text-success">
+              <ArrowUpIcon className="size-3.5" />
               <span>{transactionSummary.totalIncomeTransactions} ingresos</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Gastos</CardDescription>
-            <CardTitle className="space-y-1 text-2xl">{renderCurrencyTotals(totalExpense)}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <ArrowDownIcon className="size-4" />
+        <Card className="border border-border bg-white shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-3">
+              <ArrowDownIcon className="size-5 shrink-0 text-muted-foreground" />
+              <div>
+                <CardDescription className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  Gastos
+                </CardDescription>
+                <CardTitle className="mt-1 space-y-1 text-2xl">{renderCurrencyTotals(totalExpense)}</CardTitle>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
+              <ArrowDownIcon className="size-3.5" />
               <span>{transactionSummary.totalExpenseTransactions} gastos</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Balance Neto</CardDescription>
-            <CardTitle className="space-y-1 text-2xl text-success">{renderCurrencyTotals(balanceByCurrency)}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <ArrowUpIcon className="size-4" />
+        <Card className="border border-primary/20 bg-white shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-3">
+              <ScaleIcon className="size-5 shrink-0 text-muted-foreground" />
+              <div>
+                <CardDescription className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  Balance Neto
+                </CardDescription>
+                <CardTitle className="mt-1 space-y-1 text-2xl text-success">{renderCurrencyTotals(balanceByCurrency)}</CardTitle>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
+              <ArrowUpIcon className="size-3.5" />
               <span>{transactionSummary.totalTransactions} transacciones totales</span>
             </div>
           </CardContent>
         </Card>
       </div>
 
+      <Alert className="border-sky-200 bg-sky-50 text-sky-900">
+        <AlertDescription className="flex flex-wrap items-center gap-1.5 text-sky-900">
+          <span>Los movimientos pendientes no se incluyen en los totales hasta que sean confirmados.</span>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-6 rounded-full text-sky-700 hover:bg-sky-100 hover:text-sky-800"
+                aria-label="Más información sobre el cálculo de los totales"
+              >
+                <Info className="size-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 text-sm">
+              <p className="font-medium">¿Cómo se calculan los totales?</p>
+              <p className="mt-1 text-muted-foreground">
+                Ingresos, gastos y balance neto solo suman las transacciones con estado{" "}
+                <strong className="text-foreground">Confirmada</strong>. Las transacciones{" "}
+                <strong className="text-foreground">Pendientes</strong> (por ejemplo, las que llegan de
+                integraciones como Mercado Pago) se excluyen de estos cálculos hasta que las confirmes.
+              </p>
+            </PopoverContent>
+          </Popover>
+        </AlertDescription>
+      </Alert>
+
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-1 items-center gap-2">
-              <div className="relative flex-1 max-w-sm">
-                <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar transacciones..."
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value)
-                    setCurrentPage(1)
-                  }}
-                  className="pl-9"
-                />
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[minmax(0,1.2fr)_repeat(4,minmax(0,1fr))_auto]">
+              <div className="flex min-w-0 flex-col gap-1 lg:col-span-2 xl:col-span-1">
+                <Label htmlFor="search-query" className="text-xs text-muted-foreground">
+                  Buscar
+                </Label>
+                <div className="relative">
+                  <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="search-query"
+                    placeholder="Buscar transacciones..."
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value)
+                      setCurrentPage(1)
+                    }}
+                    className="w-full border-border/70 bg-white pl-9"
+                  />
+                </div>
               </div>
-              <Select value={filterType} onValueChange={(value) => {
-                setFilterType(value)
-                setCurrentPage(1)
-              }}>
-                <SelectTrigger className="w-[150px]">
-                  <FilterIcon className="size-4 mr-2" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los Tipos</SelectItem>
-                  <SelectItem value="Income">Ingresos</SelectItem>
-                  <SelectItem value="Expense">Gastos</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex min-w-0 flex-col gap-1">
+                <Label className="text-xs text-muted-foreground">Estado</Label>
+                <Select value={filterStatus} onValueChange={(value) => {
+                  setFilterStatus(value)
+                  setCurrentPage(1)
+                }}>
+                  <SelectTrigger className="w-full bg-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="Confirmed">Confirmada</SelectItem>
+                    <SelectItem value="Pending">Pendiente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex min-w-0 flex-col gap-1">
+                <Label className="text-xs text-muted-foreground">Método de pago</Label>
+                <Select value={filterPaymentMethod} onValueChange={(value) => {
+                  setFilterPaymentMethod(value)
+                  setCurrentPage(1)
+                }}>
+                  <SelectTrigger className="w-full bg-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {paymentMethodFilterOptions.map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex min-w-0 flex-col gap-1">
+                <Label className="text-xs text-muted-foreground">Tipo</Label>
+                <Select value={filterType} onValueChange={(value) => {
+                  setFilterType(value as "all" | "Income" | "Expense")
+                  setFilterCategory("all")
+                  setCurrentPage(1)
+                }}>
+                  <SelectTrigger className="w-full bg-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="Expense">Gastos</SelectItem>
+                    <SelectItem value="Income">Ingresos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex min-w-0 flex-col gap-1">
+                <Label className="text-xs text-muted-foreground">Categoría</Label>
+                <Popover open={isCategoryPickerOpen} onOpenChange={setIsCategoryPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={isCategoryPickerOpen}
+                      className="w-full justify-between border-border/70 bg-white font-normal disabled:bg-white disabled:opacity-55"
+                      disabled={filterType === "all"}
+                    >
+                      {filterType === "all"
+                        ? "Seleccioná un tipo"
+                        : filterCategory === "all"
+                        ? "Todos"
+                        : categoryFilterOptions.find(([value]) => value === filterCategory)?.[1] ?? filterCategory}
+                      <ChevronsUpDown className="size-4 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[200px] p-0">
+                    <Command>
+                      <CommandInput placeholder="Buscar categoría..." />
+                      <CommandList>
+                        <CommandEmpty>No se encontró la categoría.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem
+                            value="Todos"
+                            onSelect={() => {
+                              setFilterCategory("all")
+                              setCurrentPage(1)
+                              setIsCategoryPickerOpen(false)
+                            }}
+                          >
+                            <Check className={`size-4 ${filterCategory === "all" ? "opacity-100" : "opacity-0"}`} />
+                            Todos
+                          </CommandItem>
+                          {categoryFilterOptions.map(([value, label]) => (
+                            <CommandItem
+                              key={value}
+                              value={label}
+                              onSelect={() => {
+                                setFilterCategory(value)
+                                setCurrentPage(1)
+                                setIsCategoryPickerOpen(false)
+                              }}
+                            >
+                              <Check className={`size-4 ${filterCategory === value ? "opacity-100" : "opacity-0"}`} />
+                              {label}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`size-9 self-end ${hasActiveFilters ? "" : "invisible pointer-events-none"}`}
+                onClick={clearFilters}
+                disabled={!hasActiveFilters}
+                aria-label="Limpiar filtros"
+                title="Limpiar filtros"
+              >
+                <Trash2 className="size-4" />
+              </Button>
             </div>
-            <Button variant="outline" onClick={handleExportCSV}>
+            <Button variant="outline" className="w-full shrink-0 xl:w-auto" onClick={handleExportCSV}>
               <DownloadIcon className="size-4" />
               Exportar
             </Button>
@@ -822,125 +1198,158 @@ export default function TransactionsPage() {
           <CardDescription>Todas tus transacciones financieras en un solo lugar</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Descripción</TableHead>
-                <TableHead>Categoría</TableHead>
-                <TableHead>Método de Pago</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Fuente</TableHead>
-                <TableHead className="text-right">Monto</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoadingTransactions ? (
+          <div className={`${shouldShowPagination ? "min-h-[520px]" : "min-h-[220px]"} w-full`}>
+            <Table className="w-full table-auto">
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
-                    Cargando movimientos...
-                  </TableCell>
+                  <TableHead className={transactionTableHeadClassName}>Fecha</TableHead>
+                  <TableHead className={transactionTableHeadClassName}>Descripción</TableHead>
+                  <TableHead className={transactionTableHeadClassName}>Categoría</TableHead>
+                  <TableHead className={transactionTableHeadClassName}>Método de Pago</TableHead>
+                  <TableHead className={transactionTableHeadClassName}>Estado</TableHead>
+                  <TableHead className={transactionTableHeadClassName}>Monto</TableHead>
+                  <TableHead className={transactionTableHeadClassName}>Acción</TableHead>
                 </TableRow>
-              ) : filteredTransactions.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
-                    Todavia no cargaste ningun movimiento.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredTransactions.map((transaction) => (
-                <TableRow key={transaction.id}>
-                  <TableCell className="font-medium">
-                    {new Date(transaction.occurredOn).toLocaleDateString("es-ES", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={`flex size-8 items-center justify-center rounded-full ${
-                          transaction.type === "Income" ? "bg-success/10 text-success" : "bg-muted"
-                        }`}
-                      >
-                        {transaction.type === "Income" ? (
-                          <ArrowUpIcon className="size-4" />
-                        ) : (
-                          <CreditCardIcon className="size-4" />
+              </TableHeader>
+              <TableBody>
+                {isLoadingTransactions ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="py-4 text-center text-muted-foreground">
+                      Cargando movimientos...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredTransactions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="py-4 text-center text-muted-foreground">
+                      <div className="flex flex-col items-center gap-2 py-4">
+                        <span>
+                          {hasActiveFilters
+                            ? "No encontramos movimientos que coincidan con esos filtros."
+                            : "Todavia no cargaste ningun movimiento."}
+                        </span>
+                        {hasActiveFilters && (
+                          <Button variant="outline" size="sm" onClick={clearFilters}>
+                            Limpiar filtros
+                          </Button>
                         )}
                       </div>
-                      <span>{transaction.description}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>{transaction.category}</TableCell>
-                  <TableCell className="text-muted-foreground">{transaction.paymentMethod}</TableCell>
-                  <TableCell>
-                    <Badge variant={transaction.type === "Income" ? "default" : "secondary"}>
-                      {transaction.type === "Income" ? "Ingreso" : "Gasto"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{transaction.source}</TableCell>
-                  <TableCell className="text-right">
-                    <span
-                      className={`font-semibold ${transaction.type === "Income" ? "text-success" : "text-foreground"}`}
-                    >
-                      {transaction.type === "Income" ? "+" : "-"}${transaction.amount.toFixed(2)}{" "}
-                      {transaction.currency}
-                    </span>
-                  </TableCell>
-                </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredTransactions.map((transaction) => {
+                    const CategoryIcon = getCategoryIcon(transaction.category)
+                    const PaymentMethodIcon = getPaymentMethodIcon(transaction.paymentMethod)
+
+                    return (
+                      <TableRow key={transaction.id}>
+                        <TableCell className={`${transactionTableCellClassName} font-medium`}>
+                          {new Date(transaction.occurredOn).toLocaleDateString("es-ES", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </TableCell>
+                        <TableCell className={`${transactionTableCellClassName} max-w-[240px]`}>
+                          <span className="block truncate" title={transaction.description}>
+                            {transaction.description}
+                          </span>
+                        </TableCell>
+                        <TableCell className={transactionTableCellClassName}>
+                          <div className="flex items-center gap-2" title={transaction.category}>
+                            <CategoryIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                            <span className="truncate text-sm text-foreground">{transaction.category}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className={`${transactionTableCellClassName} text-muted-foreground`}>
+                          <div className="flex items-center gap-2" title={transaction.paymentMethod}>
+                            <PaymentMethodIcon className="size-4 shrink-0" aria-hidden="true" />
+                            <span className="truncate text-sm">{transaction.paymentMethod}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className={transactionTableCellClassName}>
+                          <Badge
+                            variant="outline"
+                            className={`gap-1 rounded-full font-medium ${
+                              transaction.status === "Confirmed"
+                                ? "border-success/40 bg-success/10 text-success"
+                                : "border-amber-500/40 bg-amber-500/10 text-amber-600"
+                            }`}
+                          >
+                            {transaction.status === "Confirmed" ? (
+                              <CheckCircle2 className="size-3" />
+                            ) : (
+                              <Clock className="size-3" />
+                            )}
+                            {transactionStatusLabels[transaction.status] ?? transaction.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className={transactionTableCellClassName}>
+                          <span
+                            className={`font-semibold ${transaction.type === "Income" ? "text-success" : "text-foreground"}`}
+                          >
+                            {transaction.type === "Income" ? "+" : "-"}${transaction.amount.toFixed(2)} {transaction.currency}
+                          </span>
+                        </TableCell>
+                        <TableCell className={transactionTableCellClassName}>
+                          <TransactionActionsMenu transaction={transaction} />
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
           <div className="mt-4 flex flex-col gap-3 border-t pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-col gap-1">
               <span className="font-medium text-foreground">
                 {transactionsResponse.totalCount} transacciones
               </span>
               <span>
-              {transactionsResponse.totalCount === 0
-                ? "0 transacciones"
-                : `Mostrando ${(transactionsResponse.pageNumber - 1) * pageSize + 1}-${Math.min(transactionsResponse.pageNumber * pageSize, transactionsResponse.totalCount)} de ${transactionsResponse.totalCount}`}
+                {transactionsResponse.totalCount === 0
+                  ? "0 transacciones"
+                  : `Mostrando ${visibleResultsStart}-${visibleResultsEnd} de ${transactionsResponse.totalCount}`}
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <Select value={String(pageSize)} onValueChange={(value) => {
-                setPageSize(Number(value))
-                setCurrentPage(1)
-              }}>
-                <SelectTrigger className="h-9 w-[130px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10 por página</SelectItem>
-                  <SelectItem value="20">20 por página</SelectItem>
-                  <SelectItem value="30">30 por página</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                variant="outline"
-                size="icon"
-                aria-label="Página anterior"
-                disabled={transactionsResponse.pageNumber <= 1}
-                onClick={() => setCurrentPage((page) => page - 1)}
-              >
-                <ChevronLeft className="size-4" />
-              </Button>
-              <span className="min-w-[84px] text-center">
-                Página {transactionsResponse.pageNumber} de {transactionsResponse.totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="icon"
-                aria-label="Página siguiente"
-                disabled={transactionsResponse.pageNumber >= transactionsResponse.totalPages}
-                onClick={() => setCurrentPage((page) => page + 1)}
-              >
-                <ChevronRight className="size-4" />
-              </Button>
-            </div>
+
+            {shouldShowPagination && (
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Select value={String(pageSize)} onValueChange={(value) => {
+                  setPageSize(Number(value))
+                  setCurrentPage(1)
+                }}>
+                  <SelectTrigger className="h-9 w-full sm:w-[130px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10 por página</SelectItem>
+                    <SelectItem value="20">20 por página</SelectItem>
+                    <SelectItem value="30">30 por página</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Página anterior"
+                  disabled={transactionsResponse.pageNumber <= 1}
+                  onClick={() => setCurrentPage((page) => page - 1)}
+                >
+                  <ChevronLeft className="size-4" />
+                </Button>
+                <span className="min-w-[84px] text-center">
+                  Página {transactionsResponse.pageNumber} de {transactionsResponse.totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Página siguiente"
+                  disabled={transactionsResponse.pageNumber >= transactionsResponse.totalPages}
+                  onClick={() => setCurrentPage((page) => page + 1)}
+                >
+                  <ChevronRight className="size-4" />
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -16,6 +16,34 @@ export type ExpenseCategory =
 
 export type IncomeCategory = "Salario" | "Freelance" | "Inversiones" | "Regalo" | "Otros"
 
+export const expenseCategoryLabels: Record<ExpenseCategory, string> = {
+  Alimentos: "Alimentos",
+  Transporte: "Transporte",
+  Vivienda: "Vivienda",
+  Servicios: "Servicios",
+  Salud: "Salud",
+  Educacion: "Educación",
+  Entretenimiento: "Entretenimiento",
+  Indumentaria: "Indumentaria",
+  AhorroInversion: "Ahorro e Inversión",
+  Otros: "Otros",
+}
+
+export const incomeCategoryLabels: Record<IncomeCategory, string> = {
+  Salario: "Salario",
+  Freelance: "Freelance",
+  Inversiones: "Inversiones",
+  Regalo: "Regalo",
+  Otros: "Otros",
+}
+
+export type TransactionStatus = "Confirmed" | "Pending"
+
+export const transactionStatusLabels: Record<TransactionStatus, string> = {
+  Confirmed: "Confirmada",
+  Pending: "Pendiente",
+}
+
 export type Currency = "ARS" | "USD" | "EUR" | "BRL"
 
 export type PaymentMethod = "Cash" | "CreditCard" | "DebitCard" | "BankTransfer" | "DigitalWallet"
@@ -44,7 +72,7 @@ export interface TransactionDto {
   occurredOn: string
   paymentMethod: PaymentMethodLabel
   source: string
-  status: string
+  status: TransactionStatus
   createdAt: string
 }
 
@@ -77,10 +105,32 @@ export interface TransactionSummaryResponse {
   totalIncomeTransactions: number
 }
 
-export type TransactionHistoryType = "ingreso" | "gasto" | "income" | "expense"
+export interface TransactionFilters {
+  search?: string
+  type?: TransactionType
+  expenseCategory?: ExpenseCategory
+  incomeCategory?: IncomeCategory
+  status?: TransactionStatus
+  paymentMethod?: PaymentMethod
+  /** Fecha desde, formato yyyy-MM-dd (inclusive). */
+  dateFrom?: string
+  /** Fecha hasta, formato yyyy-MM-dd (inclusive). */
+  dateTo?: string
+}
 
-export function getTransactionSummary(signal?: AbortSignal): Promise<TransactionSummaryResponse> {
-  return api.get<TransactionSummaryResponse>("/api/transactions/summary", { signal })
+export interface TransactionSummaryFilters {
+  dateFrom?: string
+  dateTo?: string
+}
+
+export function getTransactionSummary(
+  filters: TransactionSummaryFilters = {},
+  signal?: AbortSignal,
+): Promise<TransactionSummaryResponse> {
+  return api.get<TransactionSummaryResponse>("/api/transactions/summary", {
+    query: { dateFrom: filters.dateFrom, dateTo: filters.dateTo },
+    signal,
+  })
 }
 
 function translateTransaction(transaction: Omit<TransactionDto, "paymentMethod"> & { paymentMethod: PaymentMethod }) {
@@ -93,12 +143,22 @@ function translateTransaction(transaction: Omit<TransactionDto, "paymentMethod">
 export function listTransactions(
   pageNumber = 1,
   pageSize = 10,
-  search?: string,
-  type?: TransactionHistoryType,
+  filters: TransactionFilters = {},
   signal?: AbortSignal,
 ): Promise<TransactionsResponse> {
   return api.get<{ items: (Omit<TransactionDto, "paymentMethod"> & { paymentMethod: PaymentMethod })[]; pageNumber: number; pageSize: number; totalCount: number; totalPages: number }>("/api/transactions", {
-    query: { pageNumber, pageSize, search, type },
+    query: {
+      pageNumber,
+      pageSize,
+      search: filters.search,
+      type: filters.type,
+      expenseCategory: filters.expenseCategory,
+      incomeCategory: filters.incomeCategory,
+      status: filters.status,
+      paymentMethod: filters.paymentMethod,
+      dateFrom: filters.dateFrom,
+      dateTo: filters.dateTo,
+    },
     signal,
   }).then((response) => ({
     ...response,
