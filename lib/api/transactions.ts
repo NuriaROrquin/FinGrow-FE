@@ -85,7 +85,10 @@ export interface CreateTransactionPayload {
   description: string
   occurredOn: string
   paymentMethod: PaymentMethod
+  status: TransactionStatus
 }
+
+export type UpdateTransactionPayload = CreateTransactionPayload
 
 export interface TransactionsResponse {
   items: TransactionDto[]
@@ -169,5 +172,15 @@ export function listTransactions(
 export function createTransaction(payload: CreateTransactionPayload, signal?: AbortSignal): Promise<TransactionDto> {
   return api
     .post<Omit<TransactionDto, "paymentMethod"> & { paymentMethod: PaymentMethod }>("/api/transactions", payload, { signal })
+    .then(translateTransaction)
+}
+
+export function updateTransaction(
+  id: string,
+  payload: UpdateTransactionPayload,
+  signal?: AbortSignal,
+): Promise<TransactionDto> {
+  return api
+    .put<Omit<TransactionDto, "paymentMethod"> & { paymentMethod: PaymentMethod }>(`/api/transactions/${encodeURIComponent(id)}`, payload, { signal })
     .then(translateTransaction)
 }
