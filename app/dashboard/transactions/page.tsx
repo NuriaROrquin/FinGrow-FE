@@ -18,6 +18,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -58,6 +68,7 @@ import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import {
   createTransaction,
+  deleteTransaction,
   expenseCategoryLabels,
   getTransactionSummary,
   incomeCategoryLabels,
@@ -73,6 +84,7 @@ import {
 import { AddTransactionForm } from "@/components/transactions/add-transaction-form"
 import { TransactionActionsMenu } from "@/components/transactions/transaction-actions-menu"
 import { getCategoryIcon, getPaymentMethodIcon } from "@/components/transactions/transaction-icons"
+import { isApiError } from "@/lib/api/errors"
 
 const emptyTransactionsResponse: TransactionsResponse = {
   items: [],
@@ -167,6 +179,9 @@ export default function TransactionsPage() {
   const [pageSize, setPageSize] = useState(10)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<TransactionDto | null>(null)
+  const [transactionToDelete, setTransactionToDelete] = useState<TransactionDto | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [isOcrDialogOpen, setIsOcrDialogOpen] = useState(false)
   const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false)
   const [ocrImage, setOcrImage] = useState<string | null>(null)
@@ -379,6 +394,59 @@ export default function TransactionsPage() {
   const openEditTransactionDialog = (transaction: TransactionDto) => {
     setEditingTransaction(transaction)
     setIsAddDialogOpen(true)
+  }
+
+  const openDeleteTransactionDialog = (transaction: TransactionDto) => {
+    if (transaction.status !== "Pending" && transaction.status !== "Confirmed") return
+
+    setTransactionToDelete(transaction)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const closeDeleteTransactionDialog = () => {
+    if (isDeleting) return
+
+    setIsDeleteDialogOpen(false)
+    setTransactionToDelete(null)
+  }
+
+  const handleDeleteTransaction = async () => {
+    if (!transactionToDelete || isDeleting) return
+
+    setIsDeleting(true)
+
+    try {
+      await deleteTransaction(transactionToDelete.id)
+      setTransactionsResponse((previous) => ({
+        ...previous,
+        items: previous.items.filter((item) => item.id !== transactionToDelete.id),
+        totalCount: Math.max(0, previous.totalCount - 1),
+      }))
+      setSummaryRefreshKey((key) => key + 1)
+      setIsDeleteDialogOpen(false)
+      setTransactionToDelete(null)
+      if (transactionsResponse.items.length === 1 && currentPage > 1) {
+        setCurrentPage((page) => page - 1)
+      }
+      toast({
+        title: "Transacción eliminada",
+        description: "La transacción se eliminó correctamente.",
+      })
+    } catch (error) {
+      toast({
+        title: error instanceof Error && isApiError(error) && error.status === 404
+          ? "Transacción no encontrada"
+          : "No se pudo eliminar la transacción",
+        description: error instanceof Error && isApiError(error) && error.status === 404
+          ? "La transacción no existe o no pertenece al usuario."
+          : error instanceof Error
+            ? error.message
+            : "Intenta de nuevo en unos segundos.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   const handleTransactionDialogChange = (nextOpen: boolean) => {
@@ -966,6 +1034,42 @@ export default function TransactionsPage() {
                 />
               </DialogContent>
             </Dialog>
+
+            <AlertDialog
+              open={isDeleteDialogOpen}
+              onOpenChange={(nextOpen) => {
+                if (!nextOpen) {
+                  closeDeleteTransactionDialog()
+                }
+              }}
+            >
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Eliminar transacción?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Vas a eliminar la transacción de {transactionToDelete?.description ?? ""} por {transactionToDelete
+                      ? `${transactionToDelete.currency === "USD" ? "US$" : "$"}${transactionToDelete.amount.toLocaleString("es-AR", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })} ${transactionToDelete.currency}`
+                      : ""}. Esta acción no se puede deshacer.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    disabled={isDeleting}
+                    onClick={(event) => {
+                      event.preventDefault()
+                      void handleDeleteTransaction()
+                    }}
+                  >
+                    {isDeleting ? "Eliminando..." : "Confirmar"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
               </div>
             </CardContent>
           </Card>
@@ -1342,7 +1446,11 @@ export default function TransactionsPage() {
                           </span>
                         </TableCell>
                         <TableCell className={transactionTableCellClassName}>
-                          <TransactionActionsMenu transaction={transaction} onEdit={openEditTransactionDialog} />
+                          <TransactionActionsMenu
+                            transaction={transaction}
+                            onEdit={openEditTransactionDialog}
+                            onDelete={openDeleteTransactionDialog}
+                          />
                         </TableCell>
                       </TableRow>
                     )

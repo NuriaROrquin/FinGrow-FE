@@ -13,9 +13,11 @@ import type { TransactionDto } from "@/lib/api/transactions"
 export function TransactionActionsMenu({
   transaction,
   onEdit,
+  onDelete,
 }: {
   transaction: TransactionDto
   onEdit?: (transaction: TransactionDto) => void
+  onDelete?: (transaction: TransactionDto) => void
 }) {
   return (
     <DropdownMenu modal={false}>
@@ -32,7 +34,13 @@ export function TransactionActionsMenu({
         >
           Editar
         </DropdownMenuItem>
-        <DropdownMenuItem disabled>Eliminar</DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => {
+            onDelete?.(transaction)
+          }}
+        >
+          Eliminar
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

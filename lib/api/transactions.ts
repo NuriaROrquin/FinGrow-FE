@@ -38,6 +38,7 @@ export const incomeCategoryLabels: Record<IncomeCategory, string> = {
 }
 
 export type TransactionStatus = "Confirmed" | "Pending"
+type ApiTransactionStatus = TransactionStatus | "Eliminated"
 
 export const transactionStatusLabels: Record<TransactionStatus, string> = {
   Confirmed: "Confirmada",
@@ -149,7 +150,7 @@ export function listTransactions(
   filters: TransactionFilters = {},
   signal?: AbortSignal,
 ): Promise<TransactionsResponse> {
-  return api.get<{ items: (Omit<TransactionDto, "paymentMethod"> & { paymentMethod: PaymentMethod })[]; pageNumber: number; pageSize: number; totalCount: number; totalPages: number }>("/api/transactions", {
+  return api.get<{ items: (Omit<TransactionDto, "paymentMethod" | "status"> & { paymentMethod: PaymentMethod; status: ApiTransactionStatus })[]; pageNumber: number; pageSize: number; totalCount: number; totalPages: number }>("/api/transactions", {
     query: {
       pageNumber,
       pageSize,
@@ -165,7 +166,9 @@ export function listTransactions(
     signal,
   }).then((response) => ({
     ...response,
-    items: response.items.map(translateTransaction),
+    items: response.items
+      .filter((transaction) => transaction.status !== "Eliminated")
+      .map(translateTransaction),
   }))
 }
 
@@ -183,4 +186,8 @@ export function updateTransaction(
   return api
     .put<Omit<TransactionDto, "paymentMethod"> & { paymentMethod: PaymentMethod }>(`/api/transactions/${encodeURIComponent(id)}`, payload, { signal })
     .then(translateTransaction)
+}
+
+export function deleteTransaction(id: string, signal?: AbortSignal): Promise<void> {
+  return api.delete(`/api/transactions/${encodeURIComponent(id)}`, { signal })
 }
