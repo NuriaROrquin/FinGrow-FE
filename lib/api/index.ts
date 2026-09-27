@@ -54,11 +54,16 @@ export {
 export {
   ASSET_NAME_MAX_LENGTH,
   createInvestment,
+  getPortfolioSummary,
   deleteInvestment,
   investmentTypeLabels,
   listInvestments,
   updateInvestment,
+  type AllocationGroupDto,
   type CreateInvestmentPayload,
+  type CurrencyPortfolioDto,
   type InvestmentDto,
   type InvestmentType,
+  type LastPurchaseDto,
+  type PortfolioSummaryDto,
 } from "./investments"
