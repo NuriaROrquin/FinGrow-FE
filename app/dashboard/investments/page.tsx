@@ -132,6 +132,10 @@ function nextMonth(month: string): string {
   return monthNumber === 12 ? `${year + 1}-01` : `${year}-${String(monthNumber + 1).padStart(2, "0")}`
 }
 
+function pickCurrency(options: Currency[], chosen: Currency | ""): Currency | undefined {
+  return options.includes(chosen as Currency) ? (chosen as Currency) : options[0]
+}
+
 function sumByCurrency(investments: InvestmentDto[], pick: (investment: InvestmentDto) => number): TotalsByCurrency {
   return investments.reduce<TotalsByCurrency>((totals, investment) => {
     totals[investment.currency] = (totals[investment.currency] ?? 0) + pick(investment)
@@ -247,7 +251,8 @@ export default function InvestmentsPage() {
   const [editingInvestment, setEditingInvestment] = useState<InvestmentDto | null>(null)
   const [investmentToDelete, setInvestmentToDelete] = useState<InvestmentDto | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [chartCurrency, setChartCurrency] = useState<Currency | "">("")
+  const [capitalCurrency, setCapitalCurrency] = useState<Currency | "">("")
+  const [allocationCurrency, setAllocationCurrency] = useState<Currency | "">("")
   const router = useRouter()
 
   useEffect(() => {
@@ -319,12 +324,13 @@ export default function InvestmentsPage() {
   const latestValuedOn = investments.map((investment) => investment.valuedOn).sort().at(-1)
   const emptyHint = isLoading ? "Cargando..." : "Todavía no registraste inversiones"
 
-  const selectedCurrency = currencies.includes(chartCurrency as Currency) ? (chartCurrency as Currency) : currencies[0]
-  const capitalByMonth = selectedCurrency ? investedCapitalByMonth(investments, selectedCurrency) : []
-  const capitalChartConfig: ChartConfig = selectedCurrency
-    ? { capital: { label: `Capital en ${selectedCurrency}`, color: currencyColors[selectedCurrency] } }
+  const selectedCapitalCurrency = pickCurrency(currencies, capitalCurrency)
+  const capitalByMonth = selectedCapitalCurrency ? investedCapitalByMonth(investments, selectedCapitalCurrency) : []
+  const capitalChartConfig: ChartConfig = selectedCapitalCurrency
+    ? { capital: { label: `Capital en ${selectedCapitalCurrency}`, color: currencyColors[selectedCapitalCurrency] } }
     : {}
-  const allocation = selectedCurrency ? allocationByType(investments, selectedCurrency) : []
+  const selectedAllocationCurrency = pickCurrency(currencies, allocationCurrency)
+  const allocation = selectedAllocationCurrency ? allocationByType(investments, selectedAllocationCurrency) : []
   const allocationChartConfig: ChartConfig = Object.fromEntries(
     allocation.map((slice) => [slice.label, { label: slice.label, color: slice.color }]),
   )
@@ -489,8 +495,8 @@ export default function InvestmentsPage() {
             <CardHeader>
               <CardTitle>Evolución del Capital Invertido</CardTitle>
               <CardDescription>Cuánto capital fuiste acumulando en tu portafolio, mes a mes</CardDescription>
-              {selectedCurrency && (
-                <CurrencyPicker currencies={currencies} value={selectedCurrency} onChange={setChartCurrency} />
+              {selectedCapitalCurrency && (
+                <CurrencyPicker currencies={currencies} value={selectedCapitalCurrency} onChange={setCapitalCurrency} />
               )}
             </CardHeader>
             <CardContent>
@@ -514,12 +520,16 @@ export default function InvestmentsPage() {
             <CardHeader>
               <CardTitle>Distribución por Tipo de Activo</CardTitle>
               <CardDescription>Cómo se reparte tu portafolio según el valor actual de cada activo</CardDescription>
-              {selectedCurrency && (
-                <CurrencyPicker currencies={currencies} value={selectedCurrency} onChange={setChartCurrency} />
+              {selectedAllocationCurrency && (
+                <CurrencyPicker
+                  currencies={currencies}
+                  value={selectedAllocationCurrency}
+                  onChange={setAllocationCurrency}
+                />
               )}
             </CardHeader>
             <CardContent>
-              {allocation.length === 0 || !selectedCurrency ? (
+              {allocation.length === 0 || !selectedAllocationCurrency ? (
                 <p className="text-sm text-muted-foreground">{emptyHint}</p>
               ) : (
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -553,7 +563,7 @@ export default function InvestmentsPage() {
                           <span className="text-sm font-medium">{slice.label}</span>
                         </div>
                         <span className="text-sm font-semibold">
-                          {formatMoney(slice.value, selectedCurrency)} · {slice.share.toFixed(0)}%
+                          {formatMoney(slice.value, selectedAllocationCurrency)} · {slice.share.toFixed(0)}%
                         </span>
                       </div>
                     ))}
