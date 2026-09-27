@@ -75,7 +75,10 @@ const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep
 
 type TotalsByCurrency = Partial<Record<Currency, number>>
 
-type CapitalByMonth = { mes: string } & TotalsByCurrency
+interface CapitalByMonth {
+  mes: string
+  capital: number
+}
 
 interface AllocationSlice {
   type: InvestmentType
@@ -130,25 +133,24 @@ function sortByPurchase(investments: InvestmentDto[]): InvestmentDto[] {
   )
 }
 
-function investedCapitalByMonth(investments: InvestmentDto[], currencies: Currency[]): CapitalByMonth[] {
-  if (investments.length === 0) {
+function investedCapitalByMonth(investments: InvestmentDto[], currency: Currency): CapitalByMonth[] {
+  const inCurrency = investments.filter((investment) => investment.currency === currency)
+
+  if (inCurrency.length === 0) {
     return []
   }
 
-  const firstMonth = investments.map((investment) => monthOf(investment.purchasedOn)).sort()[0]
+  const firstMonth = inCurrency.map((investment) => monthOf(investment.purchasedOn)).sort()[0]
   const lastMonth = format(new Date(), "yyyy-MM")
   const rows: CapitalByMonth[] = []
 
   for (let month = firstMonth; month <= lastMonth; month = nextMonth(month)) {
-    const row: CapitalByMonth = { mes: monthLabel(month) }
-
-    for (const currency of currencies) {
-      row[currency] = investments
-        .filter((investment) => investment.currency === currency && monthOf(investment.purchasedOn) <= month)
-        .reduce((total, investment) => total + investment.investedAmount, 0)
-    }
-
-    rows.push(row)
+    rows.push({
+      mes: monthLabel(month),
+      capital: inCurrency
+        .filter((investment) => monthOf(investment.purchasedOn) <= month)
+        .reduce((total, investment) => total + investment.investedAmount, 0),
+    })
   }
 
   return rows
@@ -194,11 +196,42 @@ function MoneyByCurrency({ totals }: { totals: TotalsByCurrency }) {
   )
 }
 
+function CurrencyPicker({
+  currencies,
+  value,
+  onChange,
+}: {
+  currencies: Currency[]
+  value: Currency
+  onChange: (currency: Currency) => void
+}) {
+  if (currencies.length < 2) {
+    return null
+  }
+
+  return (
+    <CardAction>
+      <Select value={value} onValueChange={(selected) => onChange(selected as Currency)}>
+        <SelectTrigger className="w-[100px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {currencies.map((currency) => (
+            <SelectItem key={currency} value={currency}>
+              {currency}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </CardAction>
+  )
+}
+
 export default function InvestmentsPage() {
   const [investments, setInvestments] = useState<InvestmentDto[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const [allocationCurrency, setAllocationCurrency] = useState<Currency | "">("")
+  const [chartCurrency, setChartCurrency] = useState<Currency | "">("")
   const router = useRouter()
 
   useEffect(() => {
@@ -231,15 +264,12 @@ export default function InvestmentsPage() {
   const latestValuedOn = investments.map((investment) => investment.valuedOn).sort().at(-1)
   const emptyHint = isLoading ? "Cargando..." : "Todavía no registraste inversiones"
 
-  const capitalByMonth = investedCapitalByMonth(investments, currencies)
-  const capitalChartConfig: ChartConfig = Object.fromEntries(
-    currencies.map((currency) => [currency, { label: currency, color: currencyColors[currency] }]),
-  )
-
-  const selectedAllocationCurrency = currencies.includes(allocationCurrency as Currency)
-    ? (allocationCurrency as Currency)
-    : currencies[0]
-  const allocation = selectedAllocationCurrency ? allocationByType(investments, selectedAllocationCurrency) : []
+  const selectedCurrency = currencies.includes(chartCurrency as Currency) ? (chartCurrency as Currency) : currencies[0]
+  const capitalByMonth = selectedCurrency ? investedCapitalByMonth(investments, selectedCurrency) : []
+  const capitalChartConfig: ChartConfig = selectedCurrency
+    ? { capital: { label: `Capital en ${selectedCurrency}`, color: currencyColors[selectedCurrency] } }
+    : {}
+  const allocation = selectedCurrency ? allocationByType(investments, selectedCurrency) : []
   const allocationChartConfig: ChartConfig = Object.fromEntries(
     allocation.map((slice) => [slice.label, { label: slice.label, color: slice.color }]),
   )
@@ -364,6 +394,9 @@ export default function InvestmentsPage() {
             <CardHeader>
               <CardTitle>Evolución del Capital Invertido</CardTitle>
               <CardDescription>Cuánto capital fuiste acumulando en tu portafolio, mes a mes</CardDescription>
+              {selectedCurrency && (
+                <CurrencyPicker currencies={currencies} value={selectedCurrency} onChange={setChartCurrency} />
+              )}
             </CardHeader>
             <CardContent>
               {capitalByMonth.length === 0 ? (
@@ -375,15 +408,7 @@ export default function InvestmentsPage() {
                     <XAxis dataKey="mes" />
                     <YAxis />
                     <ChartTooltip content={<ChartTooltipContent />} cursor={{ stroke: "rgba(0, 0, 0, 0.2)" }} />
-                    {currencies.map((currency) => (
-                      <Line
-                        key={currency}
-                        type="monotone"
-                        dataKey={currency}
-                        stroke={currencyColors[currency]}
-                        strokeWidth={2}
-                      />
-                    ))}
+                    <Line type="monotone" dataKey="capital" stroke="var(--color-capital)" strokeWidth={2} />
                   </LineChart>
                 </ChartContainer>
               )}
@@ -394,28 +419,12 @@ export default function InvestmentsPage() {
             <CardHeader>
               <CardTitle>Distribución por Tipo de Activo</CardTitle>
               <CardDescription>Cómo se reparte tu portafolio según el valor actual de cada activo</CardDescription>
-              {currencies.length > 1 && selectedAllocationCurrency && (
-                <CardAction>
-                  <Select
-                    value={selectedAllocationCurrency}
-                    onValueChange={(value) => setAllocationCurrency(value as Currency)}
-                  >
-                    <SelectTrigger className="w-[100px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {currencies.map((currency) => (
-                        <SelectItem key={currency} value={currency}>
-                          {currency}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </CardAction>
+              {selectedCurrency && (
+                <CurrencyPicker currencies={currencies} value={selectedCurrency} onChange={setChartCurrency} />
               )}
             </CardHeader>
             <CardContent>
-              {allocation.length === 0 || !selectedAllocationCurrency ? (
+              {allocation.length === 0 || !selectedCurrency ? (
                 <p className="text-sm text-muted-foreground">{emptyHint}</p>
               ) : (
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -449,7 +458,7 @@ export default function InvestmentsPage() {
                           <span className="text-sm font-medium">{slice.label}</span>
                         </div>
                         <span className="text-sm font-semibold">
-                          {formatMoney(slice.value, selectedAllocationCurrency)} · {slice.share.toFixed(0)}%
+                          {formatMoney(slice.value, selectedCurrency)} · {slice.share.toFixed(0)}%
                         </span>
                       </div>
                     ))}
