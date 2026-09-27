@@ -31,7 +31,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { AddInvestmentForm } from "@/components/investments/add-investment-form"
-import { InvestmentActionsMenu } from "@/components/investments/investment-actions-menu"
+import { InvestmentRowActions } from "@/components/investments/investment-row-actions"
 import {
   createInvestment,
   deleteInvestment,
@@ -611,9 +611,7 @@ export default function InvestmentsPage() {
                 <TableHead className="text-right">Capital invertido</TableHead>
                 <TableHead className="text-right">Valor actual</TableHead>
                 <TableHead className="text-right">Rendimiento</TableHead>
-                <TableHead className="w-12">
-                  <span className="sr-only">Acciones</span>
-                </TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -661,8 +659,8 @@ export default function InvestmentsPage() {
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <InvestmentActionsMenu
+                  <TableCell className="text-right">
+                    <InvestmentRowActions
                       investment={investment}
                       onEdit={openEditDialog}
                       onDelete={setInvestmentToDelete}
