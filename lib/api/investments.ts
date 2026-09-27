@@ -73,8 +73,66 @@ export function getPortfolioSummary(signal?: AbortSignal): Promise<PortfolioSumm
   return api.get<PortfolioSummaryDto>("/api/investments/summary", { signal })
 }
 
-export function listInvestments(signal?: AbortSignal): Promise<InvestmentDto[]> {
-  return api.get<InvestmentDto[]>("/api/investments", { signal })
+export type InvestmentSortField = "PurchasedOn" | "AssetName" | "InvestedAmount" | "CurrentValue" | "ReturnPercentage"
+
+export type SortDirection = "Ascending" | "Descending"
+
+export type InvestmentPerformance = "Gain" | "Loss"
+
+export const investmentSortFieldLabels: Record<InvestmentSortField, string> = {
+  PurchasedOn: "Fecha de compra",
+  AssetName: "Nombre del activo",
+  InvestedAmount: "Capital invertido",
+  CurrentValue: "Valor actual",
+  ReturnPercentage: "Rendimiento",
+}
+
+export interface InvestmentListQuery {
+  pageNumber: number
+  pageSize: number
+  search?: string
+  type?: InvestmentType
+  currency?: Currency
+  purchasedFrom?: string
+  purchasedTo?: string
+  minInvested?: number
+  maxInvested?: number
+  quoted?: boolean
+  performance?: InvestmentPerformance
+  sortBy: InvestmentSortField
+  sortDirection: SortDirection
+}
+
+export interface PagedResultDto<T> {
+  items: T[]
+  pageNumber: number
+  pageSize: number
+  totalCount: number
+  totalPages: number
+}
+
+export function listInvestments(
+  query: InvestmentListQuery,
+  signal?: AbortSignal,
+): Promise<PagedResultDto<InvestmentDto>> {
+  return api.get<PagedResultDto<InvestmentDto>>("/api/investments", {
+    query: {
+      pageNumber: query.pageNumber,
+      pageSize: query.pageSize,
+      search: query.search,
+      types: query.type,
+      currencies: query.currency,
+      purchasedFrom: query.purchasedFrom,
+      purchasedTo: query.purchasedTo,
+      minInvested: query.minInvested,
+      maxInvested: query.maxInvested,
+      quoted: query.quoted,
+      performance: query.performance,
+      sortBy: query.sortBy,
+      sortDirection: query.sortDirection,
+    },
+    signal,
+  })
 }
 
 export function createInvestment(payload: CreateInvestmentPayload, signal?: AbortSignal): Promise<InvestmentDto> {
