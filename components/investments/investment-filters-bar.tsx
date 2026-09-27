@@ -50,13 +50,13 @@ export const defaultInvestmentFilters: InvestmentFilterValues = {
 const currencyOptions: Currency[] = ["ARS", "USD", "EUR", "BRL"]
 
 const quoteLabels: Record<InvestmentFilterValues["quote"], string> = {
-  all: "Cotizadas y sin cotizar",
+  all: "Todas",
   quoted: "Solo cotizadas",
   unquoted: "Solo sin cotizar",
 }
 
 const performanceLabels: Record<InvestmentFilterValues["performance"], string> = {
-  all: "Ganancia y pérdida",
+  all: "Todos",
   Gain: "Con ganancia",
   Loss: "Con pérdida",
 }
@@ -157,7 +157,7 @@ export function InvestmentFiltersBar({
 
   return (
     <div className="mb-4 space-y-3">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <div className="sm:col-span-2">
           <Field id="investment-filter-search" label="Buscar">
             <div className="relative">
@@ -180,7 +180,7 @@ export function InvestmentFiltersBar({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos los tipos</SelectItem>
+              <SelectItem value="all">Todos</SelectItem>
               {Object.entries(investmentTypeLabels).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
@@ -199,7 +199,7 @@ export function InvestmentFiltersBar({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas las monedas</SelectItem>
+              <SelectItem value="all">Todas</SelectItem>
               {currencyOptions.map((currency) => (
                 <SelectItem key={currency} value={currency}>
                   {currency}
@@ -223,9 +223,7 @@ export function InvestmentFiltersBar({
             </SelectContent>
           </Select>
         </Field>
-      </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <Field id="investment-filter-performance" label="Resultado">
           <Select
             value={values.performance}
