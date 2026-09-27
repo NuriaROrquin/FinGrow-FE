@@ -7,7 +7,7 @@ import { toast } from "sonner"
 import { Card, CardAction, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
-import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid } from "recharts"
+import { PieChart, Pie, Cell } from "recharts"
 import { TrendingUpIcon, TrendingDownIcon, PlusIcon, LightbulbIcon, InfoIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -79,23 +79,9 @@ const investmentTypeColors: Record<InvestmentType, string> = {
   Crypto: "#ef4444",
 }
 
-const currencyColors: Record<Currency, string> = {
-  ARS: "#8b5cf6",
-  USD: "#10b981",
-  EUR: "#3b5998",
-  BRL: "#f59e0b",
-}
-
 const mepConvertibleCurrencies: Currency[] = ["ARS", "USD"]
 
-const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
-
 type TotalsByCurrency = Partial<Record<Currency, number>>
-
-interface CapitalByMonth {
-  mes: string
-  capital: number
-}
 
 type AllocationSlice = {
   type: InvestmentType
@@ -150,20 +136,6 @@ function convertWithMep(amount: number, from: Currency, to: Currency, quote: Mep
   return from === "ARS" ? amount / quote.sell : amount * quote.sell
 }
 
-function monthOf(isoDate: string): string {
-  return isoDate.slice(0, 7)
-}
-
-function monthLabel(month: string): string {
-  const [year, monthNumber] = month.split("-")
-  return `${monthNames[Number(monthNumber) - 1]} ${year.slice(2)}`
-}
-
-function nextMonth(month: string): string {
-  const [year, monthNumber] = month.split("-").map(Number)
-  return monthNumber === 12 ? `${year + 1}-01` : `${year}-${String(monthNumber + 1).padStart(2, "0")}`
-}
-
 function pickCurrency(options: Currency[], chosen: Currency | ""): Currency | undefined {
   return options.includes(chosen as Currency) ? (chosen as Currency) : options[0]
 }
@@ -180,29 +152,6 @@ function sortByPurchase(investments: InvestmentDto[]): InvestmentDto[] {
     (first, second) =>
       second.purchasedOn.localeCompare(first.purchasedOn) || second.createdAt.localeCompare(first.createdAt),
   )
-}
-
-function investedCapitalByMonth(investments: InvestmentDto[], currency: Currency): CapitalByMonth[] {
-  const inCurrency = investments.filter((investment) => investment.currency === currency)
-
-  if (inCurrency.length === 0) {
-    return []
-  }
-
-  const firstMonth = inCurrency.map((investment) => monthOf(investment.purchasedOn)).sort()[0]
-  const lastMonth = format(new Date(), "yyyy-MM")
-  const rows: CapitalByMonth[] = []
-
-  for (let month = firstMonth; month <= lastMonth; month = nextMonth(month)) {
-    rows.push({
-      mes: monthLabel(month),
-      capital: inCurrency
-        .filter((investment) => monthOf(investment.purchasedOn) <= month)
-        .reduce((total, investment) => total + investment.investedAmount, 0),
-    })
-  }
-
-  return rows
 }
 
 function allocationByType(investments: InvestmentDto[], currency: Currency, quote: MepQuoteDto | null): Allocation {
@@ -351,7 +300,6 @@ export default function InvestmentsPage() {
   const [editingInvestment, setEditingInvestment] = useState<InvestmentDto | null>(null)
   const [investmentToDelete, setInvestmentToDelete] = useState<InvestmentDto | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [capitalCurrency, setCapitalCurrency] = useState<Currency | "">("")
   const [allocationCurrency, setAllocationCurrency] = useState<Currency | "">("")
   const [mepQuote, setMepQuote] = useState<MepQuoteDto | null>(null)
   const [mepStatus, setMepStatus] = useState<MepStatus>("loading")
@@ -442,11 +390,6 @@ export default function InvestmentsPage() {
   const latestValuedOn = investments.map((investment) => investment.valuedOn).sort().at(-1)
   const emptyHint = isLoading ? "Cargando..." : "Todavía no registraste inversiones"
 
-  const selectedCapitalCurrency = pickCurrency(currencies, capitalCurrency)
-  const capitalByMonth = selectedCapitalCurrency ? investedCapitalByMonth(investments, selectedCapitalCurrency) : []
-  const capitalChartConfig: ChartConfig = selectedCapitalCurrency
-    ? { capital: { label: `Capital en ${selectedCapitalCurrency}`, color: currencyColors[selectedCapitalCurrency] } }
-    : {}
   const allocationCurrencies =
     mepQuote && currencies.some((currency) => mepConvertibleCurrencies.includes(currency))
       ? [...currencies, ...mepConvertibleCurrencies.filter((currency) => !currencies.includes(currency))]
@@ -615,31 +558,6 @@ export default function InvestmentsPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Evolución del Capital Invertido</CardTitle>
-              <CardDescription>Cuánto capital fuiste acumulando en tu portafolio, mes a mes</CardDescription>
-              {selectedCapitalCurrency && (
-                <CurrencyPicker currencies={currencies} value={selectedCapitalCurrency} onChange={setCapitalCurrency} />
-              )}
-            </CardHeader>
-            <CardContent>
-              {capitalByMonth.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{emptyHint}</p>
-              ) : (
-                <ChartContainer config={capitalChartConfig} className="h-[300px] w-full">
-                  <LineChart data={capitalByMonth}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="mes" />
-                    <YAxis />
-                    <ChartTooltip content={<ChartTooltipContent />} cursor={{ stroke: "rgba(0, 0, 0, 0.2)" }} />
-                    <Line type="monotone" dataKey="capital" stroke="var(--color-capital)" strokeWidth={2} />
-                  </LineChart>
-                </ChartContainer>
-              )}
-            </CardContent>
-          </Card>
-
           <Card>
             <CardHeader>
               <CardTitle>Distribución por Tipo de Activo</CardTitle>
