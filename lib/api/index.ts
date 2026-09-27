@@ -53,8 +53,10 @@ export {
 export {
   ASSET_NAME_MAX_LENGTH,
   createInvestment,
+  deleteInvestment,
   investmentTypeLabels,
   listInvestments,
+  updateInvestment,
   type CreateInvestmentPayload,
   type InvestmentDto,
   type InvestmentType,

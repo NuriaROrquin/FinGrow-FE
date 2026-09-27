@@ -42,3 +42,15 @@ export function listInvestments(signal?: AbortSignal): Promise<InvestmentDto[]> 
 export function createInvestment(payload: CreateInvestmentPayload, signal?: AbortSignal): Promise<InvestmentDto> {
   return api.post<InvestmentDto>("/api/investments", payload, { signal })
 }
+
+export function updateInvestment(
+  id: string,
+  payload: CreateInvestmentPayload,
+  signal?: AbortSignal,
+): Promise<InvestmentDto> {
+  return api.put<InvestmentDto>(`/api/investments/${encodeURIComponent(id)}`, payload, { signal })
+}
+
+export function deleteInvestment(id: string, signal?: AbortSignal): Promise<void> {
+  return api.delete(`/api/investments/${encodeURIComponent(id)}`, { signal })
+}
