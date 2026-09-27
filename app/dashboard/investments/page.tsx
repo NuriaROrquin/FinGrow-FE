@@ -8,7 +8,7 @@ import { Card, CardAction, CardHeader, CardTitle, CardDescription, CardContent }
 import { Button } from "@/components/ui/button"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid } from "recharts"
-import { TrendingUpIcon, TrendingDownIcon, PlusIcon, LightbulbIcon } from "lucide-react"
+import { TrendingUpIcon, TrendingDownIcon, PlusIcon, LightbulbIcon, InfoIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
@@ -35,6 +35,7 @@ import { InvestmentRowActions } from "@/components/investments/investment-row-ac
 import {
   createInvestment,
   deleteInvestment,
+  getMepQuote,
   investmentTypeLabels,
   listInvestments,
   toastApiError,
@@ -42,6 +43,7 @@ import {
   type CreateInvestmentPayload,
   type InvestmentDto,
   type InvestmentType,
+  type MepQuoteDto,
 } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
 
@@ -84,6 +86,8 @@ const currencyColors: Record<Currency, string> = {
   BRL: "#f59e0b",
 }
 
+const mepConvertibleCurrencies: Currency[] = ["ARS", "USD"]
+
 const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 
 type TotalsByCurrency = Partial<Record<Currency, number>>
@@ -93,13 +97,21 @@ interface CapitalByMonth {
   capital: number
 }
 
-interface AllocationSlice {
+type AllocationSlice = {
   type: InvestmentType
   label: string
   value: number
   share: number
   color: string
 }
+
+interface Allocation {
+  slices: AllocationSlice[]
+  convertedCurrencies: Currency[]
+  excludedCurrencies: Currency[]
+}
+
+type MepStatus = "loading" | "ready" | "unavailable"
 
 function formatMoney(amount: number, currency: Currency): string {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency }).format(amount)
@@ -118,6 +130,26 @@ function formatDate(isoDate: string): string {
   return format(parseISO(isoDate), "dd/MM/yyyy")
 }
 
+function formatDateTime(isoDateTime: string): string {
+  return format(parseISO(isoDateTime), "dd/MM/yyyy HH:mm")
+}
+
+function listCurrencies(currencies: Currency[]): string {
+  return currencies.join(" y ")
+}
+
+function convertWithMep(amount: number, from: Currency, to: Currency, quote: MepQuoteDto | null): number | null {
+  if (from === to) {
+    return amount
+  }
+
+  if (!quote || !mepConvertibleCurrencies.includes(from) || !mepConvertibleCurrencies.includes(to)) {
+    return null
+  }
+
+  return from === "ARS" ? amount / quote.sell : amount * quote.sell
+}
+
 function monthOf(isoDate: string): string {
   return isoDate.slice(0, 7)
 }
@@ -130,6 +162,10 @@ function monthLabel(month: string): string {
 function nextMonth(month: string): string {
   const [year, monthNumber] = month.split("-").map(Number)
   return monthNumber === 12 ? `${year + 1}-01` : `${year}-${String(monthNumber + 1).padStart(2, "0")}`
+}
+
+function pickCurrency(options: Currency[], chosen: Currency | ""): Currency | undefined {
+  return options.includes(chosen as Currency) ? (chosen as Currency) : options[0]
 }
 
 function sumByCurrency(investments: InvestmentDto[], pick: (investment: InvestmentDto) => number): TotalsByCurrency {
@@ -169,26 +205,43 @@ function investedCapitalByMonth(investments: InvestmentDto[], currency: Currency
   return rows
 }
 
-function allocationByType(investments: InvestmentDto[], currency: Currency): AllocationSlice[] {
+function allocationByType(investments: InvestmentDto[], currency: Currency, quote: MepQuoteDto | null): Allocation {
   const valueByType = new Map<InvestmentType, number>()
+  const convertedCurrencies = new Set<Currency>()
+  const excludedCurrencies = new Set<Currency>()
 
   for (const investment of investments) {
-    if (investment.currency === currency) {
-      valueByType.set(investment.type, (valueByType.get(investment.type) ?? 0) + investment.currentValue)
+    const value = convertWithMep(investment.currentValue, investment.currency, currency, quote)
+
+    if (value === null) {
+      excludedCurrencies.add(investment.currency)
+      continue
     }
+
+    if (investment.currency !== currency) {
+      convertedCurrencies.add(investment.currency)
+    }
+
+    valueByType.set(investment.type, (valueByType.get(investment.type) ?? 0) + value)
   }
 
   const total = Array.from(valueByType.values()).reduce((sum, value) => sum + value, 0)
 
-  return Array.from(valueByType.entries())
+  const slices = Array.from(valueByType.entries())
     .map(([type, value]) => ({
       type,
       label: investmentTypeLabels[type],
-      value,
+      value: Math.round(value * 100) / 100,
       share: total === 0 ? 0 : (value / total) * 100,
       color: investmentTypeColors[type],
     }))
     .sort((first, second) => second.value - first.value)
+
+  return {
+    slices,
+    convertedCurrencies: Array.from(convertedCurrencies),
+    excludedCurrencies: Array.from(excludedCurrencies),
+  }
 }
 
 function MoneyByCurrency({ totals }: { totals: TotalsByCurrency }) {
@@ -205,6 +258,57 @@ function MoneyByCurrency({ totals }: { totals: TotalsByCurrency }) {
           {formatMoney(amount, currency)}
         </div>
       ))}
+    </div>
+  )
+}
+
+function AllocationNotice({
+  allocation,
+  currency,
+  quote,
+  mepStatus,
+}: {
+  allocation: Allocation
+  currency: Currency
+  quote: MepQuoteDto | null
+  mepStatus: MepStatus
+}) {
+  const messages: string[] = []
+  const missingMep = allocation.excludedCurrencies.filter((excluded) => mepConvertibleCurrencies.includes(excluded))
+  const notConvertible = allocation.excludedCurrencies.filter(
+    (excluded) => !mepConvertibleCurrencies.includes(excluded),
+  )
+
+  if (quote && allocation.convertedCurrencies.length > 0) {
+    messages.push(
+      `Los activos en ${listCurrencies(allocation.convertedCurrencies)} se muestran en ${currency} con el dólar MEP a ${formatMoney(quote.sell, "ARS")} (venta), actualizado el ${formatDateTime(quote.updatedAt)}.`,
+    )
+  }
+
+  if (mepStatus === "unavailable" && missingMep.length > 0) {
+    messages.push(
+      `No pudimos obtener la cotización del dólar MEP, así que no se incluyen los activos en ${listCurrencies(missingMep)}.`,
+    )
+  }
+
+  if (notConvertible.length > 0) {
+    messages.push(
+      `No se incluyen los activos en ${listCurrencies(notConvertible)}: el dólar MEP solo convierte entre pesos y dólares.`,
+    )
+  }
+
+  if (messages.length === 0) {
+    return null
+  }
+
+  return (
+    <div className="mt-4 flex items-start gap-2 rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+      <InfoIcon className="mt-0.5 size-4 shrink-0" />
+      <div className="space-y-1">
+        {messages.map((message) => (
+          <p key={message}>{message}</p>
+        ))}
+      </div>
     </div>
   )
 }
@@ -247,7 +351,10 @@ export default function InvestmentsPage() {
   const [editingInvestment, setEditingInvestment] = useState<InvestmentDto | null>(null)
   const [investmentToDelete, setInvestmentToDelete] = useState<InvestmentDto | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [chartCurrency, setChartCurrency] = useState<Currency | "">("")
+  const [capitalCurrency, setCapitalCurrency] = useState<Currency | "">("")
+  const [allocationCurrency, setAllocationCurrency] = useState<Currency | "">("")
+  const [mepQuote, setMepQuote] = useState<MepQuoteDto | null>(null)
+  const [mepStatus, setMepStatus] = useState<MepStatus>("loading")
   const router = useRouter()
 
   useEffect(() => {
@@ -261,6 +368,22 @@ export default function InvestmentsPage() {
       })
       .finally(() => {
         if (!controller.signal.aborted) setIsLoading(false)
+      })
+
+    return () => controller.abort()
+  }, [])
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    getMepQuote(controller.signal)
+      .then((quote) => {
+        setMepQuote(quote)
+        setMepStatus("ready")
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return
+        setMepStatus("unavailable")
       })
 
     return () => controller.abort()
@@ -319,14 +442,21 @@ export default function InvestmentsPage() {
   const latestValuedOn = investments.map((investment) => investment.valuedOn).sort().at(-1)
   const emptyHint = isLoading ? "Cargando..." : "Todavía no registraste inversiones"
 
-  const selectedCurrency = currencies.includes(chartCurrency as Currency) ? (chartCurrency as Currency) : currencies[0]
-  const capitalByMonth = selectedCurrency ? investedCapitalByMonth(investments, selectedCurrency) : []
-  const capitalChartConfig: ChartConfig = selectedCurrency
-    ? { capital: { label: `Capital en ${selectedCurrency}`, color: currencyColors[selectedCurrency] } }
+  const selectedCapitalCurrency = pickCurrency(currencies, capitalCurrency)
+  const capitalByMonth = selectedCapitalCurrency ? investedCapitalByMonth(investments, selectedCapitalCurrency) : []
+  const capitalChartConfig: ChartConfig = selectedCapitalCurrency
+    ? { capital: { label: `Capital en ${selectedCapitalCurrency}`, color: currencyColors[selectedCapitalCurrency] } }
     : {}
-  const allocation = selectedCurrency ? allocationByType(investments, selectedCurrency) : []
+  const allocationCurrencies =
+    mepQuote && currencies.some((currency) => mepConvertibleCurrencies.includes(currency))
+      ? [...currencies, ...mepConvertibleCurrencies.filter((currency) => !currencies.includes(currency))]
+      : currencies
+  const selectedAllocationCurrency = pickCurrency(allocationCurrencies, allocationCurrency)
+  const allocation: Allocation = selectedAllocationCurrency
+    ? allocationByType(investments, selectedAllocationCurrency, mepQuote)
+    : { slices: [], convertedCurrencies: [], excludedCurrencies: [] }
   const allocationChartConfig: ChartConfig = Object.fromEntries(
-    allocation.map((slice) => [slice.label, { label: slice.label, color: slice.color }]),
+    allocation.slices.map((slice) => [slice.label, { label: slice.label, color: slice.color }]),
   )
 
   return (
@@ -489,8 +619,8 @@ export default function InvestmentsPage() {
             <CardHeader>
               <CardTitle>Evolución del Capital Invertido</CardTitle>
               <CardDescription>Cuánto capital fuiste acumulando en tu portafolio, mes a mes</CardDescription>
-              {selectedCurrency && (
-                <CurrencyPicker currencies={currencies} value={selectedCurrency} onChange={setChartCurrency} />
+              {selectedCapitalCurrency && (
+                <CurrencyPicker currencies={currencies} value={selectedCapitalCurrency} onChange={setCapitalCurrency} />
               )}
             </CardHeader>
             <CardContent>
@@ -514,19 +644,23 @@ export default function InvestmentsPage() {
             <CardHeader>
               <CardTitle>Distribución por Tipo de Activo</CardTitle>
               <CardDescription>Cómo se reparte tu portafolio según el valor actual de cada activo</CardDescription>
-              {selectedCurrency && (
-                <CurrencyPicker currencies={currencies} value={selectedCurrency} onChange={setChartCurrency} />
+              {selectedAllocationCurrency && (
+                <CurrencyPicker
+                  currencies={allocationCurrencies}
+                  value={selectedAllocationCurrency}
+                  onChange={setAllocationCurrency}
+                />
               )}
             </CardHeader>
             <CardContent>
-              {allocation.length === 0 || !selectedCurrency ? (
+              {allocation.slices.length === 0 || !selectedAllocationCurrency ? (
                 <p className="text-sm text-muted-foreground">{emptyHint}</p>
               ) : (
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <ChartContainer config={allocationChartConfig} className="h-[250px] w-full">
                     <PieChart>
                       <Pie
-                        data={allocation}
+                        data={allocation.slices}
                         cx="50%"
                         cy="50%"
                         labelLine={false}
@@ -537,7 +671,7 @@ export default function InvestmentsPage() {
                         dataKey="value"
                         nameKey="label"
                       >
-                        {allocation.map((slice) => (
+                        {allocation.slices.map((slice) => (
                           <Cell key={slice.type} fill={slice.color} />
                         ))}
                       </Pie>
@@ -546,19 +680,27 @@ export default function InvestmentsPage() {
                   </ChartContainer>
 
                   <div className="flex flex-col justify-center gap-3">
-                    {allocation.map((slice) => (
+                    {allocation.slices.map((slice) => (
                       <div key={slice.type} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className="size-3 rounded-full" style={{ backgroundColor: slice.color }} />
                           <span className="text-sm font-medium">{slice.label}</span>
                         </div>
                         <span className="text-sm font-semibold">
-                          {formatMoney(slice.value, selectedCurrency)} · {slice.share.toFixed(0)}%
+                          {formatMoney(slice.value, selectedAllocationCurrency)} · {slice.share.toFixed(0)}%
                         </span>
                       </div>
                     ))}
                   </div>
                 </div>
+              )}
+              {selectedAllocationCurrency && (
+                <AllocationNotice
+                  allocation={allocation}
+                  currency={selectedAllocationCurrency}
+                  quote={mepQuote}
+                  mepStatus={mepStatus}
+                />
               )}
             </CardContent>
           </Card>

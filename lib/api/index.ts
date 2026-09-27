@@ -21,6 +21,7 @@ export { toastApiError } from "./notify"
 export { clearSession, getRole, loginPathForCurrentRole, saveSession, type SessionRole } from "./session"
 export { getSession, loginEmpleado, loginEmpresa, logout, type LoginRequest, type SessionResponse } from "./auth"
 export { getApiBaseUrl } from "./config"
+export { getMepQuote, type MepQuoteDto } from "./exchange-rates"
 export {
   addContribution,
   CONTRIBUTION_NOTE_MAX_LENGTH,
