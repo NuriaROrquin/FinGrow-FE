@@ -4,11 +4,11 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { format, parseISO } from "date-fns"
 import { toast } from "sonner"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import { Card, CardAction, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid } from "recharts"
-import { TrendingUpIcon, TrendingDownIcon, PlusIcon, ArrowUpIcon, ArrowDownIcon, LightbulbIcon } from "lucide-react"
+import { TrendingUpIcon, TrendingDownIcon, PlusIcon, LightbulbIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
@@ -18,6 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { AddInvestmentForm } from "@/components/investments/add-investment-form"
 import {
@@ -27,24 +28,9 @@ import {
   toastApiError,
   type CreateInvestmentPayload,
   type InvestmentDto,
+  type InvestmentType,
 } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
-
-const performanceData = [
-  { mes: "Ene", valor: 350000 },
-  { mes: "Feb", valor: 362000 },
-  { mes: "Mar", valor: 358000 },
-  { mes: "Abr", valor: 375000 },
-  { mes: "May", valor: 382000 },
-  { mes: "Jun", valor: 435750.5 },
-]
-
-const allocationData = [
-  { nombre: "Acciones", valor: 813500.5, color: "#3b5998" },
-  { nombre: "ETFs", valor: 2226000, color: "#10b981" },
-  { nombre: "Bonos", valor: 798000, color: "#f59e0b" },
-  { nombre: "Fondos Comunes", valor: 520000, color: "#8b5cf6" },
-]
 
 const educationalTips = [
   {
@@ -70,33 +56,34 @@ const educationalTips = [
   },
 ]
 
-const chartConfig = {
-  valor: {
-    label: "Valor del Portafolio",
-    color: "#8b5cf6",
-  },
+const investmentTypeColors: Record<InvestmentType, string> = {
+  Stock: "#3b5998",
+  Etf: "#10b981",
+  Bond: "#f59e0b",
+  MutualFund: "#8b5cf6",
+  Crypto: "#ef4444",
 }
 
-const allocationChartConfig = {
-  Acciones: {
-    label: "Acciones",
-    color: "#3b5998",
-  },
-  ETFs: {
-    label: "ETFs",
-    color: "#10b981",
-  },
-  Bonos: {
-    label: "Bonos",
-    color: "#f59e0b",
-  },
-  "Fondos Comunes": {
-    label: "Fondos Comunes",
-    color: "#8b5cf6",
-  },
+const currencyColors: Record<Currency, string> = {
+  ARS: "#8b5cf6",
+  USD: "#10b981",
+  EUR: "#3b5998",
+  BRL: "#f59e0b",
 }
+
+const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 
 type TotalsByCurrency = Partial<Record<Currency, number>>
+
+type CapitalByMonth = { mes: string } & TotalsByCurrency
+
+interface AllocationSlice {
+  type: InvestmentType
+  label: string
+  value: number
+  share: number
+  color: string
+}
 
 function formatMoney(amount: number, currency: Currency): string {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency }).format(amount)
@@ -115,6 +102,20 @@ function formatDate(isoDate: string): string {
   return format(parseISO(isoDate), "dd/MM/yyyy")
 }
 
+function monthOf(isoDate: string): string {
+  return isoDate.slice(0, 7)
+}
+
+function monthLabel(month: string): string {
+  const [year, monthNumber] = month.split("-")
+  return `${monthNames[Number(monthNumber) - 1]} ${year.slice(2)}`
+}
+
+function nextMonth(month: string): string {
+  const [year, monthNumber] = month.split("-").map(Number)
+  return monthNumber === 12 ? `${year + 1}-01` : `${year}-${String(monthNumber + 1).padStart(2, "0")}`
+}
+
 function sumByCurrency(investments: InvestmentDto[], pick: (investment: InvestmentDto) => number): TotalsByCurrency {
   return investments.reduce<TotalsByCurrency>((totals, investment) => {
     totals[investment.currency] = (totals[investment.currency] ?? 0) + pick(investment)
@@ -127,6 +128,52 @@ function sortByPurchase(investments: InvestmentDto[]): InvestmentDto[] {
     (first, second) =>
       second.purchasedOn.localeCompare(first.purchasedOn) || second.createdAt.localeCompare(first.createdAt),
   )
+}
+
+function investedCapitalByMonth(investments: InvestmentDto[], currencies: Currency[]): CapitalByMonth[] {
+  if (investments.length === 0) {
+    return []
+  }
+
+  const firstMonth = investments.map((investment) => monthOf(investment.purchasedOn)).sort()[0]
+  const lastMonth = format(new Date(), "yyyy-MM")
+  const rows: CapitalByMonth[] = []
+
+  for (let month = firstMonth; month <= lastMonth; month = nextMonth(month)) {
+    const row: CapitalByMonth = { mes: monthLabel(month) }
+
+    for (const currency of currencies) {
+      row[currency] = investments
+        .filter((investment) => investment.currency === currency && monthOf(investment.purchasedOn) <= month)
+        .reduce((total, investment) => total + investment.investedAmount, 0)
+    }
+
+    rows.push(row)
+  }
+
+  return rows
+}
+
+function allocationByType(investments: InvestmentDto[], currency: Currency): AllocationSlice[] {
+  const valueByType = new Map<InvestmentType, number>()
+
+  for (const investment of investments) {
+    if (investment.currency === currency) {
+      valueByType.set(investment.type, (valueByType.get(investment.type) ?? 0) + investment.currentValue)
+    }
+  }
+
+  const total = Array.from(valueByType.values()).reduce((sum, value) => sum + value, 0)
+
+  return Array.from(valueByType.entries())
+    .map(([type, value]) => ({
+      type,
+      label: investmentTypeLabels[type],
+      value,
+      share: total === 0 ? 0 : (value / total) * 100,
+      color: investmentTypeColors[type],
+    }))
+    .sort((first, second) => second.value - first.value)
 }
 
 function MoneyByCurrency({ totals }: { totals: TotalsByCurrency }) {
@@ -151,6 +198,7 @@ export default function InvestmentsPage() {
   const [investments, setInvestments] = useState<InvestmentDto[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [allocationCurrency, setAllocationCurrency] = useState<Currency | "">("")
   const router = useRouter()
 
   useEffect(() => {
@@ -179,6 +227,22 @@ export default function InvestmentsPage() {
   const investedByCurrency = sumByCurrency(investments, (investment) => investment.investedAmount)
   const returnByCurrency = sumByCurrency(investments, (investment) => investment.returnAmount)
   const currencies = Object.keys(investedByCurrency) as Currency[]
+  const lastPurchase = investments[0]
+  const latestValuedOn = investments.map((investment) => investment.valuedOn).sort().at(-1)
+  const emptyHint = isLoading ? "Cargando..." : "Todavía no registraste inversiones"
+
+  const capitalByMonth = investedCapitalByMonth(investments, currencies)
+  const capitalChartConfig: ChartConfig = Object.fromEntries(
+    currencies.map((currency) => [currency, { label: currency, color: currencyColors[currency] }]),
+  )
+
+  const selectedAllocationCurrency = currencies.includes(allocationCurrency as Currency)
+    ? (allocationCurrency as Currency)
+    : currencies[0]
+  const allocation = selectedAllocationCurrency ? allocationByType(investments, selectedAllocationCurrency) : []
+  const allocationChartConfig: ChartConfig = Object.fromEntries(
+    allocation.map((slice) => [slice.label, { label: slice.label, color: slice.color }]),
+  )
 
   return (
     <div className="space-y-6">
@@ -212,27 +276,10 @@ export default function InvestmentsPage() {
               <MoneyByCurrency totals={currentValueByCurrency} />
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-1">
-            {currencies.length === 0 && (
-              <p className="text-sm text-muted-foreground">Todavía no registraste inversiones</p>
-            )}
-            {currencies.map((currency) => {
-              const gain = returnByCurrency[currency] ?? 0
-              const invested = investedByCurrency[currency] ?? 0
-              const gainPercent = invested === 0 ? 0 : (gain / invested) * 100
-
-              return (
-                <div
-                  key={currency}
-                  className={`flex items-center gap-1 text-sm ${gain >= 0 ? "text-success" : "text-destructive"}`}
-                >
-                  {gain >= 0 ? <ArrowUpIcon className="size-4" /> : <ArrowDownIcon className="size-4" />}
-                  <span>
-                    {formatSignedMoney(gain, currency)} ({formatPercentage(gainPercent)})
-                  </span>
-                </div>
-              )
-            })}
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              {latestValuedOn ? `Valuado al ${formatDate(latestValuedOn)}` : emptyHint}
+            </p>
           </CardContent>
         </Card>
 
@@ -252,24 +299,61 @@ export default function InvestmentsPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Cambio de Hoy</CardDescription>
-            <CardTitle className="text-2xl text-success">+$342.50</CardTitle>
+            <CardDescription>Rendimiento</CardDescription>
+            <CardTitle className="text-2xl">
+              {currencies.length === 0 ? (
+                <span>{formatMoney(0, "ARS")}</span>
+              ) : (
+                <div className="space-y-1">
+                  {currencies.map((currency, index) => {
+                    const gain = returnByCurrency[currency] ?? 0
+
+                    return (
+                      <div
+                        key={currency}
+                        className={`${index === 0 ? "" : "text-base"} ${gain >= 0 ? "text-success" : "text-destructive"}`}
+                      >
+                        {formatSignedMoney(gain, currency)}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-1 text-sm text-success">
-              <TrendingUpIcon className="size-4" />
-              <span>+0.89%</span>
-            </div>
+          <CardContent className="space-y-1">
+            {currencies.length === 0 && <p className="text-sm text-muted-foreground">{emptyHint}</p>}
+            {currencies.map((currency) => {
+              const gain = returnByCurrency[currency] ?? 0
+              const invested = investedByCurrency[currency] ?? 0
+              const gainPercent = invested === 0 ? 0 : (gain / invested) * 100
+
+              return (
+                <div
+                  key={currency}
+                  className={`flex items-center gap-1 text-sm ${gain >= 0 ? "text-success" : "text-destructive"}`}
+                >
+                  {gain >= 0 ? <TrendingUpIcon className="size-4" /> : <TrendingDownIcon className="size-4" />}
+                  <span>
+                    {formatPercentage(gainPercent)} en {currency}
+                  </span>
+                </div>
+              )
+            })}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Retorno Anual</CardDescription>
-            <CardTitle className="text-2xl text-success">+12.4%</CardTitle>
+            <CardDescription>Última compra</CardDescription>
+            <CardTitle className="text-2xl truncate">{lastPurchase ? lastPurchase.assetName : "Sin compras"}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">Año en curso</p>
+            <p className="text-sm text-muted-foreground">
+              {lastPurchase
+                ? `${investmentTypeLabels[lastPurchase.type]} · ${formatDate(lastPurchase.purchasedOn)}`
+                : emptyHint}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -278,64 +362,100 @@ export default function InvestmentsPage() {
         <div className="lg:col-span-2 space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Rendimiento Histórico</CardTitle>
-              <CardDescription>Evolución del valor de tu portafolio en los últimos 6 meses</CardDescription>
+              <CardTitle>Evolución del Capital Invertido</CardTitle>
+              <CardDescription>Cuánto capital fuiste acumulando en tu portafolio, mes a mes</CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                <LineChart data={performanceData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="mes" />
-                  <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} cursor={{ stroke: "rgba(0, 0, 0, 0.2)" }} />
-                  <Line type="monotone" dataKey="valor" stroke="#8b5cf6" strokeWidth={2} />
-                </LineChart>
-              </ChartContainer>
+              {capitalByMonth.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{emptyHint}</p>
+              ) : (
+                <ChartContainer config={capitalChartConfig} className="h-[300px] w-full">
+                  <LineChart data={capitalByMonth}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="mes" />
+                    <YAxis />
+                    <ChartTooltip content={<ChartTooltipContent />} cursor={{ stroke: "rgba(0, 0, 0, 0.2)" }} />
+                    {currencies.map((currency) => (
+                      <Line
+                        key={currency}
+                        type="monotone"
+                        dataKey={currency}
+                        stroke={currencyColors[currency]}
+                        strokeWidth={2}
+                      />
+                    ))}
+                  </LineChart>
+                </ChartContainer>
+              )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
               <CardTitle>Distribución por Tipo de Activo</CardTitle>
-              <CardDescription>Cómo está distribuido tu portafolio</CardDescription>
+              <CardDescription>Cómo se reparte tu portafolio según el valor actual de cada activo</CardDescription>
+              {currencies.length > 1 && selectedAllocationCurrency && (
+                <CardAction>
+                  <Select
+                    value={selectedAllocationCurrency}
+                    onValueChange={(value) => setAllocationCurrency(value as Currency)}
+                  >
+                    <SelectTrigger className="w-[100px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {currencies.map((currency) => (
+                        <SelectItem key={currency} value={currency}>
+                          {currency}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CardAction>
+              )}
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                <ChartContainer config={allocationChartConfig} className="h-[250px] w-full">
-                  <PieChart>
-                    <Pie
-                      data={allocationData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ nombre, percent }: { nombre?: string; percent?: number }) =>
-                        `${nombre} ${((percent ?? 0) * 100).toFixed(0)}%`
-                      }
-                      outerRadius={90}
-                      fill="#8884d8"
-                      dataKey="valor"
-                      nameKey="nombre"
-                    >
-                      {allocationData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <ChartTooltip content={<ChartTooltipContent hideLabel indicator="dot" />} cursor={false} />
-                  </PieChart>
-                </ChartContainer>
+              {allocation.length === 0 || !selectedAllocationCurrency ? (
+                <p className="text-sm text-muted-foreground">{emptyHint}</p>
+              ) : (
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <ChartContainer config={allocationChartConfig} className="h-[250px] w-full">
+                    <PieChart>
+                      <Pie
+                        data={allocation}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }: { name?: string; percent?: number }) =>
+                          `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
+                        }
+                        outerRadius={90}
+                        dataKey="value"
+                        nameKey="label"
+                      >
+                        {allocation.map((slice) => (
+                          <Cell key={slice.type} fill={slice.color} />
+                        ))}
+                      </Pie>
+                      <ChartTooltip content={<ChartTooltipContent hideLabel indicator="dot" />} cursor={false} />
+                    </PieChart>
+                  </ChartContainer>
 
-                <div className="flex flex-col justify-center gap-3">
-                  {allocationData.map((item) => (
-                    <div key={item.nombre} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="size-3 rounded-full" style={{ backgroundColor: item.color }} />
-                        <span className="text-sm font-medium">{item.nombre}</span>
+                  <div className="flex flex-col justify-center gap-3">
+                    {allocation.map((slice) => (
+                      <div key={slice.type} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="size-3 rounded-full" style={{ backgroundColor: slice.color }} />
+                          <span className="text-sm font-medium">{slice.label}</span>
+                        </div>
+                        <span className="text-sm font-semibold">
+                          {formatMoney(slice.value, selectedAllocationCurrency)} · {slice.share.toFixed(0)}%
+                        </span>
                       </div>
-                      <span className="text-sm font-semibold">${item.valor.toLocaleString()}</span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>
