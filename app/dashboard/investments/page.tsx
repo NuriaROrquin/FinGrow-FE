@@ -36,14 +36,18 @@ import {
   createInvestment,
   deleteInvestment,
   getMepQuote,
+  getPortfolioSummary,
   investmentTypeLabels,
   listInvestments,
   toastApiError,
   updateInvestment,
+  type AllocationGroupDto,
   type CreateInvestmentPayload,
+  type CurrencyPortfolioDto,
   type InvestmentDto,
   type InvestmentType,
   type MepQuoteDto,
+  type PortfolioSummaryDto,
 } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
 
@@ -81,8 +85,6 @@ const investmentTypeColors: Record<InvestmentType, string> = {
 
 const mepConvertibleCurrencies: Currency[] = ["ARS", "USD"]
 
-type TotalsByCurrency = Partial<Record<Currency, number>>
-
 type AllocationSlice = {
   type: InvestmentType
   label: string
@@ -94,6 +96,11 @@ type AllocationSlice = {
 interface Allocation {
   slices: AllocationSlice[]
   convertedCurrencies: Currency[]
+  excludedCurrencies: Currency[]
+}
+
+interface ConsolidatedTotal {
+  amount: number
   excludedCurrencies: Currency[]
 }
 
@@ -124,6 +131,10 @@ function listCurrencies(currencies: Currency[]): string {
   return currencies.join(" y ")
 }
 
+function pluralizeAssets(count: number): string {
+  return `${count} ${count === 1 ? "activo" : "activos"}`
+}
+
 function convertWithMep(amount: number, from: Currency, to: Currency, quote: MepQuoteDto | null): number | null {
   if (from === to) {
     return amount
@@ -140,13 +151,6 @@ function pickCurrency(options: Currency[], chosen: Currency | ""): Currency | un
   return options.includes(chosen as Currency) ? (chosen as Currency) : options[0]
 }
 
-function sumByCurrency(investments: InvestmentDto[], pick: (investment: InvestmentDto) => number): TotalsByCurrency {
-  return investments.reduce<TotalsByCurrency>((totals, investment) => {
-    totals[investment.currency] = (totals[investment.currency] ?? 0) + pick(investment)
-    return totals
-  }, {})
-}
-
 function sortByPurchase(investments: InvestmentDto[]): InvestmentDto[] {
   return [...investments].sort(
     (first, second) =>
@@ -154,24 +158,56 @@ function sortByPurchase(investments: InvestmentDto[]): InvestmentDto[] {
   )
 }
 
-function allocationByType(investments: InvestmentDto[], currency: Currency, quote: MepQuoteDto | null): Allocation {
+function consolidateInDollars(currencies: CurrencyPortfolioDto[], quote: MepQuoteDto | null): ConsolidatedTotal | null {
+  const convertible = currencies.filter((entry) => mepConvertibleCurrencies.includes(entry.currency))
+
+  if (!quote || convertible.length < 2) {
+    return null
+  }
+
+  return {
+    amount: convertible.reduce(
+      (total, entry) => total + (convertWithMep(entry.currentValue, entry.currency, "USD", quote) ?? 0),
+      0,
+    ),
+    excludedCurrencies: currencies
+      .filter((entry) => !mepConvertibleCurrencies.includes(entry.currency))
+      .map((entry) => entry.currency),
+  }
+}
+
+function valuationStatus(summary: PortfolioSummaryDto): string {
+  if (summary.unquotedCount === summary.investmentCount) {
+    return "Sin cotizaciones de mercado todavía: se muestra el capital invertido."
+  }
+
+  const oldest = summary.oldestQuotedOn ? formatDate(summary.oldestQuotedOn) : ""
+
+  if (summary.unquotedCount > 0) {
+    return `${pluralizeAssets(summary.unquotedCount)} sin cotizar, al costo. El resto, valuado al ${oldest}.`
+  }
+
+  return `Valuado al ${oldest}`
+}
+
+function allocationByType(groups: AllocationGroupDto[], currency: Currency, quote: MepQuoteDto | null): Allocation {
   const valueByType = new Map<InvestmentType, number>()
   const convertedCurrencies = new Set<Currency>()
   const excludedCurrencies = new Set<Currency>()
 
-  for (const investment of investments) {
-    const value = convertWithMep(investment.currentValue, investment.currency, currency, quote)
+  for (const group of groups) {
+    const value = convertWithMep(group.currentValue, group.currency, currency, quote)
 
     if (value === null) {
-      excludedCurrencies.add(investment.currency)
+      excludedCurrencies.add(group.currency)
       continue
     }
 
-    if (investment.currency !== currency) {
-      convertedCurrencies.add(investment.currency)
+    if (group.currency !== currency) {
+      convertedCurrencies.add(group.currency)
     }
 
-    valueByType.set(investment.type, (valueByType.get(investment.type) ?? 0) + value)
+    valueByType.set(group.type, (valueByType.get(group.type) ?? 0) + value)
   }
 
   const total = Array.from(valueByType.values()).reduce((sum, value) => sum + value, 0)
@@ -193,16 +229,14 @@ function allocationByType(investments: InvestmentDto[], currency: Currency, quot
   }
 }
 
-function MoneyByCurrency({ totals }: { totals: TotalsByCurrency }) {
-  const entries = Object.entries(totals) as [Currency, number][]
-
-  if (entries.length === 0) {
+function MoneyByCurrency({ amounts }: { amounts: [Currency, number][] }) {
+  if (amounts.length === 0) {
     return <span>{formatMoney(0, "ARS")}</span>
   }
 
   return (
     <div className="space-y-1">
-      {entries.map(([currency, amount], index) => (
+      {amounts.map(([currency, amount], index) => (
         <div key={currency} className={index === 0 ? undefined : "text-base text-muted-foreground"}>
           {formatMoney(amount, currency)}
         </div>
@@ -296,6 +330,8 @@ function CurrencyPicker({
 export default function InvestmentsPage() {
   const [investments, setInvestments] = useState<InvestmentDto[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [summary, setSummary] = useState<PortfolioSummaryDto | null>(null)
+  const [summaryVersion, setSummaryVersion] = useState(0)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [editingInvestment, setEditingInvestment] = useState<InvestmentDto | null>(null)
   const [investmentToDelete, setInvestmentToDelete] = useState<InvestmentDto | null>(null)
@@ -324,6 +360,19 @@ export default function InvestmentsPage() {
   useEffect(() => {
     const controller = new AbortController()
 
+    getPortfolioSummary(controller.signal)
+      .then(setSummary)
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return
+        toastApiError(error, "No se pudo cargar el resumen de tu portafolio.")
+      })
+
+    return () => controller.abort()
+  }, [summaryVersion])
+
+  useEffect(() => {
+    const controller = new AbortController()
+
     getMepQuote(controller.signal)
       .then((quote) => {
         setMepQuote(quote)
@@ -337,9 +386,12 @@ export default function InvestmentsPage() {
     return () => controller.abort()
   }, [])
 
+  const refreshSummary = () => setSummaryVersion((version) => version + 1)
+
   const handleAdd = async (payload: CreateInvestmentPayload) => {
     const created = await createInvestment(payload)
     setInvestments((current) => sortByPurchase([created, ...current]))
+    refreshSummary()
     toast.success(`Inversión "${created.assetName}" registrada`)
   }
 
@@ -353,6 +405,7 @@ export default function InvestmentsPage() {
     setInvestments((current) =>
       sortByPurchase(current.map((investment) => (investment.id === updated.id ? updated : investment))),
     )
+    refreshSummary()
     toast.success(`Inversión "${updated.assetName}" actualizada`)
   }
 
@@ -373,6 +426,7 @@ export default function InvestmentsPage() {
     try {
       await deleteInvestment(investmentToDelete.id)
       setInvestments((current) => current.filter((investment) => investment.id !== investmentToDelete.id))
+      refreshSummary()
       toast.success(`Inversión "${investmentToDelete.assetName}" eliminada`)
       setInvestmentToDelete(null)
     } catch (error) {
@@ -382,13 +436,13 @@ export default function InvestmentsPage() {
     }
   }
 
-  const currentValueByCurrency = sumByCurrency(investments, (investment) => investment.currentValue)
-  const investedByCurrency = sumByCurrency(investments, (investment) => investment.investedAmount)
-  const returnByCurrency = sumByCurrency(investments, (investment) => investment.returnAmount)
-  const currencies = Object.keys(investedByCurrency) as Currency[]
-  const lastPurchase = investments[0]
-  const latestValuedOn = investments.map((investment) => investment.valuedOn).sort().at(-1)
-  const emptyHint = isLoading ? "Cargando..." : "Todavía no registraste inversiones"
+  const portfolioCurrencies = summary?.currencies ?? []
+  const currencies = portfolioCurrencies.map((entry) => entry.currency)
+  const quotedCurrencies = portfolioCurrencies.filter((entry) => entry.quotedCount > 0)
+  const investmentCount = summary?.investmentCount ?? 0
+  const lastPurchase = summary?.lastPurchase ?? null
+  const consolidated = consolidateInDollars(portfolioCurrencies, mepQuote)
+  const emptyHint = summary === null ? "Cargando..." : "Todavía no registraste inversiones"
 
   const allocationCurrencies =
     mepQuote && currencies.some((currency) => mepConvertibleCurrencies.includes(currency))
@@ -396,7 +450,7 @@ export default function InvestmentsPage() {
       : currencies
   const selectedAllocationCurrency = pickCurrency(allocationCurrencies, allocationCurrency)
   const allocation: Allocation = selectedAllocationCurrency
-    ? allocationByType(investments, selectedAllocationCurrency, mepQuote)
+    ? allocationByType(summary?.allocation ?? [], selectedAllocationCurrency, mepQuote)
     : { slices: [], convertedCurrencies: [], excludedCurrencies: [] }
   const allocationChartConfig: ChartConfig = Object.fromEntries(
     allocation.slices.map((slice) => [slice.label, { label: slice.label, color: slice.color }]),
@@ -471,12 +525,19 @@ export default function InvestmentsPage() {
           <CardHeader className="pb-2">
             <CardDescription>Valor Total del Portafolio</CardDescription>
             <CardTitle className="text-2xl">
-              <MoneyByCurrency totals={currentValueByCurrency} />
+              <MoneyByCurrency amounts={portfolioCurrencies.map((entry) => [entry.currency, entry.currentValue])} />
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-1">
+            {consolidated && (
+              <p className="text-sm font-medium">
+                ≈ {formatMoney(consolidated.amount, "USD")} en total al dólar MEP
+                {consolidated.excludedCurrencies.length > 0 &&
+                  ` (sin ${listCurrencies(consolidated.excludedCurrencies)})`}
+              </p>
+            )}
             <p className="text-sm text-muted-foreground">
-              {latestValuedOn ? `Valuado al ${formatDate(latestValuedOn)}` : emptyHint}
+              {summary && investmentCount > 0 ? valuationStatus(summary) : emptyHint}
             </p>
           </CardContent>
         </Card>
@@ -485,13 +546,11 @@ export default function InvestmentsPage() {
           <CardHeader className="pb-2">
             <CardDescription>Total Invertido</CardDescription>
             <CardTitle className="text-2xl">
-              <MoneyByCurrency totals={investedByCurrency} />
+              <MoneyByCurrency amounts={portfolioCurrencies.map((entry) => [entry.currency, entry.investedAmount])} />
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">
-              {investments.length} {investments.length === 1 ? "activo" : "activos"}
-            </p>
+            <p className="text-sm text-muted-foreground">{pluralizeAssets(investmentCount)}</p>
           </CardContent>
         </Card>
 
@@ -499,45 +558,50 @@ export default function InvestmentsPage() {
           <CardHeader className="pb-2">
             <CardDescription>Rendimiento</CardDescription>
             <CardTitle className="text-2xl">
-              {currencies.length === 0 ? (
-                <span>{formatMoney(0, "ARS")}</span>
+              {quotedCurrencies.length === 0 ? (
+                <span className="text-muted-foreground">Sin cotizar</span>
               ) : (
                 <div className="space-y-1">
-                  {currencies.map((currency, index) => {
-                    const gain = returnByCurrency[currency] ?? 0
-
-                    return (
-                      <div
-                        key={currency}
-                        className={`${index === 0 ? "" : "text-base"} ${gain >= 0 ? "text-success" : "text-destructive"}`}
-                      >
-                        {formatSignedMoney(gain, currency)}
-                      </div>
-                    )
-                  })}
+                  {quotedCurrencies.map((entry, index) => (
+                    <div
+                      key={entry.currency}
+                      className={`${index === 0 ? "" : "text-base"} ${entry.quotedReturnAmount >= 0 ? "text-success" : "text-destructive"}`}
+                    >
+                      {formatSignedMoney(entry.quotedReturnAmount, entry.currency)}
+                    </div>
+                  ))}
                 </div>
               )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
-            {currencies.length === 0 && <p className="text-sm text-muted-foreground">{emptyHint}</p>}
-            {currencies.map((currency) => {
-              const gain = returnByCurrency[currency] ?? 0
-              const invested = investedByCurrency[currency] ?? 0
-              const gainPercent = invested === 0 ? 0 : (gain / invested) * 100
-
-              return (
-                <div
-                  key={currency}
-                  className={`flex items-center gap-1 text-sm ${gain >= 0 ? "text-success" : "text-destructive"}`}
-                >
-                  {gain >= 0 ? <TrendingUpIcon className="size-4" /> : <TrendingDownIcon className="size-4" />}
-                  <span>
-                    {formatPercentage(gainPercent)} en {currency}
-                  </span>
-                </div>
-              )
-            })}
+            {quotedCurrencies.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                {investmentCount === 0
+                  ? emptyHint
+                  : "El rendimiento aparece cuando el mercado cotice tus activos."}
+              </p>
+            )}
+            {quotedCurrencies.map((entry) => (
+              <div
+                key={entry.currency}
+                className={`flex items-center gap-1 text-sm ${entry.quotedReturnAmount >= 0 ? "text-success" : "text-destructive"}`}
+              >
+                {entry.quotedReturnAmount >= 0 ? (
+                  <TrendingUpIcon className="size-4" />
+                ) : (
+                  <TrendingDownIcon className="size-4" />
+                )}
+                <span>
+                  {formatPercentage(entry.quotedReturnPercentage)} en {entry.currency}
+                </span>
+              </div>
+            ))}
+            {quotedCurrencies.length > 0 && summary && summary.unquotedCount > 0 && (
+              <p className="text-xs text-muted-foreground">
+                No incluye {pluralizeAssets(summary.unquotedCount)} sin cotizar.
+              </p>
+            )}
           </CardContent>
         </Card>
 
