@@ -20,12 +20,25 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { AddInvestmentForm } from "@/components/investments/add-investment-form"
+import { InvestmentActionsMenu } from "@/components/investments/investment-actions-menu"
 import {
   createInvestment,
+  deleteInvestment,
   investmentTypeLabels,
   listInvestments,
   toastApiError,
+  updateInvestment,
   type CreateInvestmentPayload,
   type InvestmentDto,
   type InvestmentType,
@@ -231,6 +244,9 @@ export default function InvestmentsPage() {
   const [investments, setInvestments] = useState<InvestmentDto[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [editingInvestment, setEditingInvestment] = useState<InvestmentDto | null>(null)
+  const [investmentToDelete, setInvestmentToDelete] = useState<InvestmentDto | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [chartCurrency, setChartCurrency] = useState<Currency | "">("")
   const router = useRouter()
 
@@ -254,6 +270,45 @@ export default function InvestmentsPage() {
     const created = await createInvestment(payload)
     setInvestments((current) => sortByPurchase([created, ...current]))
     toast.success(`Inversión "${created.assetName}" registrada`)
+  }
+
+  const handleSubmit = async (payload: CreateInvestmentPayload) => {
+    if (!editingInvestment) {
+      await handleAdd(payload)
+      return
+    }
+
+    const updated = await updateInvestment(editingInvestment.id, payload)
+    setInvestments((current) =>
+      sortByPurchase(current.map((investment) => (investment.id === updated.id ? updated : investment))),
+    )
+    toast.success(`Inversión "${updated.assetName}" actualizada`)
+  }
+
+  const handleDialogChange = (open: boolean) => {
+    setIsAddDialogOpen(open)
+    if (!open) setEditingInvestment(null)
+  }
+
+  const openEditDialog = (investment: InvestmentDto) => {
+    setEditingInvestment(investment)
+    setIsAddDialogOpen(true)
+  }
+
+  const handleDelete = async () => {
+    if (!investmentToDelete) return
+
+    setIsDeleting(true)
+    try {
+      await deleteInvestment(investmentToDelete.id)
+      setInvestments((current) => current.filter((investment) => investment.id !== investmentToDelete.id))
+      toast.success(`Inversión "${investmentToDelete.assetName}" eliminada`)
+      setInvestmentToDelete(null)
+    } catch (error) {
+      toastApiError(error, "No se pudo eliminar la inversión.")
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   const currentValueByCurrency = sumByCurrency(investments, (investment) => investment.currentValue)
@@ -281,7 +336,7 @@ export default function InvestmentsPage() {
           <h1 className="text-3xl font-bold text-balance">Inversiones</h1>
           <p className="text-muted-foreground mt-1">Gestioná y seguí el rendimiento de tus inversiones</p>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <Dialog open={isAddDialogOpen} onOpenChange={handleDialogChange}>
           <DialogTrigger asChild>
             <Button>
               <PlusIcon className="size-4" />
@@ -290,12 +345,52 @@ export default function InvestmentsPage() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Agregar Nueva Inversión</DialogTitle>
-              <DialogDescription>Registrá una nueva inversión en tu portafolio</DialogDescription>
+              <DialogTitle>{editingInvestment ? "Editar inversión" : "Agregar Nueva Inversión"}</DialogTitle>
+              <DialogDescription>
+                {editingInvestment
+                  ? "Corregí los datos de la inversión seleccionada"
+                  : "Registrá una nueva inversión en tu portafolio"}
+              </DialogDescription>
             </DialogHeader>
-            <AddInvestmentForm onSubmit={handleAdd} onClose={() => setIsAddDialogOpen(false)} />
+            <AddInvestmentForm
+              key={editingInvestment?.id ?? "new"}
+              initialInvestment={editingInvestment}
+              onSubmit={handleSubmit}
+              onClose={() => handleDialogChange(false)}
+            />
           </DialogContent>
         </Dialog>
+
+        <AlertDialog
+          open={investmentToDelete !== null}
+          onOpenChange={(open) => {
+            if (!open && !isDeleting) setInvestmentToDelete(null)
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Eliminar inversión?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {investmentToDelete
+                  ? `Vas a eliminar "${investmentToDelete.assetName}" por ${formatMoney(investmentToDelete.investedAmount, investmentToDelete.currency)} invertidos. Esta acción no se puede deshacer.`
+                  : ""}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={isDeleting}
+                onClick={(event) => {
+                  event.preventDefault()
+                  void handleDelete()
+                }}
+              >
+                {isDeleting ? "Eliminando..." : "Eliminar"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -516,19 +611,22 @@ export default function InvestmentsPage() {
                 <TableHead className="text-right">Capital invertido</TableHead>
                 <TableHead className="text-right">Valor actual</TableHead>
                 <TableHead className="text-right">Rendimiento</TableHead>
+                <TableHead className="w-12">
+                  <span className="sr-only">Acciones</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
                     Cargando tus inversiones...
                   </TableCell>
                 </TableRow>
               )}
               {!isLoading && investments.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
                     Todavía no registraste ninguna inversión. Agregá la primera con el botón de arriba.
                   </TableCell>
                 </TableRow>
@@ -562,6 +660,13 @@ export default function InvestmentsPage() {
                         {formatPercentage(investment.returnPercentage)})
                       </span>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <InvestmentActionsMenu
+                      investment={investment}
+                      onEdit={openEditDialog}
+                      onDelete={setInvestmentToDelete}
+                    />
                   </TableCell>
                 </TableRow>
               ))}
