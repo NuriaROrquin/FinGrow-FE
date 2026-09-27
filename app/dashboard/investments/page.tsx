@@ -1,8 +1,9 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { format, parseISO } from "date-fns"
+import { toast } from "sonner"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
@@ -17,54 +18,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { useRouter } from "next/navigation"
-
-const mockPortfolio = [
-  {
-    id: 1,
-    activo: "Fondo S&P 500",
-    tipo: "ETF",
-    monto: 2226000,
-    rentabilidad: 1305,
-    variacion: 5.87,
-  },
-  {
-    id: 2,
-    activo: "Apple Inc.",
-    tipo: "Acción",
-    monto: 456200.5,
-    rentabilidad: 187.5,
-    variacion: 4.11,
-  },
-  {
-    id: 3,
-    activo: "Tesla Inc.",
-    tipo: "Acción",
-    monto: 357300,
-    rentabilidad: -114,
-    variacion: -3.09,
-  },
-  {
-    id: 4,
-    activo: "Bonos del Tesoro",
-    tipo: "Bono",
-    monto: 798000,
-    rentabilidad: 130,
-    variacion: 1.66,
-  },
-  {
-    id: 5,
-    activo: "Fondo Común FCI",
-    tipo: "Fondo Común",
-    monto: 520000,
-    rentabilidad: 312,
-    variacion: 6.38,
-  },
-]
+import { AddInvestmentForm } from "@/components/investments/add-investment-form"
+import {
+  createInvestment,
+  investmentTypeLabels,
+  listInvestments,
+  toastApiError,
+  type CreateInvestmentPayload,
+  type InvestmentDto,
+} from "@/lib/api"
+import type { Currency } from "@/lib/api/transactions"
 
 const performanceData = [
   { mes: "Ene", valor: 350000 },
@@ -132,17 +96,92 @@ const allocationChartConfig = {
   },
 }
 
+type TotalsByCurrency = Partial<Record<Currency, number>>
+
+function formatMoney(amount: number, currency: Currency): string {
+  return new Intl.NumberFormat("es-AR", { style: "currency", currency }).format(amount)
+}
+
+function formatSignedMoney(amount: number, currency: Currency): string {
+  return `${amount < 0 ? "-" : "+"}${formatMoney(Math.abs(amount), currency)}`
+}
+
+function formatPercentage(value: number): string {
+  const formatted = value.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return `${value < 0 ? "" : "+"}${formatted}%`
+}
+
+function formatDate(isoDate: string): string {
+  return format(parseISO(isoDate), "dd/MM/yyyy")
+}
+
+function sumByCurrency(investments: InvestmentDto[], pick: (investment: InvestmentDto) => number): TotalsByCurrency {
+  return investments.reduce<TotalsByCurrency>((totals, investment) => {
+    totals[investment.currency] = (totals[investment.currency] ?? 0) + pick(investment)
+    return totals
+  }, {})
+}
+
+function sortByPurchase(investments: InvestmentDto[]): InvestmentDto[] {
+  return [...investments].sort(
+    (first, second) =>
+      second.purchasedOn.localeCompare(first.purchasedOn) || second.createdAt.localeCompare(first.createdAt),
+  )
+}
+
+function MoneyByCurrency({ totals }: { totals: TotalsByCurrency }) {
+  const entries = Object.entries(totals) as [Currency, number][]
+
+  if (entries.length === 0) {
+    return <span>{formatMoney(0, "ARS")}</span>
+  }
+
+  return (
+    <div className="space-y-1">
+      {entries.map(([currency, amount], index) => (
+        <div key={currency} className={index === 0 ? undefined : "text-base text-muted-foreground"}>
+          {formatMoney(amount, currency)}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function InvestmentsPage() {
+  const [investments, setInvestments] = useState<InvestmentDto[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const router = useRouter()
 
-  const totalValue = mockPortfolio.reduce((sum, inv) => sum + inv.monto, 0)
-  const totalGain = mockPortfolio.reduce((sum, inv) => sum + inv.rentabilidad, 0)
-  const totalGainPercent = (totalGain / (totalValue - totalGain)) * 100
+  useEffect(() => {
+    const controller = new AbortController()
+
+    listInvestments(controller.signal)
+      .then(setInvestments)
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return
+        toastApiError(error, "No se pudieron cargar tus inversiones.")
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false)
+      })
+
+    return () => controller.abort()
+  }, [])
+
+  const handleAdd = async (payload: CreateInvestmentPayload) => {
+    const created = await createInvestment(payload)
+    setInvestments((current) => sortByPurchase([created, ...current]))
+    toast.success(`Inversión "${created.assetName}" registrada`)
+  }
+
+  const currentValueByCurrency = sumByCurrency(investments, (investment) => investment.currentValue)
+  const investedByCurrency = sumByCurrency(investments, (investment) => investment.investedAmount)
+  const returnByCurrency = sumByCurrency(investments, (investment) => investment.returnAmount)
+  const currencies = Object.keys(investedByCurrency) as Currency[]
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-balance">Inversiones</h1>
@@ -160,35 +199,54 @@ export default function InvestmentsPage() {
               <DialogTitle>Agregar Nueva Inversión</DialogTitle>
               <DialogDescription>Registrá una nueva inversión en tu portafolio</DialogDescription>
             </DialogHeader>
-            <AddInvestmentForm onClose={() => setIsAddDialogOpen(false)} />
+            <AddInvestmentForm onAdd={handleAdd} onClose={() => setIsAddDialogOpen(false)} />
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Valor Total del Portafolio</CardDescription>
-            <CardTitle className="text-2xl">${totalValue.toLocaleString()}</CardTitle>
+            <CardTitle className="text-2xl">
+              <MoneyByCurrency totals={currentValueByCurrency} />
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className={`flex items-center gap-1 text-sm ${totalGain >= 0 ? "text-success" : "text-destructive"}`}>
-              {totalGain >= 0 ? <ArrowUpIcon className="size-4" /> : <ArrowDownIcon className="size-4" />}
-              <span>
-                {totalGain >= 0 ? "+" : ""}${Math.abs(totalGain).toLocaleString()} ({totalGainPercent.toFixed(2)}%)
-              </span>
-            </div>
+          <CardContent className="space-y-1">
+            {currencies.length === 0 && (
+              <p className="text-sm text-muted-foreground">Todavía no registraste inversiones</p>
+            )}
+            {currencies.map((currency) => {
+              const gain = returnByCurrency[currency] ?? 0
+              const invested = investedByCurrency[currency] ?? 0
+              const gainPercent = invested === 0 ? 0 : (gain / invested) * 100
+
+              return (
+                <div
+                  key={currency}
+                  className={`flex items-center gap-1 text-sm ${gain >= 0 ? "text-success" : "text-destructive"}`}
+                >
+                  {gain >= 0 ? <ArrowUpIcon className="size-4" /> : <ArrowDownIcon className="size-4" />}
+                  <span>
+                    {formatSignedMoney(gain, currency)} ({formatPercentage(gainPercent)})
+                  </span>
+                </div>
+              )
+            })}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total Invertido</CardDescription>
-            <CardTitle className="text-2xl">${(totalValue - totalGain).toLocaleString()}</CardTitle>
+            <CardTitle className="text-2xl">
+              <MoneyByCurrency totals={investedByCurrency} />
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">{mockPortfolio.length} activos</p>
+            <p className="text-sm text-muted-foreground">
+              {investments.length} {investments.length === 1 ? "activo" : "activos"}
+            </p>
           </CardContent>
         </Card>
 
@@ -217,9 +275,7 @@ export default function InvestmentsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Columna principal con gráficos */}
         <div className="lg:col-span-2 space-y-4">
-          {/* Gráfico de rendimiento histórico */}
           <Card>
             <CardHeader>
               <CardTitle>Rendimiento Histórico</CardTitle>
@@ -238,7 +294,6 @@ export default function InvestmentsPage() {
             </CardContent>
           </Card>
 
-          {/* Resumen por tipo de activo */}
           <Card>
             <CardHeader>
               <CardTitle>Distribución por Tipo de Activo</CardTitle>
@@ -308,7 +363,7 @@ export default function InvestmentsPage() {
                 variant="outline"
                 className="w-full bg-transparent"
                 size="sm"
-                onClick={() => router.push('/dashboard/education')}
+                onClick={() => router.push("/dashboard/education")}
               >
                 Ver más recursos educativos
               </Button>
@@ -328,38 +383,54 @@ export default function InvestmentsPage() {
               <TableRow>
                 <TableHead>Activo</TableHead>
                 <TableHead>Tipo</TableHead>
-                <TableHead className="text-right">Monto</TableHead>
-                <TableHead className="text-right">Rentabilidad</TableHead>
-                <TableHead className="text-right">Variación %</TableHead>
+                <TableHead>Fecha de compra</TableHead>
+                <TableHead className="text-right">Capital invertido</TableHead>
+                <TableHead className="text-right">Valor actual</TableHead>
+                <TableHead className="text-right">Rendimiento</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockPortfolio.map((investment) => (
+              {isLoading && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    Cargando tus inversiones...
+                  </TableCell>
+                </TableRow>
+              )}
+              {!isLoading && investments.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    Todavía no registraste ninguna inversión. Agregá la primera con el botón de arriba.
+                  </TableCell>
+                </TableRow>
+              )}
+              {investments.map((investment) => (
                 <TableRow key={investment.id}>
-                  <TableCell className="font-medium">{investment.activo}</TableCell>
+                  <TableCell className="font-medium">{investment.assetName}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className="text-xs">
-                      {investment.tipo}
+                      {investmentTypeLabels[investment.type]}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right font-semibold">${investment.monto.toLocaleString()}</TableCell>
-                  <TableCell
-                    className={`text-right font-semibold ${investment.rentabilidad >= 0 ? "text-success" : "text-destructive"}`}
-                  >
-                    {investment.rentabilidad >= 0 ? "+" : ""}${investment.rentabilidad.toLocaleString()}
+                  <TableCell>{formatDate(investment.purchasedOn)}</TableCell>
+                  <TableCell className="text-right font-semibold">
+                    {formatMoney(investment.investedAmount, investment.currency)}
+                  </TableCell>
+                  <TableCell className="text-right font-semibold">
+                    {formatMoney(investment.currentValue, investment.currency)}
                   </TableCell>
                   <TableCell className="text-right">
                     <div
-                      className={`flex items-center justify-end gap-1 ${investment.variacion >= 0 ? "text-success" : "text-destructive"}`}
+                      className={`flex items-center justify-end gap-1 ${investment.returnAmount >= 0 ? "text-success" : "text-destructive"}`}
                     >
-                      {investment.variacion >= 0 ? (
+                      {investment.returnAmount >= 0 ? (
                         <TrendingUpIcon className="size-4" />
                       ) : (
                         <TrendingDownIcon className="size-4" />
                       )}
                       <span className="font-semibold">
-                        {investment.variacion >= 0 ? "+" : ""}
-                        {investment.variacion.toFixed(2)}%
+                        {formatSignedMoney(investment.returnAmount, investment.currency)} (
+                        {formatPercentage(investment.returnPercentage)})
                       </span>
                     </div>
                   </TableCell>
@@ -370,61 +441,5 @@ export default function InvestmentsPage() {
         </CardContent>
       </Card>
     </div>
-  )
-}
-
-function AddInvestmentForm({ onClose }: { onClose: () => void }) {
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onClose()
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="inv-type">Tipo de Inversión</Label>
-        <Select>
-          <SelectTrigger id="inv-type">
-            <SelectValue placeholder="Seleccioná el tipo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="accion">Acción</SelectItem>
-            <SelectItem value="etf">ETF</SelectItem>
-            <SelectItem value="bono">Bono</SelectItem>
-            <SelectItem value="crypto">Criptomoneda</SelectItem>
-            <SelectItem value="fondo">Fondo Común</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="inv-name">Nombre del Activo</Label>
-        <Input id="inv-name" placeholder="ej. Apple Inc." required />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="inv-amount">Monto Invertido</Label>
-          <Input id="inv-amount" type="number" placeholder="0.00" step="0.01" required />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="inv-price">Precio de Compra</Label>
-          <Input id="inv-price" type="number" placeholder="0.00" step="0.01" required />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="inv-date">Fecha de Compra</Label>
-        <Input id="inv-date" type="date" required />
-      </div>
-
-      <div className="flex gap-2 justify-end pt-4">
-        <Button type="button" variant="outline" onClick={onClose}>
-          Cancelar
-        </Button>
-        <Button type="submit">Agregar Inversión</Button>
-      </div>
-    </form>
   )
 }
