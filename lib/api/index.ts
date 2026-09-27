@@ -50,3 +50,4 @@ export {
   type MercadoPagoLinkResult,
   type MercadoPagoSyncSummary,
 } from "./integrations"
+export { getSavingsVsGoals, type SavingsVsGoalsDto, type SavingsVsGoalsMonthDto } from "./reports"

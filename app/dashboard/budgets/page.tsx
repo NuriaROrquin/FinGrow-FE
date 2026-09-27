@@ -85,9 +85,12 @@ function todayLocal(): string {
   return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10)
 }
 
+type BudgetsTab = "budgets" | "savings"
+
 export default function BudgetsPage() {
   const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false)
   const [isSavingsDialogOpen, setIsSavingsDialogOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<BudgetsTab>("budgets")
   const [savingsGoals, setSavingsGoals] = useState<GoalDto[]>([])
   const [isLoadingGoals, setIsLoadingGoals] = useState(true)
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null)
@@ -137,55 +140,62 @@ export default function BudgetsPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Presupuesto Total</CardDescription>
-            <CardTitle className="text-2xl">${totalBudget.toLocaleString()}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">Asignación mensual</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Gastado</CardDescription>
-            <CardTitle className="text-2xl">${totalSpent.toLocaleString()}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Progress value={(totalSpent / totalBudget) * 100} className="h-2" />
-            <p className="text-sm text-muted-foreground mt-2">
-              {((totalSpent / totalBudget) * 100).toFixed(1)}% del presupuesto usado
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Metas de Ahorro</CardDescription>
-            <CardTitle className="text-2xl">{goalsInProgress.length}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">Metas activas</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Ahorrado</CardDescription>
-            <CardTitle className="text-2xl text-success">${totalSavingsCurrent.toLocaleString()}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              {(totalSavingsTarget > 0 ? (totalSavingsCurrent / totalSavingsTarget) * 100 : 0).toFixed(1)}% del
-              objetivo
-            </p>
-          </CardContent>
-        </Card>
+      {}
+      <div className="grid gap-4 md:grid-cols-2">
+        {activeTab === "budgets" ? (
+          <>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Presupuesto Total</CardDescription>
+                <CardTitle className="text-2xl">${totalBudget.toLocaleString()}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">Asignación mensual</p>
+              </CardContent>
+            </Card>
+    
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Total Gastado</CardDescription>
+                <CardTitle className="text-2xl">${totalSpent.toLocaleString()}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Progress value={(totalSpent / totalBudget) * 100} className="h-2" />
+                <p className="text-sm text-muted-foreground mt-2">
+                  {((totalSpent / totalBudget) * 100).toFixed(1)}% del presupuesto usado
+                </p>
+              </CardContent>
+            </Card>
+          </>
+        ) : (
+          <>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Metas de Ahorro</CardDescription>
+                <CardTitle className="text-2xl">{goalsInProgress.length}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">Metas activas</p>
+              </CardContent>
+            </Card>
+    
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Total Ahorrado</CardDescription>
+                <CardTitle className="text-2xl text-success">${totalSavingsCurrent.toLocaleString()}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  {(totalSavingsTarget > 0 ? (totalSavingsCurrent / totalSavingsTarget) * 100 : 0).toFixed(1)}% del
+                  objetivo
+                </p>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
-      <Tabs defaultValue="budgets" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as BudgetsTab)} className="space-y-4">
         <TabsList>
           <TabsTrigger value="budgets">Presupuestos</TabsTrigger>
           <TabsTrigger value="savings">Metas de Ahorro</TabsTrigger>
