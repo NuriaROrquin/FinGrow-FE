@@ -50,3 +50,12 @@ export {
   type MercadoPagoLinkResult,
   type MercadoPagoSyncSummary,
 } from "./integrations"
+export {
+  ASSET_NAME_MAX_LENGTH,
+  createInvestment,
+  investmentTypeLabels,
+  listInvestments,
+  type CreateInvestmentPayload,
+  type InvestmentDto,
+  type InvestmentType,
+} from "./investments"
