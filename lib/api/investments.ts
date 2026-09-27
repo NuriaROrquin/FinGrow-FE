@@ -24,6 +24,7 @@ export interface InvestmentDto {
   returnPercentage: number
   purchasedOn: string
   valuedOn: string
+  hasMarketValuation: boolean
   createdAt: string
 }
 
@@ -33,6 +34,43 @@ export interface CreateInvestmentPayload {
   investedAmount: number
   currency: Currency
   purchasedOn: string
+}
+
+export interface CurrencyPortfolioDto {
+  currency: Currency
+  investmentCount: number
+  investedAmount: number
+  currentValue: number
+  quotedCount: number
+  quotedInvestedAmount: number
+  quotedReturnAmount: number
+  quotedReturnPercentage: number
+}
+
+export interface AllocationGroupDto {
+  type: InvestmentType
+  currency: Currency
+  currentValue: number
+}
+
+export interface LastPurchaseDto {
+  id: string
+  assetName: string
+  type: InvestmentType
+  purchasedOn: string
+}
+
+export interface PortfolioSummaryDto {
+  investmentCount: number
+  unquotedCount: number
+  oldestQuotedOn: string | null
+  lastPurchase: LastPurchaseDto | null
+  currencies: CurrencyPortfolioDto[]
+  allocation: AllocationGroupDto[]
+}
+
+export function getPortfolioSummary(signal?: AbortSignal): Promise<PortfolioSummaryDto> {
+  return api.get<PortfolioSummaryDto>("/api/investments/summary", { signal })
 }
 
 export function listInvestments(signal?: AbortSignal): Promise<InvestmentDto[]> {
