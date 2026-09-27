@@ -22,6 +22,15 @@ export { clearSession, getRole, loginPathForCurrentRole, saveSession, type Sessi
 export { getSession, loginEmpleado, loginEmpresa, logout, type LoginRequest, type SessionResponse } from "./auth"
 export { getApiBaseUrl } from "./config"
 export {
+  EDUCATION_CATEGORY_LABELS,
+  getArticle,
+  listArticles,
+  type ArticleDto,
+  type ArticleFilters,
+  type ArticleSummaryDto,
+  type EducationCategory,
+} from "./articles"
+export {
   addContribution,
   CONTRIBUTION_NOTE_MAX_LENGTH,
   createGoal,
