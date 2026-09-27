@@ -8,7 +8,15 @@ import { Card, CardAction, CardHeader, CardTitle, CardDescription, CardContent }
 import { Button } from "@/components/ui/button"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { PieChart, Pie, Cell } from "recharts"
-import { TrendingUpIcon, TrendingDownIcon, PlusIcon, LightbulbIcon, InfoIcon } from "lucide-react"
+import {
+  TrendingUpIcon,
+  TrendingDownIcon,
+  PlusIcon,
+  LightbulbIcon,
+  InfoIcon,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
@@ -33,6 +41,14 @@ import {
 import { AddInvestmentForm } from "@/components/investments/add-investment-form"
 import { InvestmentRowActions } from "@/components/investments/investment-row-actions"
 import {
+  InvestmentFiltersBar,
+  defaultInvestmentFilters,
+  filtersError,
+  hasActiveFilters,
+  toListQuery,
+  type InvestmentFilterValues,
+} from "@/components/investments/investment-filters-bar"
+import {
   createInvestment,
   deleteInvestment,
   getMepQuote,
@@ -47,6 +63,7 @@ import {
   type InvestmentDto,
   type InvestmentType,
   type MepQuoteDto,
+  type PagedResultDto,
   type PortfolioSummaryDto,
 } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
@@ -84,6 +101,8 @@ const investmentTypeColors: Record<InvestmentType, string> = {
 }
 
 const mepConvertibleCurrencies: Currency[] = ["ARS", "USD"]
+
+const pageSizeOptions = [5, 10, 20, 50]
 
 type AllocationSlice = {
   type: InvestmentType
@@ -149,13 +168,6 @@ function convertWithMep(amount: number, from: Currency, to: Currency, quote: Mep
 
 function pickCurrency(options: Currency[], chosen: Currency | ""): Currency | undefined {
   return options.includes(chosen as Currency) ? (chosen as Currency) : options[0]
-}
-
-function sortByPurchase(investments: InvestmentDto[]): InvestmentDto[] {
-  return [...investments].sort(
-    (first, second) =>
-      second.purchasedOn.localeCompare(first.purchasedOn) || second.createdAt.localeCompare(first.createdAt),
-  )
 }
 
 function consolidateInDollars(currencies: CurrencyPortfolioDto[], quote: MepQuoteDto | null): ConsolidatedTotal | null {
@@ -328,8 +340,13 @@ function CurrencyPicker({
 }
 
 export default function InvestmentsPage() {
-  const [investments, setInvestments] = useState<InvestmentDto[]>([])
+  const [page, setPage] = useState<PagedResultDto<InvestmentDto> | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [filterValues, setFilterValues] = useState<InvestmentFilterValues>(defaultInvestmentFilters)
+  const [appliedFilters, setAppliedFilters] = useState<InvestmentFilterValues>(defaultInvestmentFilters)
+  const [pageNumber, setPageNumber] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const [listVersion, setListVersion] = useState(0)
   const [summary, setSummary] = useState<PortfolioSummaryDto | null>(null)
   const [summaryVersion, setSummaryVersion] = useState(0)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
@@ -342,10 +359,19 @@ export default function InvestmentsPage() {
   const router = useRouter()
 
   useEffect(() => {
-    const controller = new AbortController()
+    const timeoutId = window.setTimeout(() => setAppliedFilters(filterValues), 300)
 
-    listInvestments(controller.signal)
-      .then(setInvestments)
+    return () => window.clearTimeout(timeoutId)
+  }, [filterValues])
+
+  useEffect(() => {
+    if (filtersError(appliedFilters)) return
+
+    const controller = new AbortController()
+    setIsLoading(true)
+
+    listInvestments(toListQuery(appliedFilters, pageNumber, pageSize), controller.signal)
+      .then(setPage)
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return
         toastApiError(error, "No se pudieron cargar tus inversiones.")
@@ -355,7 +381,7 @@ export default function InvestmentsPage() {
       })
 
     return () => controller.abort()
-  }, [])
+  }, [appliedFilters, pageNumber, pageSize, listVersion])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -388,9 +414,23 @@ export default function InvestmentsPage() {
 
   const refreshSummary = () => setSummaryVersion((version) => version + 1)
 
+  const refreshList = () => setListVersion((version) => version + 1)
+
+  const handleFiltersChange = (values: InvestmentFilterValues) => {
+    setFilterValues(values)
+    setPageNumber(1)
+  }
+
+  const clearFilters = () =>
+    handleFiltersChange({
+      ...defaultInvestmentFilters,
+      sortBy: filterValues.sortBy,
+      sortDirection: filterValues.sortDirection,
+    })
+
   const handleAdd = async (payload: CreateInvestmentPayload) => {
     const created = await createInvestment(payload)
-    setInvestments((current) => sortByPurchase([created, ...current]))
+    refreshList()
     refreshSummary()
     toast.success(`Inversión "${created.assetName}" registrada`)
   }
@@ -402,9 +442,7 @@ export default function InvestmentsPage() {
     }
 
     const updated = await updateInvestment(editingInvestment.id, payload)
-    setInvestments((current) =>
-      sortByPurchase(current.map((investment) => (investment.id === updated.id ? updated : investment))),
-    )
+    refreshList()
     refreshSummary()
     toast.success(`Inversión "${updated.assetName}" actualizada`)
   }
@@ -425,7 +463,11 @@ export default function InvestmentsPage() {
     setIsDeleting(true)
     try {
       await deleteInvestment(investmentToDelete.id)
-      setInvestments((current) => current.filter((investment) => investment.id !== investmentToDelete.id))
+      if (page && page.items.length === 1 && pageNumber > 1) {
+        setPageNumber((current) => current - 1)
+      } else {
+        refreshList()
+      }
       refreshSummary()
       toast.success(`Inversión "${investmentToDelete.assetName}" eliminada`)
       setInvestmentToDelete(null)
@@ -435,6 +477,10 @@ export default function InvestmentsPage() {
       setIsDeleting(false)
     }
   }
+
+  const rows = page?.items ?? []
+  const visibleStart = page && page.totalCount > 0 ? (page.pageNumber - 1) * page.pageSize + 1 : 0
+  const visibleEnd = page ? Math.min(page.pageNumber * page.pageSize, page.totalCount) : 0
 
   const portfolioCurrencies = summary?.currencies ?? []
   const currencies = portfolioCurrencies.map((entry) => entry.currency)
@@ -726,7 +772,13 @@ export default function InvestmentsPage() {
           <CardDescription>Detalle completo de tus activos</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
+          <InvestmentFiltersBar
+            values={filterValues}
+            onChange={handleFiltersChange}
+            onClear={clearFilters}
+            error={filtersError(filterValues)}
+          />
+          <Table className={isLoading && rows.length > 0 ? "opacity-60" : undefined}>
             <TableHeader>
               <TableRow>
                 <TableHead>Activo</TableHead>
@@ -739,21 +791,30 @@ export default function InvestmentsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && (
+              {isLoading && rows.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground">
                     Cargando tus inversiones...
                   </TableCell>
                 </TableRow>
               )}
-              {!isLoading && investments.length === 0 && (
+              {!isLoading && page && page.totalCount === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground">
-                    Todavía no registraste ninguna inversión. Agregá la primera con el botón de arriba.
+                    {hasActiveFilters(appliedFilters) ? (
+                      <div className="space-y-2 py-2">
+                        <p>Ninguna inversión coincide con los filtros.</p>
+                        <Button variant="outline" size="sm" onClick={clearFilters}>
+                          Limpiar filtros
+                        </Button>
+                      </div>
+                    ) : (
+                      "Todavía no registraste ninguna inversión. Agregá la primera con el botón de arriba."
+                    )}
                   </TableCell>
                 </TableRow>
               )}
-              {investments.map((investment) => (
+              {rows.map((investment) => (
                 <TableRow key={investment.id}>
                   <TableCell className="font-medium">{investment.assetName}</TableCell>
                   <TableCell>
@@ -801,6 +862,60 @@ export default function InvestmentsPage() {
               ))}
             </TableBody>
           </Table>
+          {page && page.totalCount > 0 && (
+            <div className="mt-4 flex flex-col gap-3 border-t pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-1">
+                <span className="font-medium text-foreground">
+                  {page.totalCount} {page.totalCount === 1 ? "inversión" : "inversiones"}
+                </span>
+                <span>
+                  Mostrando {visibleStart}-{visibleEnd} de {page.totalCount}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(value) => {
+                    setPageSize(Number(value))
+                    setPageNumber(1)
+                  }}
+                >
+                  <SelectTrigger className="h-9 w-full sm:w-[130px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pageSizeOptions.map((size) => (
+                      <SelectItem key={size} value={String(size)}>
+                        {size} por página
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Página anterior"
+                  disabled={page.pageNumber <= 1 || isLoading}
+                  onClick={() => setPageNumber((current) => current - 1)}
+                >
+                  <ChevronLeft className="size-4" />
+                </Button>
+                <span className="min-w-[84px] text-center">
+                  Página {page.pageNumber} de {Math.max(page.totalPages, 1)}
+                </span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Página siguiente"
+                  disabled={page.pageNumber >= page.totalPages || isLoading}
+                  onClick={() => setPageNumber((current) => current + 1)}
+                >
+                  <ChevronRight className="size-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
