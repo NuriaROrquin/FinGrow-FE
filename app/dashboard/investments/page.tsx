@@ -765,23 +765,30 @@ export default function InvestmentsPage() {
                   <TableCell className="text-right font-semibold">
                     {formatMoney(investment.investedAmount, investment.currency)}
                   </TableCell>
-                  <TableCell className="text-right font-semibold">
-                    {formatMoney(investment.currentValue, investment.currency)}
+                  <TableCell className="text-right">
+                    <div className="font-semibold">{formatMoney(investment.currentValue, investment.currency)}</div>
+                    {!investment.hasMarketValuation && (
+                      <div className="text-xs text-muted-foreground">al costo</div>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div
-                      className={`flex items-center justify-end gap-1 ${investment.returnAmount >= 0 ? "text-success" : "text-destructive"}`}
-                    >
-                      {investment.returnAmount >= 0 ? (
-                        <TrendingUpIcon className="size-4" />
-                      ) : (
-                        <TrendingDownIcon className="size-4" />
-                      )}
-                      <span className="font-semibold">
-                        {formatSignedMoney(investment.returnAmount, investment.currency)} (
-                        {formatPercentage(investment.returnPercentage)})
-                      </span>
-                    </div>
+                    {investment.hasMarketValuation ? (
+                      <div
+                        className={`flex items-center justify-end gap-1 ${investment.returnAmount >= 0 ? "text-success" : "text-destructive"}`}
+                      >
+                        {investment.returnAmount >= 0 ? (
+                          <TrendingUpIcon className="size-4" />
+                        ) : (
+                          <TrendingDownIcon className="size-4" />
+                        )}
+                        <span className="font-semibold">
+                          {formatSignedMoney(investment.returnAmount, investment.currency)} (
+                          {formatPercentage(investment.returnPercentage)})
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">Sin cotizar</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     <InvestmentRowActions
