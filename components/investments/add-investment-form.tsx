@@ -13,6 +13,7 @@ import {
   investmentTypeLabels,
   toastApiError,
   type CreateInvestmentPayload,
+  type InvestmentDto,
   type InvestmentType,
 } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
@@ -29,17 +30,20 @@ function todayForDateInput(): string {
 }
 
 export function AddInvestmentForm({
-  onAdd,
+  initialInvestment,
+  onSubmit,
   onClose,
 }: {
-  onAdd: (payload: CreateInvestmentPayload) => Promise<void>
+  initialInvestment?: InvestmentDto | null
+  onSubmit: (payload: CreateInvestmentPayload) => Promise<void>
   onClose: () => void
 }) {
-  const [type, setType] = useState<InvestmentType | "">("")
-  const [assetName, setAssetName] = useState("")
-  const [investedAmount, setInvestedAmount] = useState("")
-  const [currency, setCurrency] = useState<Currency>("ARS")
-  const [purchasedOn, setPurchasedOn] = useState("")
+  const isEditing = Boolean(initialInvestment)
+  const [type, setType] = useState<InvestmentType | "">(initialInvestment?.type ?? "")
+  const [assetName, setAssetName] = useState(initialInvestment?.assetName ?? "")
+  const [investedAmount, setInvestedAmount] = useState(initialInvestment ? String(initialInvestment.investedAmount) : "")
+  const [currency, setCurrency] = useState<Currency>(initialInvestment?.currency ?? "ARS")
+  const [purchasedOn, setPurchasedOn] = useState(initialInvestment?.purchasedOn ?? "")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,7 +55,7 @@ export function AddInvestmentForm({
 
     setIsSubmitting(true)
     try {
-      await onAdd({
+      await onSubmit({
         assetName: assetName.trim(),
         type,
         investedAmount: Number(investedAmount),
@@ -60,7 +64,7 @@ export function AddInvestmentForm({
       })
       onClose()
     } catch (error) {
-      toastApiError(error, "No se pudo registrar la inversión.")
+      toastApiError(error, isEditing ? "No se pudo actualizar la inversión." : "No se pudo registrar la inversión.")
     } finally {
       setIsSubmitting(false)
     }
@@ -144,7 +148,7 @@ export function AddInvestmentForm({
           Cancelar
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Guardando..." : "Agregar Inversión"}
+          {isSubmitting ? "Guardando..." : isEditing ? "Guardar cambios" : "Agregar Inversión"}
         </Button>
       </div>
     </form>

@@ -293,7 +293,7 @@ export default function InvestmentsPage() {
               <DialogTitle>Agregar Nueva Inversión</DialogTitle>
               <DialogDescription>Registrá una nueva inversión en tu portafolio</DialogDescription>
             </DialogHeader>
-            <AddInvestmentForm onAdd={handleAdd} onClose={() => setIsAddDialogOpen(false)} />
+            <AddInvestmentForm onSubmit={handleAdd} onClose={() => setIsAddDialogOpen(false)} />
           </DialogContent>
         </Dialog>
       </div>
