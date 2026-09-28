@@ -10,17 +10,37 @@ import {
 } from "@/components/ui/dropdown-menu"
 import type { TransactionDto } from "@/lib/api/transactions"
 
-export function TransactionActionsMenu({ transaction }: { transaction: TransactionDto }) {
+export function TransactionActionsMenu({
+  transaction,
+  onEdit,
+  onDelete,
+}: {
+  transaction: TransactionDto
+  onEdit?: (transaction: TransactionDto) => void
+  onDelete?: (transaction: TransactionDto) => void
+}) {
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="size-8" aria-label={`Acciones de ${transaction.description}`}>
           <MoreVertical className="size-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem disabled>Editar</DropdownMenuItem>
-        <DropdownMenuItem disabled>Eliminar</DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => {
+            onEdit?.(transaction)
+          }}
+        >
+          Editar
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => {
+            onDelete?.(transaction)
+          }}
+        >
+          Eliminar
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

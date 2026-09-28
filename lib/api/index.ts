@@ -21,6 +21,7 @@ export { toastApiError } from "./notify"
 export { clearSession, getRole, loginPathForCurrentRole, saveSession, type SessionRole } from "./session"
 export { getSession, loginEmpleado, loginEmpresa, logout, type LoginRequest, type SessionResponse } from "./auth"
 export { getApiBaseUrl } from "./config"
+export { getMepQuote, type MepQuoteDto } from "./exchange-rates"
 export {
   addContribution,
   CONTRIBUTION_NOTE_MAX_LENGTH,
@@ -50,4 +51,26 @@ export {
   type MercadoPagoLinkResult,
   type MercadoPagoSyncSummary,
 } from "./integrations"
+export {
+  ASSET_NAME_MAX_LENGTH,
+  createInvestment,
+  getPortfolioSummary,
+  deleteInvestment,
+  investmentSortFieldLabels,
+  investmentTypeLabels,
+  listInvestments,
+  updateInvestment,
+  type AllocationGroupDto,
+  type CreateInvestmentPayload,
+  type CurrencyPortfolioDto,
+  type InvestmentDto,
+  type InvestmentListQuery,
+  type InvestmentPerformance,
+  type InvestmentSortField,
+  type InvestmentType,
+  type LastPurchaseDto,
+  type PagedResultDto,
+  type PortfolioSummaryDto,
+  type SortDirection,
+} from "./investments"
 export { getSavingsVsGoals, type SavingsVsGoalsDto, type SavingsVsGoalsMonthDto } from "./reports"

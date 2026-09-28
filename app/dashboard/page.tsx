@@ -222,7 +222,7 @@ export default function DashboardPage() {
                   <DialogDescription>Registra un nuevo ingreso o gasto</DialogDescription>
                 </DialogHeader>
                 <AddTransactionForm
-                  onAdd={async (payload) => {
+                  onSubmit={async (payload) => {
                     await createTransaction(payload)
                     refreshRecentTransactions()
                     toast({
