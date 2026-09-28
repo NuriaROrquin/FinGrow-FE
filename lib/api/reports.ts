@@ -4,9 +4,7 @@ import type { Currency } from "./transactions"
 export interface SavingsVsGoalsMonthDto {
   year: number
   month: number
-  income: number
-  expense: number
-  actualSavings: number
+  contributed: number
   committed: number
   metTarget: boolean | null
 }
@@ -14,12 +12,11 @@ export interface SavingsVsGoalsMonthDto {
 export interface SavingsVsGoalsDto {
   currency: Currency
   months: SavingsVsGoalsMonthDto[]
-  totalIncome: number
-  totalActualSavings: number
+  totalContributed: number
   totalCommitted: number
   monthsWithCommitment: number
   monthsOnTarget: number
-  savingsRate: number | null
+  completionRate: number | null
   hasGoals: boolean
 }
 

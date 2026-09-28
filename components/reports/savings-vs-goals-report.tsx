@@ -22,7 +22,7 @@ const monthLabels = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Se
 
 const chartConfig = {
   committed: { label: "Objetivo", color: "#c084fc" },
-  actualSavings: { label: "Ahorro real", color: "#a78bfa" },
+  contributed: { label: "Aportado", color: "#a78bfa" },
 } satisfies ChartConfig
 
 function formatMoney(amount: number): string {
@@ -56,7 +56,7 @@ export function SavingsVsGoalsReport({ months }: { months: number | null }) {
     report?.months.map((month) => ({
       label: `${monthLabels[month.month - 1]}${spansSeveralYears ? ` ${String(month.year).slice(2)}` : ""}`,
       committed: month.committed,
-      actualSavings: month.actualSavings,
+      contributed: month.contributed,
     })) ?? []
 
   const successRate =
@@ -68,7 +68,7 @@ export function SavingsVsGoalsReport({ months }: { months: number | null }) {
         <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
           <div className="space-y-1.5">
             <CardTitle>Rendimiento de Ahorros</CardTitle>
-            <CardDescription>Objetivo de tus metas vs ahorro real (ingresos − gastos) de cada mes</CardDescription>
+            <CardDescription>Lo que tus metas te pedían aportar cada mes vs lo que aportaste</CardDescription>
           </div>
           <Select value={currency} onValueChange={(value) => setCurrency(value as Currency)}>
             <SelectTrigger className="w-[100px] no-print" aria-label="Moneda del reporte">
@@ -108,7 +108,7 @@ export function SavingsVsGoalsReport({ months }: { months: number | null }) {
                     strokeWidth={2}
                     strokeDasharray="5 5"
                   />
-                  <Line type="monotone" dataKey="actualSavings" stroke="var(--color-actualSavings)" strokeWidth={2} />
+                  <Line type="monotone" dataKey="contributed" stroke="var(--color-contributed)" strokeWidth={2} />
                 </LineChart>
               </ChartContainer>
             </>
@@ -121,20 +121,24 @@ export function SavingsVsGoalsReport({ months }: { months: number | null }) {
           <CardHeader className="pb-2">
             <CardDescription>Meses Sobre el Objetivo</CardDescription>
             <CardTitle className="text-2xl text-success">
-              {report ? `${report.monthsOnTarget}/${report.monthsWithCommitment}` : "—"}
+              {report && report.monthsWithCommitment > 0 ? `${report.monthsOnTarget}/${report.monthsWithCommitment}` : "—"}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              {successRate === null ? "Sin metas en el período" : `${successRate.toFixed(0)}% de éxito`}
+              {successRate !== null
+                ? `${successRate.toFixed(0)}% de éxito`
+                : report?.hasGoals
+                  ? "El mes en curso cuenta cuando llegues a la cuota"
+                  : "Sin metas en el período"}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Total Ahorrado vs Objetivo</CardDescription>
-            <CardTitle className="text-2xl">{report ? formatMoney(report.totalActualSavings) : "—"}</CardTitle>
+            <CardDescription>Aportado vs Objetivo</CardDescription>
+            <CardTitle className="text-2xl">{report ? formatMoney(report.totalContributed) : "—"}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
@@ -145,14 +149,14 @@ export function SavingsVsGoalsReport({ months }: { months: number | null }) {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Tasa de Ahorro</CardDescription>
+            <CardDescription>Cumplimiento</CardDescription>
             <CardTitle className="text-2xl text-success">
-              {report?.savingsRate != null ? `${report.savingsRate}%` : "—"}
+              {report?.completionRate != null ? `${report.completionRate}%` : "—"}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              {report?.savingsRate != null ? "Del ingreso total" : "Sin ingresos en el período"}
+              {report?.completionRate != null ? "Del objetivo del período" : "Sin metas en el período"}
             </p>
           </CardContent>
         </Card>
