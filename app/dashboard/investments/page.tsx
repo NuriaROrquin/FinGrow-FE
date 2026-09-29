@@ -138,6 +138,10 @@ function formatPercentage(value: number): string {
   return `${value < 0 ? "" : "+"}${formatted}%`
 }
 
+function formatQuantity(quantity: number): string {
+  return quantity.toLocaleString("es-AR", { maximumFractionDigits: 6 })
+}
+
 function formatDate(isoDate: string): string {
   return format(parseISO(isoDate), "dd/MM/yyyy")
 }
@@ -816,7 +820,15 @@ export default function InvestmentsPage() {
               )}
               {rows.map((investment) => (
                 <TableRow key={investment.id}>
-                  <TableCell className="font-medium">{investment.assetName}</TableCell>
+                  <TableCell>
+                    <div className="font-medium">{investment.assetName}</div>
+                    {investment.symbol && investment.quantity != null && (
+                      <div className="text-xs text-muted-foreground">
+                        {investment.symbol} · {formatQuantity(investment.quantity)}{" "}
+                        {investment.type === "Bond" ? "nominales" : "unidades"}
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="text-xs">
                       {investmentTypeLabels[investment.type]}
