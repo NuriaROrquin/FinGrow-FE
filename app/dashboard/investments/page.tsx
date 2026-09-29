@@ -138,8 +138,9 @@ function formatPercentage(value: number): string {
   return `${value < 0 ? "" : "+"}${formatted}%`
 }
 
-function formatQuantity(quantity: number): string {
-  return quantity.toLocaleString("es-AR", { maximumFractionDigits: 6 })
+function formatQuantity(quantity: number, type: InvestmentType): string {
+  const unit = type === "Bond" ? (quantity === 1 ? "nominal" : "nominales") : quantity === 1 ? "unidad" : "unidades"
+  return `${quantity.toLocaleString("es-AR", { maximumFractionDigits: 6 })} ${unit}`
 }
 
 function formatDate(isoDate: string): string {
@@ -824,8 +825,7 @@ export default function InvestmentsPage() {
                     <div className="font-medium">{investment.assetName}</div>
                     {investment.symbol && investment.quantity != null && (
                       <div className="text-xs text-muted-foreground">
-                        {investment.symbol} · {formatQuantity(investment.quantity)}{" "}
-                        {investment.type === "Bond" ? "nominales" : "unidades"}
+                        {investment.symbol} · {formatQuantity(investment.quantity, investment.type)}
                       </div>
                     )}
                   </TableCell>
