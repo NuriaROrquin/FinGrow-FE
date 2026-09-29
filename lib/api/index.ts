@@ -53,11 +53,13 @@ export {
 } from "./integrations"
 export {
   ASSET_NAME_MAX_LENGTH,
+  SYMBOL_MAX_LENGTH,
   createInvestment,
   getPortfolioSummary,
   deleteInvestment,
   investmentSortFieldLabels,
   investmentTypeLabels,
+  isQuotedOnExchange,
   listInvestments,
   updateInvestment,
   type AllocationGroupDto,

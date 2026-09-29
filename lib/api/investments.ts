@@ -5,6 +5,14 @@ export type InvestmentType = "Etf" | "Stock" | "Bond" | "MutualFund" | "Crypto"
 
 export const ASSET_NAME_MAX_LENGTH = 120
 
+export const SYMBOL_MAX_LENGTH = 20
+
+export const quotedOnExchangeTypes: InvestmentType[] = ["Stock", "Etf", "Bond"]
+
+export function isQuotedOnExchange(type: InvestmentType): boolean {
+  return quotedOnExchangeTypes.includes(type)
+}
+
 export const investmentTypeLabels: Record<InvestmentType, string> = {
   Etf: "ETF",
   Stock: "Acción",
@@ -25,6 +33,8 @@ export interface InvestmentDto {
   purchasedOn: string
   valuedOn: string
   hasMarketValuation: boolean
+  symbol: string | null
+  quantity: number | null
   createdAt: string
 }
 
@@ -34,6 +44,8 @@ export interface CreateInvestmentPayload {
   investedAmount: number
   currency: Currency
   purchasedOn: string
+  symbol: string | null
+  quantity: number | null
 }
 
 export interface CurrencyPortfolioDto {
