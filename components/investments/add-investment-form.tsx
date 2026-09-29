@@ -10,7 +10,9 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   ASSET_NAME_MAX_LENGTH,
+  SYMBOL_MAX_LENGTH,
   investmentTypeLabels,
+  isQuotedOnExchange,
   toastApiError,
   type CreateInvestmentPayload,
   type InvestmentDto,
@@ -29,6 +31,10 @@ function todayForDateInput(): string {
   return format(new Date(), "yyyy-MM-dd")
 }
 
+function quantityLabel(type: InvestmentType | ""): string {
+  return type === "Bond" ? "Cantidad de nominales" : "Cantidad de unidades"
+}
+
 export function AddInvestmentForm({
   initialInvestment,
   onSubmit,
@@ -44,7 +50,12 @@ export function AddInvestmentForm({
   const [investedAmount, setInvestedAmount] = useState(initialInvestment ? String(initialInvestment.investedAmount) : "")
   const [currency, setCurrency] = useState<Currency>(initialInvestment?.currency ?? "ARS")
   const [purchasedOn, setPurchasedOn] = useState(initialInvestment?.purchasedOn ?? "")
+  const [symbol, setSymbol] = useState(initialInvestment?.symbol ?? "")
+  const [quantity, setQuantity] = useState(initialInvestment?.quantity != null ? String(initialInvestment.quantity) : "")
+  const [trackingError, setTrackingError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const canBeQuoted = type !== "" && isQuotedOnExchange(type)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -53,6 +64,15 @@ export function AddInvestmentForm({
       return
     }
 
+    const trimmedSymbol = canBeQuoted ? symbol.trim().toUpperCase() : ""
+    const trimmedQuantity = canBeQuoted ? quantity.trim() : ""
+
+    if ((trimmedSymbol === "") !== (trimmedQuantity === "")) {
+      setTrackingError("Para cotizar la inversión completá el símbolo y la cantidad, o dejá los dos vacíos.")
+      return
+    }
+
+    setTrackingError(null)
     setIsSubmitting(true)
     try {
       await onSubmit({
@@ -61,6 +81,8 @@ export function AddInvestmentForm({
         investedAmount: Number(investedAmount),
         currency,
         purchasedOn,
+        symbol: trimmedSymbol || null,
+        quantity: trimmedQuantity ? Number(trimmedQuantity) : null,
       })
       onClose()
     } catch (error) {
@@ -142,6 +164,45 @@ export function AddInvestmentForm({
           required
         />
       </div>
+
+      {canBeQuoted && (
+        <div className="space-y-3 rounded-md border p-3">
+          <div>
+            <p className="text-sm font-medium">Cotización automática (opcional)</p>
+            <p className="text-xs text-muted-foreground">
+              Con el símbolo y la cantidad le ponemos precio de mercado todos los días hábiles con el cierre de BYMA.
+              Usá la variante de la moneda de la inversión: AL30 en pesos, AL30D en dólares.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-2">
+              <Label htmlFor="investment-symbol">Símbolo</Label>
+              <Input
+                id="investment-symbol"
+                placeholder="ej. AL30, YPFD, SPY"
+                maxLength={SYMBOL_MAX_LENGTH}
+                pattern="[A-Za-z0-9]+"
+                title="Solo letras y números"
+                value={symbol}
+                onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="investment-quantity">{quantityLabel(type)}</Label>
+              <Input
+                id="investment-quantity"
+                type="number"
+                placeholder="0"
+                step="any"
+                min="0"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+              />
+            </div>
+          </div>
+          {trackingError && <p className="text-sm text-destructive">{trackingError}</p>}
+        </div>
+      )}
 
       <div className="flex gap-2 justify-end pt-4">
         <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
