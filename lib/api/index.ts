@@ -23,6 +23,15 @@ export { getSession, loginEmpleado, loginEmpresa, logout, type LoginRequest, typ
 export { getApiBaseUrl } from "./config"
 export { getMepQuote, type MepQuoteDto } from "./exchange-rates"
 export {
+  createBudget,
+  duplicatePreviousBudget,
+  getBudget,
+  type BudgetDto,
+  type BudgetLimitDto,
+  type BudgetPeriod,
+  type CreateBudgetPayload,
+} from "./budgets"
+export {
   addContribution,
   CONTRIBUTION_NOTE_MAX_LENGTH,
   createGoal,
