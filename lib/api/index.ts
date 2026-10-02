@@ -26,10 +26,13 @@ export {
   createBudget,
   duplicatePreviousBudget,
   getBudget,
+  setBudgetLimit,
   type BudgetDto,
+  type BudgetHealth,
   type BudgetLimitDto,
   type BudgetPeriod,
   type CreateBudgetPayload,
+  type SetBudgetLimitPayload,
 } from "./budgets"
 export {
   addContribution,
