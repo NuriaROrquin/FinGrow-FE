@@ -4,20 +4,26 @@ import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { ChevronLeftIcon, ChevronRightIcon, CopyIcon, PlusIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { duplicatePreviousBudget, getBudget, isApiError, toastApiError, type BudgetDto } from "@/lib/api"
-import { expenseCategoryLabels } from "@/lib/api/transactions"
+import { expenseCategoryLabels, type ExpenseCategory } from "@/lib/api/transactions"
+import { BudgetLimitCard } from "./budget-limit-card"
+import { BudgetLimitForm } from "./budget-limit-form"
 import {
   currentYearMonth,
-  expenseCategoryIcons,
   formatAmount,
   formatYearMonth,
   shiftMonth,
   type YearMonth,
 } from "./budget-month"
 import { CreateBudgetForm } from "./create-budget-form"
+
+const allCategories = Object.keys(expenseCategoryLabels) as ExpenseCategory[]
+
+/** Qué límite se está editando: una categoría existente, una nueva, o ninguno. */
+type LimitEditor = { mode: "edit"; category: ExpenseCategory; amount: number } | { mode: "add" } | null
 
 export function MonthlyBudgetSection({ onBudgetChange }: { onBudgetChange: (budget: BudgetDto | null) => void }) {
   const [period, setPeriod] = useState<YearMonth>(currentYearMonth)
@@ -27,6 +33,7 @@ export function MonthlyBudgetSection({ onBudgetChange }: { onBudgetChange: (budg
   const [reloadKey, setReloadKey] = useState(0)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isDuplicating, setIsDuplicating] = useState(false)
+  const [limitEditor, setLimitEditor] = useState<LimitEditor>(null)
 
   const previousPeriod = shiftMonth(period, -1)
   const periodLabel = formatYearMonth(period)
@@ -71,9 +78,9 @@ export function MonthlyBudgetSection({ onBudgetChange }: { onBudgetChange: (budg
   const handleDuplicate = async () => {
     setIsDuplicating(true)
     try {
-      const duplicated = await duplicatePreviousBudget(period.year, period.month)
-      setBudget(duplicated)
-      setPreviousBudget(null)
+      await duplicatePreviousBudget(period.year, period.month)
+      // Duplicar devuelve solo los límites: se vuelve a pedir para traer lo gastado del mes.
+      reload()
       toast.success(`Presupuesto de ${periodLabel} creado a partir de ${previousLabel}`)
     } catch (error) {
       toastApiError(error, "No se pudo duplicar el presupuesto.")
@@ -84,6 +91,9 @@ export function MonthlyBudgetSection({ onBudgetChange }: { onBudgetChange: (budg
   }
 
   const total = budget?.limits.reduce((sum, limit) => sum + limit.amount, 0) ?? 0
+  const categoriesWithoutLimit = allCategories.filter(
+    (category) => !budget?.limits.some((limit) => limit.category === category),
+  )
 
   return (
     <div className="space-y-4">
@@ -108,9 +118,18 @@ export function MonthlyBudgetSection({ onBudgetChange }: { onBudgetChange: (budg
           </Button>
         </div>
         {!isLoading && budget && (
-          <p className="text-sm text-muted-foreground">
-            Total asignado: <span className="font-semibold text-foreground">{formatAmount(total, budget.currency)}</span>
-          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-sm text-muted-foreground">
+              Total asignado:{" "}
+              <span className="font-semibold text-foreground">{formatAmount(total, budget.currency)}</span>
+            </p>
+            {categoriesWithoutLimit.length > 0 && (
+              <Button onClick={() => setLimitEditor({ mode: "add" })}>
+                <PlusIcon className="size-4" />
+                Agregar Categoría
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
@@ -122,20 +141,12 @@ export function MonthlyBudgetSection({ onBudgetChange }: { onBudgetChange: (budg
       ) : budget ? (
         <div className="grid gap-4 md:grid-cols-2">
           {budget.limits.map((limit) => (
-            <Card key={limit.category}>
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="text-3xl">{expenseCategoryIcons[limit.category]}</div>
-                  <div>
-                    <CardTitle className="text-lg">{expenseCategoryLabels[limit.category]}</CardTitle>
-                    <CardDescription>Tope mensual</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <span className="text-2xl font-bold">{formatAmount(limit.amount, budget.currency)}</span>
-              </CardContent>
-            </Card>
+            <BudgetLimitCard
+              key={limit.category}
+              limit={limit}
+              currency={budget.currency}
+              onEdit={() => setLimitEditor({ mode: "edit", category: limit.category, amount: limit.amount })}
+            />
           ))}
         </div>
       ) : (
@@ -162,7 +173,7 @@ export function MonthlyBudgetSection({ onBudgetChange }: { onBudgetChange: (budg
             </div>
             {previousBudget && (
               <p className="text-xs text-muted-foreground">
-                Duplicar copia los {previousBudget.limits.length} topes de {previousLabel}.
+                Duplicar copia los {previousBudget.limits.length} límites de {previousLabel}.
               </p>
             )}
           </CardContent>
@@ -174,18 +185,42 @@ export function MonthlyBudgetSection({ onBudgetChange }: { onBudgetChange: (budg
           <DialogHeader>
             <DialogTitle>Crear presupuesto</DialogTitle>
             <DialogDescription>
-              Asigná un tope de gasto por categoría para <span className="capitalize">{periodLabel}</span>.
+              Asigná un límite de gasto por categoría para <span className="capitalize">{periodLabel}</span>.
             </DialogDescription>
           </DialogHeader>
           <CreateBudgetForm
             period={period}
-            onCreated={(created) => {
-              setBudget(created)
-              setPreviousBudget(null)
-            }}
+            // Crear devuelve solo los límites: se vuelve a pedir para traer lo gastado del mes.
+            onCreated={reload}
             onConflict={reload}
             onClose={() => setIsCreateOpen(false)}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={limitEditor !== null} onOpenChange={(open) => !open && setLimitEditor(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{limitEditor?.mode === "edit" ? "Editar límite" : "Agregar categoría"}</DialogTitle>
+            <DialogDescription>
+              {limitEditor?.mode === "edit" ? "Ajustá el límite" : "Definí el límite de una categoría nueva"} para{" "}
+              <span className="capitalize">{periodLabel}</span>. Lo gastado y el estado se recalculan al guardar.
+            </DialogDescription>
+          </DialogHeader>
+          {limitEditor && budget && (
+            <BudgetLimitForm
+              // La key reinicia el formulario al pasar de una categoría a otra.
+              key={limitEditor.mode === "edit" ? limitEditor.category : "add"}
+              period={period}
+              currency={budget.currency}
+              category={limitEditor.mode === "edit" ? limitEditor.category : undefined}
+              initialAmount={limitEditor.mode === "edit" ? limitEditor.amount : undefined}
+              availableCategories={categoriesWithoutLimit}
+              onSaved={setBudget}
+              onBudgetMissing={reload}
+              onClose={() => setLimitEditor(null)}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
