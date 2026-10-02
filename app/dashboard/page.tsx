@@ -25,36 +25,20 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { useEffect, useState } from "react"
 import { useToast } from "@/hooks/use-toast"
-import { createTransaction, listTransactions, type TransactionDto } from "@/lib/api/transactions"
+import {
+  createTransaction,
+  expenseCategoryLabels,
+  listTransactions,
+  type Currency,
+  type TransactionDto,
+} from "@/lib/api/transactions"
+import { getExpensesByCategory, getIncomeVsExpenses, getMonthlyExpenses, type ExpenseCategoryTotalDto } from "@/lib/api"
 import { AddTransactionForm } from "@/components/transactions/add-transaction-form"
 
-const monthlySpendingData = [
-  { month: "Ene", amount: 240000 },
-  { month: "Feb", amount: 139800 },
-  { month: "Mar", amount: 380000 },
-  { month: "Abr", amount: 390800 },
-  { month: "May", amount: 480000 },
-  { month: "Jun", amount: 380000 },
-]
-
-const incomeVsExpenseData = [
-  { month: "Ene", income: 500000, expense: 240000 },
-  { month: "Feb", income: 500000, expense: 139800 },
-  { month: "Mar", income: 520000, expense: 380000 },
-  { month: "Abr", income: 520000, expense: 390800 },
-  { month: "May", income: 550000, expense: 480000 },
-  { month: "Jun", income: 550000, expense: 380000 },
-]
-
-const categoryData = [
-  { name: "Comida", value: 120000, color: "#3b5998" },
-  { name: "Transporte", value: 80000, color: "#10b981" },
-  { name: "Entretenimiento", value: 60000, color: "#f59e0b" },
-  { name: "Servicios", value: 140000, color: "#8b5cf6" },
-  { name: "Otros", value: 50000, color: "#ec4899" },
-]
+const categoryColors = ["#3b5998", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#ef4444", "#14b8a6"]
 
 const chartConfig = {
   amount: {
@@ -72,26 +56,55 @@ const chartConfig = {
 }
 
 const categoryChartConfig = {
-  Comida: {
-    label: "Comida",
-    color: "#3b5998",
-  },
-  Transporte: {
-    label: "Transporte",
-    color: "#10b981",
-  },
-  Entretenimiento: {
-    label: "Entretenimiento",
-    color: "#f59e0b",
-  },
-  Servicios: {
-    label: "Servicios",
+  value: {
+    label: "Gastos",
     color: "#8b5cf6",
   },
-  Otros: {
-    label: "Otros",
-    color: "#ec4899",
-  },
+}
+
+function formatMonth(month: string): string {
+  const [year, monthNumber] = month.split("-").map(Number)
+  if (!year || !monthNumber || monthNumber < 1 || monthNumber > 12) return month
+
+  return new Intl.DateTimeFormat("es-AR", { month: "short" })
+    .format(new Date(year, monthNumber - 1, 1))
+    .replace(".", "")
+}
+
+function getSixMonthDateRange(): { dateFrom: string; dateTo: string } {
+  const today = new Date()
+  const firstMonth = new Date(today.getFullYear(), today.getMonth() - 5, 1)
+  const dateFrom = `${firstMonth.getFullYear()}-${String(firstMonth.getMonth() + 1).padStart(2, "0")}-01`
+  const dateTo = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`
+
+  return { dateFrom, dateTo }
+}
+
+function getCategoryLabel(category: string): string {
+  return expenseCategoryLabels[category as keyof typeof expenseCategoryLabels] ?? category
+}
+
+function toCategoryChartData(items: ExpenseCategoryTotalDto[]) {
+  return items.map((item, index) => ({
+    name: getCategoryLabel(item.category),
+    value: item.totalExpense,
+    color: categoryColors[index % categoryColors.length],
+  }))
+}
+
+function formatCurrency(value: number, currency: Currency): string {
+  return new Intl.NumberFormat("es-AR", { style: "currency", currency }).format(value)
+}
+
+function ChartEmptyState({ title, description }: { title: string; description: string }) {
+  return (
+    <Empty className="min-h-[300px] border">
+      <EmptyHeader>
+        <EmptyTitle>{title}</EmptyTitle>
+        <EmptyDescription>{description}</EmptyDescription>
+      </EmptyHeader>
+    </Empty>
+  )
 }
 
 export default function DashboardPage() {
@@ -101,8 +114,18 @@ export default function DashboardPage() {
   const [openSavings, setOpenSavings] = useState(false)
   const [recentTransactions, setRecentTransactions] = useState<TransactionDto[]>([])
   const [recentTransactionsRefreshKey, setRecentTransactionsRefreshKey] = useState(0)
+  const [monthlySpendingData, setMonthlySpendingData] = useState<{ month: string; amount: number }[]>([])
+  const [incomeVsExpenseData, setIncomeVsExpenseData] = useState<{ month: string; income: number; expense: number }[]>([])
+  const [categoryData, setCategoryData] = useState<{ name: string; value: number; color: string }[]>([])
+  const [isLoadingCharts, setIsLoadingCharts] = useState(true)
+  const [chartsError, setChartsError] = useState<string | null>(null)
+  const [chartsRefreshKey, setChartsRefreshKey] = useState(0)
+  const [currency, setCurrency] = useState<"ARS" | "USD">("ARS")
 
-  const refreshRecentTransactions = () => setRecentTransactionsRefreshKey((current) => current + 1)
+  const refreshRecentTransactions = () => {
+    setRecentTransactionsRefreshKey((current) => current + 1)
+    setChartsRefreshKey((current) => current + 1)
+  }
 
   useEffect(() => {
     listTransactions(1, 5)
@@ -117,6 +140,46 @@ export default function DashboardPage() {
         })
       })
   }, [recentTransactionsRefreshKey, toast])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    const { dateFrom, dateTo } = getSixMonthDateRange()
+
+    setIsLoadingCharts(true)
+    setChartsError(null)
+    setMonthlySpendingData([])
+    setIncomeVsExpenseData([])
+    setCategoryData([])
+
+    Promise.all([
+      getMonthlyExpenses({ currency, signal: controller.signal }),
+      getIncomeVsExpenses({ currency, signal: controller.signal }),
+      getExpensesByCategory({ dateFrom, dateTo, currency, signal: controller.signal }),
+    ])
+      .then(([monthlyExpenses, incomeVsExpenses, expensesByCategory]) => {
+        setMonthlySpendingData(
+          monthlyExpenses.items.map((item) => ({ month: formatMonth(item.month), amount: item.totalExpense })),
+        )
+        setIncomeVsExpenseData(
+          incomeVsExpenses.items.map((item) => ({
+            month: formatMonth(item.month),
+            income: item.totalIncome,
+            expense: item.totalExpense,
+          })),
+        )
+        setCategoryData(toCategoryChartData(expensesByCategory.items.filter((item) => item.totalExpense > 0)))
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return
+
+        setChartsError(error instanceof Error ? error.message : "No se pudieron cargar los datos de los gráficos.")
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoadingCharts(false)
+      })
+
+    return () => controller.abort()
+  }, [chartsRefreshKey, currency])
 
   const formatRelativeDate = (value: string) => {
     const transactionDate = new Date(value)
@@ -140,6 +203,9 @@ export default function DashboardPage() {
 
     return `En ${Math.abs(diffInDays)} días`
   }
+
+  const hasMonthlySpendingData = monthlySpendingData.some((entry) => entry.amount > 0)
+  const hasIncomeVsExpenseData = incomeVsExpenseData.some((entry) => entry.income > 0 || entry.expense > 0)
 
   return (
     <div className="space-y-6">
@@ -293,11 +359,30 @@ export default function DashboardPage() {
       </Card>
 
       <Tabs defaultValue="spending" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="spending">Tendencias de Gasto</TabsTrigger>
-          <TabsTrigger value="income-expense">Ingresos vs Gastos</TabsTrigger>
-          <TabsTrigger value="categories">Categorías</TabsTrigger>
-        </TabsList>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <TabsList>
+            <TabsTrigger value="spending">Tendencias de Gasto</TabsTrigger>
+            <TabsTrigger value="income-expense">Ingresos vs Gastos</TabsTrigger>
+            <TabsTrigger value="categories">Categorías</TabsTrigger>
+          </TabsList>
+
+          <Tabs value={currency} onValueChange={(value) => setCurrency(value as "ARS" | "USD")} className="w-fit">
+            <TabsList>
+              <TabsTrigger value="ARS">Pesos (ARS)</TabsTrigger>
+              <TabsTrigger value="USD">Dólares (USD)</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {isLoadingCharts && <p className="text-sm text-muted-foreground">Cargando datos de los gráficos...</p>}
+        {chartsError && (
+          <div className="flex items-center justify-between gap-4 rounded-md border border-destructive/30 p-3 text-sm">
+            <span className="text-destructive">{chartsError}</span>
+            <Button variant="outline" size="sm" onClick={() => setChartsRefreshKey((current) => current + 1)}>
+              Reintentar
+            </Button>
+          </div>
+        )}
 
         <TabsContent value="spending" className="space-y-4">
           <Card>
@@ -306,31 +391,35 @@ export default function DashboardPage() {
               <CardDescription>Tus gastos durante los últimos 6 meses</CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={chartConfig} className="h-[350px] w-full">
-                <BarChart data={monthlySpendingData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
-                  <XAxis
-                    dataKey="month"
-                    tick={{ fill: "#6b7280", fontSize: 12 }}
-                    axisLine={{ stroke: "#e5e7eb" }}
-                  />
-                  <YAxis
-                    tick={{ fill: "#6b7280", fontSize: 12 }}
-                    axisLine={{ stroke: "#e5e7eb" }}
-                  />
-                  <ChartTooltip
-                    content={<ChartTooltipContent />}
-                    cursor={{ fill: "rgba(139, 92, 246, 0.1)" }}
-                  />
-                  <Bar
-                    dataKey="amount"
-                    fill="#8b5cf6"
-                    radius={[8, 8, 0, 0]}
-                    animationDuration={800}
-                    animationBegin={0}
-                  />
-                </BarChart>
-              </ChartContainer>
+              {!hasMonthlySpendingData && !isLoadingCharts ? (
+                <ChartEmptyState
+                  title="Todavía no hay gastos mensuales"
+                  description={`Este gráfico mostrará tus gastos confirmados en ${currency} durante los últimos seis meses.`}
+                />
+              ) : (
+                <ChartContainer config={chartConfig} className="h-[350px] w-full">
+                  <BarChart data={monthlySpendingData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                    <XAxis
+                      dataKey="month"
+                      tick={{ fill: "#6b7280", fontSize: 12 }}
+                      axisLine={{ stroke: "#e5e7eb" }}
+                    />
+                    <YAxis tick={{ fill: "#6b7280", fontSize: 12 }} axisLine={{ stroke: "#e5e7eb" }} />
+                    <ChartTooltip
+                      content={<ChartTooltipContent />}
+                      cursor={{ fill: "rgba(139, 92, 246, 0.1)" }}
+                    />
+                    <Bar
+                      dataKey="amount"
+                      fill="#8b5cf6"
+                      radius={[8, 8, 0, 0]}
+                      animationDuration={800}
+                      animationBegin={0}
+                    />
+                  </BarChart>
+                </ChartContainer>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -342,16 +431,23 @@ export default function DashboardPage() {
               <CardDescription>Compara tus ingresos y gastos a lo largo del tiempo</CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                <LineChart data={incomeVsExpenseData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} cursor={{ stroke: "rgba(0, 0, 0, 0.2)" }} />
-                  <Line type="monotone" dataKey="income" stroke="#a78bfa" strokeWidth={2} />
-                  <Line type="monotone" dataKey="expense" stroke="#8b5cf6" strokeWidth={2} />
-                </LineChart>
-              </ChartContainer>
+              {!hasIncomeVsExpenseData && !isLoadingCharts ? (
+                <ChartEmptyState
+                  title="Todavía no hay ingresos o gastos"
+                  description={`Este gráfico comparará tus movimientos confirmados en ${currency} por mes.`}
+                />
+              ) : (
+                <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                  <LineChart data={incomeVsExpenseData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <ChartTooltip content={<ChartTooltipContent />} cursor={{ stroke: "rgba(0, 0, 0, 0.2)" }} />
+                    <Line type="monotone" dataKey="income" stroke="#a78bfa" strokeWidth={2} />
+                    <Line type="monotone" dataKey="expense" stroke="#8b5cf6" strokeWidth={2} />
+                  </LineChart>
+                </ChartContainer>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -363,42 +459,49 @@ export default function DashboardPage() {
               <CardDescription>Desglose de tus gastos por categoría</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                <ChartContainer config={categoryChartConfig} className="h-[300px] w-full">
-                  <PieChart>
-                    <Pie
-                      data={categoryData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }: { name?: string; percent?: number }) =>
-                        `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
-                      }
-                      outerRadius={100}
-                      fill="#8884d8"
-                      dataKey="value"
-                      nameKey="name"
-                    >
-                      {categoryData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <ChartTooltip content={<ChartTooltipContent hideLabel indicator="dot" />} cursor={false} />
-                  </PieChart>
-                </ChartContainer>
+              {categoryData.length === 0 && !isLoadingCharts ? (
+                <ChartEmptyState
+                  title="Todavía no hay gastos por categoría"
+                  description={`Este gráfico mostrará cómo se distribuyen tus gastos confirmados en ${currency}.`}
+                />
+              ) : (
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <ChartContainer config={categoryChartConfig} className="h-[300px] w-full">
+                    <PieChart>
+                      <Pie
+                        data={categoryData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }: { name?: string; percent?: number }) =>
+                          `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
+                        }
+                        outerRadius={100}
+                        fill="#8884d8"
+                        dataKey="value"
+                        nameKey="name"
+                      >
+                        {categoryData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <ChartTooltip content={<ChartTooltipContent hideLabel indicator="dot" />} cursor={false} />
+                    </PieChart>
+                  </ChartContainer>
 
-                <div className="flex flex-col justify-center gap-3">
-                  {categoryData.map((category) => (
-                    <div key={category.name} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="size-3 rounded-full" style={{ backgroundColor: category.color }} />
-                        <span className="text-sm font-medium">{category.name}</span>
+                  <div className="flex flex-col justify-center gap-3">
+                    {categoryData.map((category) => (
+                      <div key={category.name} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="size-3 rounded-full" style={{ backgroundColor: category.color }} />
+                          <span className="text-sm font-medium">{category.name}</span>
+                        </div>
+                        <span className="text-sm font-semibold">{formatCurrency(category.value, currency)}</span>
                       </div>
-                      <span className="text-sm font-semibold">${category.value.toLocaleString()}</span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

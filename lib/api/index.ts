@@ -85,3 +85,13 @@ export {
   type SortDirection,
 } from "./investments"
 export { getSavingsVsGoals, type SavingsVsGoalsDto, type SavingsVsGoalsMonthDto } from "./reports"
+export {
+  getExpensesByCategory,
+  getIncomeVsExpenses,
+  getMonthlyExpenses,
+  type DashboardDateRangeQuery,
+  type DashboardPeriodQuery,
+  type ExpenseCategoryTotalDto,
+  type IncomeExpenseMonthDto,
+  type MonthlyExpenseDto,
+} from "./dashboard"
