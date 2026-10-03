@@ -36,7 +36,6 @@ export function CreateBudgetForm({
 }: {
   period: YearMonth
   onCreated: (budget: BudgetDto) => void
-  /** El mes ya tenía presupuesto (por ejemplo, creado desde otra pestaña). */
   onConflict: () => void
   onClose: () => void
 }) {
