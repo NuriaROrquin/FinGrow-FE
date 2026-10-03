@@ -7,7 +7,6 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid } from "recharts"
 import {
   ArrowUpIcon,
-  ArrowDownIcon,
   PlusIcon,
   TrendingUpIcon,
   WalletIcon,
@@ -26,6 +25,8 @@ import {
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
+import { EmptyContent } from "@/components/ui/empty"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -35,8 +36,16 @@ import {
   type Currency,
   type TransactionDto,
 } from "@/lib/api/transactions"
-import { getExpensesByCategory, getIncomeVsExpenses, getMonthlyExpenses, type ExpenseCategoryTotalDto } from "@/lib/api"
+import {
+  getDashboardSummary,
+  getExpensesByCategory,
+  getIncomeVsExpenses,
+  getMonthlyExpenses,
+  type DashboardSummaryDto,
+  type ExpenseCategoryTotalDto,
+} from "@/lib/api"
 import { AddTransactionForm } from "@/components/transactions/add-transaction-form"
+import { PeriodFilter, getCurrentMonthStart, getToday } from "@/components/period-filter"
 
 const categoryColors = ["#3b5998", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#ef4444", "#14b8a6"]
 
@@ -69,15 +78,6 @@ function formatMonth(month: string): string {
   return new Intl.DateTimeFormat("es-AR", { month: "short" })
     .format(new Date(year, monthNumber - 1, 1))
     .replace(".", "")
-}
-
-function getSixMonthDateRange(): { dateFrom: string; dateTo: string } {
-  const today = new Date()
-  const firstMonth = new Date(today.getFullYear(), today.getMonth() - 5, 1)
-  const dateFrom = `${firstMonth.getFullYear()}-${String(firstMonth.getMonth() + 1).padStart(2, "0")}-01`
-  const dateTo = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`
-
-  return { dateFrom, dateTo }
 }
 
 function getCategoryLabel(category: string): string {
@@ -121,11 +121,42 @@ export default function DashboardPage() {
   const [chartsError, setChartsError] = useState<string | null>(null)
   const [chartsRefreshKey, setChartsRefreshKey] = useState(0)
   const [currency, setCurrency] = useState<"ARS" | "USD">("ARS")
+  const [dashboardSummary, setDashboardSummary] = useState<DashboardSummaryDto | null>(null)
+  const [isLoadingSummary, setIsLoadingSummary] = useState(true)
+  const [summaryError, setSummaryError] = useState<string | null>(null)
+  const [dateFrom, setDateFrom] = useState(() => getCurrentMonthStart())
+  const [dateTo, setDateTo] = useState(() => getToday())
+  const [summaryRefreshKey, setSummaryRefreshKey] = useState(0)
 
   const refreshRecentTransactions = () => {
     setRecentTransactionsRefreshKey((current) => current + 1)
     setChartsRefreshKey((current) => current + 1)
   }
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    setIsLoadingSummary(true)
+    setSummaryError(null)
+
+    getDashboardSummary({
+      currency,
+      dateFrom,
+      dateTo,
+      signal: controller.signal,
+    })
+      .then(setDashboardSummary)
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return
+        setDashboardSummary(null)
+        setSummaryError(error instanceof Error ? error.message : "No se pudo cargar el resumen financiero.")
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoadingSummary(false)
+      })
+
+    return () => controller.abort()
+  }, [currency, dateFrom, dateTo, summaryRefreshKey])
 
   useEffect(() => {
     listTransactions(1, 5)
@@ -143,8 +174,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const controller = new AbortController()
-    const { dateFrom, dateTo } = getSixMonthDateRange()
-
     setIsLoadingCharts(true)
     setChartsError(null)
     setMonthlySpendingData([])
@@ -179,7 +208,7 @@ export default function DashboardPage() {
       })
 
     return () => controller.abort()
-  }, [chartsRefreshKey, currency])
+  }, [chartsRefreshKey, currency, dateFrom, dateTo])
 
   const formatRelativeDate = (value: string) => {
     const transactionDate = new Date(value)
@@ -206,6 +235,24 @@ export default function DashboardPage() {
 
   const hasMonthlySpendingData = monthlySpendingData.some((entry) => entry.amount > 0)
   const hasIncomeVsExpenseData = incomeVsExpenseData.some((entry) => entry.income > 0 || entry.expense > 0)
+  const formatMetric = (value: number | null | undefined) =>
+    value === null || value === undefined ? "—" : formatCurrency(value, dashboardSummary?.currency ?? currency)
+  const savingsRateVariation =
+    dashboardSummary?.savingsRate !== null &&
+    dashboardSummary?.savingsRate !== undefined &&
+    dashboardSummary.previousPeriodSavingsRate !== null &&
+    dashboardSummary.previousPeriodSavingsRate !== undefined &&
+    dashboardSummary.previousPeriodSavingsRate !== 0
+      ? ((dashboardSummary.savingsRate - dashboardSummary.previousPeriodSavingsRate) /
+          Math.abs(dashboardSummary.previousPeriodSavingsRate)) *
+        100
+      : null
+
+  const formatPercentageVariation = (value: number | null) => {
+    if (value === null) return null
+    const sign = value > 0 ? "+" : ""
+    return `${sign}${value.toFixed(2)}%`
+  }
 
   return (
     <div className="space-y-6">
@@ -214,59 +261,100 @@ export default function DashboardPage() {
         <p className="text-muted-foreground mt-1">Monitorea tu salud financiera y progreso</p>
       </div>
 
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <PeriodFilter
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          onChange={({ dateFrom: nextDateFrom, dateTo: nextDateTo }) => {
+            setDateFrom(nextDateFrom)
+            setDateTo(nextDateTo)
+          }}
+        />
+        <Tabs value={currency} onValueChange={(value) => setCurrency(value as "ARS" | "USD")} className="w-fit">
+          <TabsList>
+            <TabsTrigger value="ARS">Pesos (ARS)</TabsTrigger>
+            <TabsTrigger value="USD">Dólares (USD)</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Saldo Total</CardDescription>
-            <CardTitle className="text-2xl">$1,245,000.00</CardTitle>
+            <CardTitle className="text-2xl">
+              {isLoadingSummary ? <Skeleton className="h-8 w-36" /> : formatMetric(dashboardSummary?.balance)}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-1 text-sm text-success">
-              <ArrowUpIcon className="size-4" />
-              <span>+12.5% desde el mes pasado</span>
-            </div>
+            <p className="text-sm text-muted-foreground">Saldo acumulado hasta el período</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Ingresos Mensuales</CardDescription>
-            <CardTitle className="text-2xl">$550,000.00</CardTitle>
+            <CardTitle className="text-2xl">
+              {isLoadingSummary ? <Skeleton className="h-8 w-36" /> : formatMetric(dashboardSummary?.income)}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-1 text-sm text-success">
-              <ArrowUpIcon className="size-4" />
-              <span>+5.8% desde el mes pasado</span>
-            </div>
+            <p className="text-sm text-muted-foreground">En el período seleccionado</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Gastos Mensuales</CardDescription>
-            <CardTitle className="text-2xl">$380,000.00</CardTitle>
+            <CardTitle className="text-2xl">
+              {isLoadingSummary ? <Skeleton className="h-8 w-36" /> : formatMetric(dashboardSummary?.expenses === null || dashboardSummary?.expenses === undefined ? null : -dashboardSummary.expenses)}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-1 text-sm text-destructive">
-              <ArrowDownIcon className="size-4" />
-              <span>-2.3% desde el mes pasado</span>
-            </div>
+            <p className="text-sm text-muted-foreground">En el período seleccionado</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Tasa de Ahorro</CardDescription>
-            <CardTitle className="text-2xl">31%</CardTitle>
+            <CardTitle className="text-2xl">
+              {isLoadingSummary ? <Skeleton className="h-8 w-24" /> : dashboardSummary?.savingsRate === null || dashboardSummary?.savingsRate === undefined ? "—" : `${dashboardSummary.savingsRate}%`}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-1 text-sm text-success">
-              <ArrowUpIcon className="size-4" />
-              <span>+3.2% desde el mes pasado</span>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              {savingsRateVariation === null
+                ? "Sin variación calculable"
+                : `${formatPercentageVariation(savingsRateVariation)} vs período anterior`}
+            </p>
           </CardContent>
         </Card>
       </div>
+
+      {summaryError && (
+        <div className="flex items-center justify-between gap-4 rounded-md border border-destructive/30 p-3 text-sm">
+          <span className="text-destructive">{summaryError}</span>
+          <Button variant="outline" size="sm" onClick={() => setSummaryRefreshKey((current) => current + 1)}>
+            Reintentar
+          </Button>
+        </div>
+      )}
+
+      {!isLoadingSummary && !summaryError && dashboardSummary && !dashboardSummary.hasMovements && (
+        <Empty className="border">
+          <EmptyHeader>
+            <EmptyTitle>Todavía no hay movimientos</EmptyTitle>
+            <EmptyDescription>Cargá tu primer ingreso o gasto para ver tu resumen financiero.</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button onClick={() => setOpenTransaction(true)}>
+              <PlusIcon className="size-4" />
+              Cargar primer movimiento
+            </Button>
+          </EmptyContent>
+        </Empty>
+      )}
 
       <Card>
         <CardHeader>
@@ -366,12 +454,6 @@ export default function DashboardPage() {
             <TabsTrigger value="categories">Categorías</TabsTrigger>
           </TabsList>
 
-          <Tabs value={currency} onValueChange={(value) => setCurrency(value as "ARS" | "USD")} className="w-fit">
-            <TabsList>
-              <TabsTrigger value="ARS">Pesos (ARS)</TabsTrigger>
-              <TabsTrigger value="USD">Dólares (USD)</TabsTrigger>
-            </TabsList>
-          </Tabs>
         </div>
 
         {isLoadingCharts && <p className="text-sm text-muted-foreground">Cargando datos de los gráficos...</p>}

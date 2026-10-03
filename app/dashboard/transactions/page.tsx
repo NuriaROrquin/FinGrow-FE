@@ -62,10 +62,10 @@ import {
   Video,
   ChevronLeft,
   ChevronRight,
-  MoreHorizontal,
   Trash2,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import {
   createTransaction,
@@ -88,6 +88,11 @@ import { AddTransactionForm } from "@/components/transactions/add-transaction-fo
 import { TransactionActionsMenu } from "@/components/transactions/transaction-actions-menu"
 import { getCategoryIcon, getPaymentMethodIcon } from "@/components/transactions/transaction-icons"
 import { isApiError } from "@/lib/api/errors"
+import {
+  PeriodFilter,
+  getCurrentMonthStart,
+  getToday,
+} from "@/components/period-filter"
 
 const emptyTransactionsResponse: TransactionsResponse = {
   items: [],
@@ -122,31 +127,6 @@ const defaultTransactionStatuses: TransactionListStatus[] = ["Confirmed", "Pendi
 const transactionTableHeadClassName = "py-3 pr-2 text-left align-middle whitespace-nowrap"
 const transactionTableCellClassName = "py-3 pr-2 align-middle whitespace-nowrap"
 
-function formatDateInput(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, "0")
-  const day = String(date.getDate()).padStart(2, "0")
-  return `${year}-${month}-${day}`
-}
-
-function parseDateInput(value: string): Date {
-  const [year, month, day] = value.split("-").map(Number)
-  return new Date(year, month - 1, day)
-}
-
-function getCurrentMonthStart(): string {
-  const now = new Date()
-  return formatDateInput(new Date(now.getFullYear(), now.getMonth(), 1))
-}
-
-function getToday(): string {
-  return formatDateInput(new Date())
-}
-
-function getMonthEnd(date: Date): string {
-  return formatDateInput(new Date(date.getFullYear(), date.getMonth() + 1, 0))
-}
-
 export default function TransactionsPage() {
   const searchParams = useSearchParams()
   const [transactionsResponse, setTransactionsResponse] = useState(emptyTransactionsResponse)
@@ -163,9 +143,7 @@ export default function TransactionsPage() {
   const [isStatusPickerOpen, setIsStatusPickerOpen] = useState(false)
   const [dateFrom, setDateFrom] = useState(() => getCurrentMonthStart())
   const [dateTo, setDateTo] = useState(() => getToday())
-  const [customDateFrom, setCustomDateFrom] = useState(() => getCurrentMonthStart())
-  const [customDateTo, setCustomDateTo] = useState(() => getToday())
-  const [isCustomPeriodOpen, setIsCustomPeriodOpen] = useState(false)
+  const [summaryCurrency, setSummaryCurrency] = useState<"ARS" | "USD">("ARS")
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
@@ -346,10 +324,6 @@ export default function TransactionsPage() {
 
   const defaultDateFrom = getCurrentMonthStart()
   const defaultDateTo = getToday()
-  const periodLabel = parseDateInput(dateFrom).toLocaleDateString("es-AR", {
-    month: "long",
-    year: "numeric",
-  })
   const shouldShowPagination = transactionsResponse.totalPages > 1
   const visibleResultsStart = transactionsResponse.totalCount === 0 ? 0 : (transactionsResponse.pageNumber - 1) * pageSize + 1
   const visibleResultsEnd = transactionsResponse.totalCount === 0 ? 0 : Math.min(transactionsResponse.pageNumber * pageSize, transactionsResponse.totalCount)
@@ -449,24 +423,11 @@ export default function TransactionsPage() {
     }
   }
 
-  const changePeriod = (offset: number) => {
-    const currentPeriod = parseDateInput(dateFrom)
-    const nextPeriod = new Date(currentPeriod.getFullYear(), currentPeriod.getMonth() + offset, 1)
-
-    setDateFrom(formatDateInput(nextPeriod))
-    setDateTo(getMonthEnd(nextPeriod))
+  const changePeriod = (nextDateFrom: string, nextDateTo: string) => {
+    setDateFrom(nextDateFrom)
+    setDateTo(nextDateTo)
     setCurrentPage(1)
     setSummaryRefreshKey((key) => key + 1)
-  }
-
-  const applyCustomPeriod = () => {
-    if (!customDateFrom || !customDateTo || customDateFrom > customDateTo) return
-
-    setDateFrom(customDateFrom)
-    setDateTo(customDateTo)
-    setCurrentPage(1)
-    setSummaryRefreshKey((key) => key + 1)
-    setIsCustomPeriodOpen(false)
   }
 
   const totalIncome = {
@@ -481,18 +442,9 @@ export default function TransactionsPage() {
     ARS: totalIncome.ARS - totalExpense.ARS,
     USD: totalIncome.USD - totalExpense.USD,
   }
-  const isNetPositive = balanceByCurrency.ARS >= 0 && balanceByCurrency.USD >= 0
-
   // Función de formateo consistente
   const formatCurrency = (amount: number, currency: string) =>
     `${currency === "USD" ? "US$" : "$"}${amount.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`
-
-  const renderCurrencyTotals = (totals: Record<string, number>) => (
-    <div className="space-y-1">
-      <div>{formatCurrency(totals.ARS ?? 0, "ARS")}</div>
-      <div className="text-base text-muted-foreground">{formatCurrency(totals.USD ?? 0, "USD")}</div>
-    </div>
-  )
 
   const handleExport = async () => {
     if (isExporting) return
@@ -700,15 +652,14 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="w-full max-w-full space-y-6 overflow-x-hidden pr-1 sm:pr-2">
-      <div className="w-full max-w-full space-y-4">
-        <div>
+    <div className="flex w-full max-w-full flex-col space-y-6 overflow-x-hidden pr-1 sm:pr-2">
+      <div className="contents">
+        <div className="order-0">
           <h1 className="text-3xl font-bold text-balance">Transacciones</h1>
           <p className="text-muted-foreground mt-1">Rastrea y gestiona tus ingresos y gastos</p>
+        </div>
 
-          <Card className="mt-4 w-full border-border/70 bg-card shadow-sm">
-            <CardContent className="p-4">
-              <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="order-4 grid w-full grid-cols-1 gap-2 py-3 sm:grid-cols-2 lg:grid-cols-3">
             <Dialog open={isOcrDialogOpen} onOpenChange={setIsOcrDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="w-full">
@@ -1091,87 +1042,19 @@ export default function TransactionsPage() {
               </AlertDialogContent>
             </AlertDialog>
               </div>
-            </CardContent>
-          </Card>
-
-        </div>
       </div>
 
-      <div className="w-full max-w-3xl space-y-3">
-        <Label className="text-xs text-muted-foreground">Período</Label>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Período anterior"
-            title="Período anterior"
-            onClick={() => changePeriod(-1)}
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
-          <div className="min-w-48 rounded-md border border-border/60 bg-card px-3 py-2 text-center text-sm font-medium capitalize">
-            {periodLabel}
-          </div>
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Período siguiente"
-            title="Período siguiente"
-            onClick={() => changePeriod(1)}
-          >
-            <ChevronRight className="size-4" />
-          </Button>
-          <Popover
-            open={isCustomPeriodOpen}
-            onOpenChange={(open) => {
-              if (open) {
-                setCustomDateFrom(dateFrom)
-                setCustomDateTo(dateTo)
-              }
-              setIsCustomPeriodOpen(open)
-            }}
-          >
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="icon" aria-label="Personalizar período" title="Personalizar período">
-                <MoreHorizontal className="size-4" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="start" className="w-72 space-y-4">
-              <div>
-                <p className="font-medium">Personalizar período</p>
-                <p className="text-sm text-muted-foreground">Elegí el rango de fechas de las transacciones.</p>
-              </div>
-              <div className="grid gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="custom-date-from">Desde</Label>
-                  <Input
-                    id="custom-date-from"
-                    type="date"
-                    value={customDateFrom}
-                    max={customDateTo || undefined}
-                    onChange={(event) => setCustomDateFrom(event.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="custom-date-to">Hasta</Label>
-                  <Input
-                    id="custom-date-to"
-                    type="date"
-                    value={customDateTo}
-                    min={customDateFrom || undefined}
-                    onChange={(event) => setCustomDateTo(event.target.value)}
-                  />
-                </div>
-              </div>
-              <Button className="w-full" onClick={applyCustomPeriod} disabled={!customDateFrom || !customDateTo || customDateFrom > customDateTo}>
-                Aplicar período
-              </Button>
-            </PopoverContent>
-          </Popover>
-        </div>
+      <div className="order-1 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <PeriodFilter dateFrom={dateFrom} dateTo={dateTo} onChange={({ dateFrom: nextDateFrom, dateTo: nextDateTo }) => changePeriod(nextDateFrom, nextDateTo)} />
+        <Tabs value={summaryCurrency} onValueChange={(value) => setSummaryCurrency(value as "ARS" | "USD")} className="w-fit">
+          <TabsList>
+            <TabsTrigger value="ARS">Pesos (ARS)</TabsTrigger>
+            <TabsTrigger value="USD">Dólares (USD)</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
-      <Alert className="border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-800/70 dark:bg-sky-950/40 dark:text-sky-100">
+      <Alert className="order-2 border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-800/70 dark:bg-sky-950/40 dark:text-sky-100">
         <AlertDescription className="flex flex-wrap items-center gap-1.5 text-sky-900 dark:text-sky-100">
           <span>Los movimientos pendientes no se incluyen en los totales hasta que sean confirmados.</span>
           <Popover>
@@ -1198,19 +1081,19 @@ export default function TransactionsPage() {
         </AlertDescription>
       </Alert>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="order-3 grid gap-4 md:grid-cols-3">
         <Card className="border border-border bg-card shadow-sm">
           <CardContent className="p-6">
             <div className="flex items-start gap-3">
-              <ArrowUpIcon className="size-5 shrink-0 text-emerald-500 dark:text-emerald-300" />
+              <ArrowUpIcon className="size-5 shrink-0 text-muted-foreground" />
               <div>
                 <CardDescription className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
                   Ingresos
                 </CardDescription>
-                <CardTitle className="mt-1 space-y-1 text-2xl text-emerald-500 dark:text-emerald-300">{renderCurrencyTotals(totalIncome)}</CardTitle>
+                <CardTitle className="mt-1 text-2xl text-foreground">{formatCurrency(totalIncome[summaryCurrency], summaryCurrency)}</CardTitle>
               </div>
             </div>
-            <div className="mt-4 flex items-center gap-1 text-xs font-medium text-emerald-500 dark:text-emerald-300">
+            <div className="mt-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
               <ArrowUpIcon className="size-3.5" />
               <span>{transactionSummary.totalIncomeTransactions} ingresos</span>
             </div>
@@ -1225,17 +1108,17 @@ export default function TransactionsPage() {
                 <CardDescription className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
                   Gastos
                 </CardDescription>
-                <CardTitle className="mt-1 space-y-1 text-2xl text-rose-500 dark:text-rose-300">{renderCurrencyTotals(totalExpense)}</CardTitle>
+                <CardTitle className="mt-1 text-2xl text-foreground">{formatCurrency(totalExpense[summaryCurrency], summaryCurrency)}</CardTitle>
               </div>
             </div>
-            <div className="mt-4 flex items-center gap-1 text-xs font-medium text-rose-500 dark:text-rose-300">
+            <div className="mt-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
               <ArrowDownIcon className="size-3.5" />
               <span>{transactionSummary.totalExpenseTransactions} gastos</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border border-primary/20 bg-card shadow-sm">
+        <Card className="border border-border bg-card shadow-sm">
           <CardContent className="p-6">
             <div className="flex items-start gap-3">
               <ScaleIcon className="size-5 shrink-0 text-muted-foreground" />
@@ -1243,20 +1126,18 @@ export default function TransactionsPage() {
                 <CardDescription className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
                   Balance Neto
                 </CardDescription>
-                <CardTitle className={`mt-1 space-y-1 text-2xl ${isNetPositive ? "text-emerald-500 dark:text-emerald-300" : "text-rose-500 dark:text-rose-300"}`}>
-                  {renderCurrencyTotals(balanceByCurrency)}
-                </CardTitle>
+                <CardTitle className="mt-1 text-2xl text-foreground">{formatCurrency(balanceByCurrency[summaryCurrency], summaryCurrency)}</CardTitle>
               </div>
             </div>
-            <div className={`mt-4 flex items-center gap-1 text-xs font-medium ${isNetPositive ? "text-emerald-500 dark:text-emerald-300" : "text-rose-500 dark:text-rose-300"}`}>
-              {isNetPositive ? <ArrowUpIcon className="size-3.5" /> : <ArrowDownIcon className="size-3.5" />}
+            <div className="mt-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
+              {balanceByCurrency[summaryCurrency] >= 0 ? <ArrowUpIcon className="size-3.5" /> : <ArrowDownIcon className="size-3.5" />}
               <span>{transactionSummary.totalTransactions} transacciones totales</span>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
+      <Card className="order-5">
         <CardHeader>
           <CardTitle>Historial de Transacciones</CardTitle>
           <CardDescription>Todas tus transacciones financieras en un solo lugar</CardDescription>
