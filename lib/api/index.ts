@@ -23,9 +23,12 @@ export { getSession, loginEmpleado, loginEmpresa, logout, type LoginRequest, typ
 export { getApiBaseUrl } from "./config"
 export { getMepQuote, type MepQuoteDto } from "./exchange-rates"
 export {
+  changeBudgetCurrency,
   createBudget,
+  deleteBudget,
   duplicatePreviousBudget,
   getBudget,
+  removeBudgetLimit,
   setBudgetLimit,
   type BudgetDto,
   type BudgetHealth,
