@@ -3,7 +3,11 @@ import { ApiError, ClientErrorCodes, parseApiError } from "./errors"
 import { clearSession, loginPathForCurrentRole } from "./session"
 
 export interface RequestOptions {
-  query?: Record<string, string | number | boolean | undefined | null>
+  /** Parámetros de query. Los `undefined` y `null` se omiten. */
+  query?: Record<string, string | string[] | number | boolean | undefined | null>
+
+  /** Formato esperado para respuestas exitosas. */
+  responseType?: "json" | "blob"
 
   headers?: Record<string, string>
 
@@ -98,6 +102,10 @@ async function request<TResponse>(
     return undefined as TResponse
   }
 
+  if (options.responseType === "blob") {
+    return (await response.blob()) as TResponse
+  }
+
   return (await readJson(response)) as TResponse
 }
 
@@ -123,7 +131,9 @@ function buildQueryString(query: RequestOptions["query"]): string {
   const params = new URLSearchParams()
 
   for (const [key, value] of Object.entries(query)) {
-    if (value !== undefined && value !== null) {
+    if (Array.isArray(value)) {
+      value.forEach((item) => params.append(key, item))
+    } else if (value !== undefined && value !== null) {
       params.append(key, String(value))
     }
   }
