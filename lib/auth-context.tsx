@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
-import { getSession, loginEmpleado, loginEmpresa, logout as logoutRequest } from "@/lib/api/auth"
+import { getSession, loginEmpleado, loginEmpresa, logout as logoutRequest, refreshSession } from "@/lib/api/auth"
 import { setUnauthorizedHandler } from "@/lib/api/client"
 import { clearSession as clearStoredSession, saveSession } from "@/lib/api/session"
 import { isSessionActive, toSessionUser } from "@/lib/auth/session-user"
@@ -102,16 +102,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isAuthenticated || expiresAt === null) return
 
+    let cancelled = false
+
+    const handleExpiry = async () => {
+      try {
+        const session = await refreshSession()
+        const user = toSessionUser(session)
+
+        if (cancelled) return
+
+        if (user && isSessionActive(user)) {
+          saveSession(user.role)
+          setAuthState(createAuthenticatedState(user))
+          return
+        }
+      } catch {
+        // Refresh token vencido o revocado: se cae al cierre de sesión de abajo.
+      }
+
+      if (!cancelled) clearSession()
+    }
+
     const remainingTime = expiresAt - Date.now()
 
     if (remainingTime <= 0) {
-      clearSession()
-      return
+      void handleExpiry()
+      return () => {
+        cancelled = true
+      }
     }
 
-    const timeoutId = window.setTimeout(clearSession, remainingTime)
+    const timeoutId = window.setTimeout(() => {
+      void handleExpiry()
+    }, remainingTime)
 
-    return () => window.clearTimeout(timeoutId)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timeoutId)
+    }
   }, [isAuthenticated, expiresAt, clearSession])
 
   return (

@@ -3,29 +3,15 @@ import { ApiError, ClientErrorCodes, parseApiError } from "./errors"
 import { clearSession, loginPathForCurrentRole } from "./session"
 
 export interface RequestOptions {
-  /** Parámetros de query. Los `undefined` y `null` se omiten. */
   query?: Record<string, string | number | boolean | undefined | null>
 
-  /** Cabeceras extra para esta llamada puntual. */
   headers?: Record<string, string>
 
-  /** Para cancelar la llamada desde el componente que la disparó. */
   signal?: AbortSignal
 
-  /**
-   * Desactiva el manejo automático del 401 para esta llamada.
-   * El login lo usa: ahí un 401 significa "credenciales incorrectas", no
-   * "se venció tu sesión", y no hay que redirigir a ningún lado.
-   */
   skipAuthRedirect?: boolean
 }
 
-/**
- * Qué hacer cuando la API responde 401.
- *
- * Es reemplazable para que T-05 pueda usar el router de Next en lugar de una
- * recarga completa, y para que los tests puedan observarlo sin tocar `window`.
- */
 let onUnauthorized: () => void = () => {
   if (typeof window === "undefined") {
     return
@@ -38,11 +24,31 @@ export function setUnauthorizedHandler(handler: () => void): void {
   onUnauthorized = handler
 }
 
+let refreshInFlight: Promise<boolean> | null = null
+
+function refreshSession(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = fetch(buildUrl("/session/refresh"), {
+      method: "POST",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    })
+      .then((response) => response.ok)
+      .catch(() => false)
+      .finally(() => {
+        refreshInFlight = null
+      })
+  }
+
+  return refreshInFlight
+}
+
 async function request<TResponse>(
   method: string,
   path: string,
   body?: unknown,
   options: RequestOptions = {},
+  isRetryAfterRefresh = false,
 ): Promise<TResponse> {
   const headers: Record<string, string> = {
     Accept: "application/json",
@@ -64,8 +70,6 @@ async function request<TResponse>(
       credentials: "include",
     })
   } catch (error) {
-    // Una excepción de fetch no distingue entre red caída, servidor apagado y CORS:
-    // el navegador oculta el motivo a propósito. Por eso el mensaje es genérico.
     if (error instanceof DOMException && error.name === "AbortError") {
       throw error
     }
@@ -78,6 +82,10 @@ async function request<TResponse>(
   }
 
   if (response.status === 401 && !options.skipAuthRedirect) {
+    if (!isRetryAfterRefresh && (await refreshSession())) {
+      return request<TResponse>(method, path, body, options, true)
+    }
+
     clearSession()
     onUnauthorized()
   }
@@ -86,7 +94,6 @@ async function request<TResponse>(
     throw parseApiError(response.status, await readJson(response))
   }
 
-  // 204 y 205 no traen cuerpo; devolver undefined es correcto para un Promise<void>.
   if (response.status === 204 || response.status === 205) {
     return undefined as TResponse
   }
