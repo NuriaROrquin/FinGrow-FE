@@ -11,6 +11,7 @@ import {
   GraduationCapIcon,
   PiggyBankIcon,
   PlayCircleIcon,
+  ReceiptIcon,
   StarIcon,
   TrendingUpIcon,
   type LucideIcon,
@@ -31,19 +32,21 @@ import {
   type CourseLevel,
   type CourseProgressStatus,
   type CourseSummaryDto,
+  type EducationCategory,
 } from "@/lib/api"
 
 const ALL = "all"
 
 const durationOptions = [40, 50, 60]
 
-const categoryIcons: Record<string, LucideIcon> = {
+const categoryIcons: Record<EducationCategory, LucideIcon> = {
   Basics: DollarSignIcon,
   Savings: PiggyBankIcon,
   Budgeting: DollarSignIcon,
   Investments: TrendingUpIcon,
   Credit: CreditCardIcon,
   Retirement: PiggyBankIcon,
+  Taxes: ReceiptIcon,
 }
 
 function formatDuration(minutes: number): string {
@@ -177,7 +180,7 @@ export function CoursesCatalog() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {courses.map((course) => {
-            const Icon = categoryIcons[course.category] ?? GraduationCapIcon
+            const Icon = categoryIcons[course.category]
             const isCompleted = course.progressStatus === "Completed"
             const currentRating = courseRatings[course.id] || 0
             const currentHover = hoveredRating[course.id] || 0
