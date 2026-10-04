@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { BookOpenIcon, ClockIcon } from "lucide-react"
+import { AlertCircleIcon, BookOpenIcon, ClockIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -26,12 +26,14 @@ export function ArticlesCatalog() {
   const router = useRouter()
   const [category, setCategory] = useState<EducationCategory | typeof ALL>(ALL)
   const [maxReadingTime, setMaxReadingTime] = useState<string>(ALL)
-  const [articles, setArticles] = useState<ArticleSummaryDto[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [articles, setArticles] = useState<ArticleSummaryDto[] | null>(null)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     const controller = new AbortController()
-    setIsLoading(true)
+    setArticles(null)
+    setLoadFailed(false)
 
     listArticles(
       {
@@ -44,13 +46,11 @@ export function ArticlesCatalog() {
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return
         toastApiError(error, "No se pudieron cargar los artículos.")
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setIsLoading(false)
+        setLoadFailed(true)
       })
 
     return () => controller.abort()
-  }, [category, maxReadingTime])
+  }, [category, maxReadingTime, retryCount])
 
   const hasFilters = category !== ALL || maxReadingTime !== ALL
 
@@ -95,7 +95,20 @@ export function ArticlesCatalog() {
         </div>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
+        {loadFailed ? (
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <AlertCircleIcon />
+              </EmptyMedia>
+              <EmptyTitle>No se pudieron cargar los artículos</EmptyTitle>
+              <EmptyDescription>Probá de nuevo en un momento.</EmptyDescription>
+            </EmptyHeader>
+            <Button variant="outline" onClick={() => setRetryCount((count) => count + 1)}>
+              Reintentar
+            </Button>
+          </Empty>
+        ) : articles === null ? (
           <div className="space-y-4">
             <Skeleton className="h-20 w-full" />
             <Skeleton className="h-20 w-full" />
