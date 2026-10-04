@@ -43,21 +43,24 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { CompanyProvider } from "@/lib/company-context"
 import { usePreferences } from "@/lib/preferences-context"
+import { useMessages, type Messages } from "@/lib/i18n"
 import { useEffect } from "react"
 
-const empleadoNavigation = [
-  { name: "Resumen", href: "/dashboard", icon: LayoutDashboardIcon },
-  { name: "Transacciones", href: "/dashboard/transactions", icon: WalletIcon },
-  { name: "Presupuestos", href: "/dashboard/budgets", icon: PiggyBankIcon },
-  { name: "Inversiones", href: "/dashboard/investments", icon: TrendingUpIcon },
-  { name: "Educación", href: "/dashboard/education", icon: GraduationCapIcon },
-  { name: "Reportes", href: "/dashboard/reports", icon: FileTextIcon },
+type NavigationKey = keyof Messages["nav"]
+
+const empleadoNavigation: { key: NavigationKey; href: string; icon: typeof LayoutDashboardIcon }[] = [
+  { key: "summary", href: "/dashboard", icon: LayoutDashboardIcon },
+  { key: "transactions", href: "/dashboard/transactions", icon: WalletIcon },
+  { key: "budgets", href: "/dashboard/budgets", icon: PiggyBankIcon },
+  { key: "investments", href: "/dashboard/investments", icon: TrendingUpIcon },
+  { key: "education", href: "/dashboard/education", icon: GraduationCapIcon },
+  { key: "reports", href: "/dashboard/reports", icon: FileTextIcon },
 ]
 
-const empresaNavigation = [
-  { name: "Panel Empresarial", href: "/dashboard/company", icon: BuildingIcon },
-  { name: "Gestión de Departamentos", href: "/dashboard/company/departamentos", icon: BuildingIcon },
-  { name: "Gestión de Empleados", href: "/dashboard/company/empleados", icon: UsersIcon },
+const empresaNavigation: { key: NavigationKey; href: string; icon: typeof LayoutDashboardIcon }[] = [
+  { key: "companyPanel", href: "/dashboard/company", icon: BuildingIcon },
+  { key: "departments", href: "/dashboard/company/departamentos", icon: BuildingIcon },
+  { key: "employees", href: "/dashboard/company/empleados", icon: UsersIcon },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -65,6 +68,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter()
   const { role, userName, logout, isAuthenticated, isHydrated } = useAuth()
   const { isReady: preferencesReady } = usePreferences()
+  const t = useMessages()
 
   // Protección de rutas según el rol
   useEffect(() => {
@@ -135,14 +139,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <SidebarContent>
             {role === "empleado" && (
                 <div className="px-2 py-2">
-                  <p className="px-2 text-xs font-medium text-muted-foreground mb-2">Personal</p>
+                  <p className="px-2 text-xs font-medium text-muted-foreground mb-2">{t.nav.personal}</p>
                   <SidebarMenu>
                     {empleadoNavigation.map((item) => (
-                        <SidebarMenuItem key={item.name}>
+                        <SidebarMenuItem key={item.key}>
                       <SidebarMenuButton asChild isActive={pathname === item.href}>
                         <Link href={item.href}>
                           <item.icon className="size-4" />
-                          <span>{item.name}</span>
+                          <span>{t.nav[item.key]}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -153,14 +157,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             {role === "empresa" && (
               <div className="px-2 py-2">
-                <p className="px-2 text-xs font-medium text-muted-foreground mb-2">Empresa</p>
+                <p className="px-2 text-xs font-medium text-muted-foreground mb-2">{t.nav.company}</p>
                 <SidebarMenu>
                   {empresaNavigation.map((item) => (
-                    <SidebarMenuItem key={item.name}>
+                    <SidebarMenuItem key={item.key}>
                       <SidebarMenuButton asChild isActive={pathname === item.href}>
                         <Link href={item.href}>
                           <item.icon className="size-4" />
-                          <span>{item.name}</span>
+                          <span>{t.nav[item.key]}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -176,7 +180,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <SidebarMenuButton asChild>
                   <Link href="/dashboard/settings">
                     <SettingsIcon className="size-4" />
-                    <span>Configuración</span>
+                    <span>{t.nav.settings}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -218,30 +222,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <div className="flex flex-col items-start">
                       <span className="text-sm font-medium">{userName}</span>
                       <span className="text-xs text-muted-foreground">
-                        {role === "empleado" ? "Empleado" : "Empresa"}
+                        {role === "empleado" ? t.header.roleEmployee : t.header.roleCompany}
                       </span>
                     </div>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
+                  <DropdownMenuLabel>{t.header.myAccount}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard/settings" className="cursor-pointer">
                       <UserIcon className="size-4 mr-2" />
-                      Perfil
+                      {t.header.profile}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard/settings" className="cursor-pointer">
                       <SettingsIcon className="size-4 mr-2" />
-                      Configuración
+                      {t.header.settings}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => logout()} className="cursor-pointer text-destructive">
                     <LogOutIcon className="size-4 mr-2" />
-                    Cerrar Sesión
+                    {t.header.logout}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

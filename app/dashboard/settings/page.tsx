@@ -24,6 +24,7 @@ import {
   Info,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
+import { useMessages } from "@/lib/i18n"
 import { changePassword, PASSWORD_MIN_LENGTH, toastApiError } from "@/lib/api"
 import { TwoFactorCard } from "@/components/security/two-factor-card"
 import { PreferencesCard } from "@/components/preferences/preferences-card"
@@ -36,6 +37,7 @@ import { useToast } from "@/hooks/use-toast"
 
 export default function SettingsPage() {
   const { role, logout } = useAuth()
+  const t = useMessages()
   const { toast } = useToast()
   const [mounted, setMounted] = useState(false)
 
@@ -48,12 +50,12 @@ export default function SettingsPage() {
     e.preventDefault()
 
     if (newPassword !== confirmPassword) {
-      sonnerToast.error("Las contraseñas nuevas no coinciden.")
+      sonnerToast.error(t.settings.security.passwordsDontMatch)
       return
     }
 
     if (newPassword === currentPassword) {
-      sonnerToast.error("La nueva contraseña tiene que ser distinta de la actual.")
+      sonnerToast.error(t.settings.security.passwordMustDiffer)
       return
     }
 
@@ -61,10 +63,10 @@ export default function SettingsPage() {
 
     try {
       await changePassword({ currentPassword, newPassword })
-      sonnerToast.success("Contraseña actualizada", { description: "Volvé a iniciar sesión con tu nueva contraseña." })
+      sonnerToast.success(t.settings.security.passwordUpdated, { description: t.settings.security.passwordUpdatedDescription })
       await logout(`/login/${role}`)
     } catch (error) {
-      toastApiError(error, "No pudimos cambiar la contraseña.", { showCode: false })
+      toastApiError(error, t.settings.security.passwordUpdateFailed, { showCode: false })
     } finally {
       setChangingPassword(false)
     }
@@ -81,16 +83,16 @@ export default function SettingsPage() {
   const handleLinkGmail = () => {
     setGmailLinked(true)
     toast({
-      title: "¡Gmail vinculado!",
-      description: "Tus facturas serán procesadas automáticamente",
+      title: t.settings.gmail.linkedToastTitle,
+      description: t.settings.gmail.linkedToastDescription,
     })
   }
 
   const handleUnlinkGmail = () => {
     setGmailLinked(false)
     toast({
-      title: "Gmail desvinculado",
-      description: "Ya no se procesarán facturas automáticamente",
+      title: t.settings.gmail.unlinkedToastTitle,
+      description: t.settings.gmail.unlinkedToastDescription,
     })
   }
 
@@ -102,20 +104,20 @@ export default function SettingsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-balance">Configuración</h1>
+        <h1 className="text-3xl font-bold text-balance">{t.settings.title}</h1>
         <p className="text-muted-foreground mt-1">
-          {role === "empleado" ? "Administra tu cuenta y preferencias" : "Administra la configuración empresarial"}
+          {role === "empleado" ? t.settings.subtitleEmployee : t.settings.subtitleCompany}
         </p>
       </div>
 
       {/* Settings Tabs */}
       <Tabs defaultValue="profile" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="profile">Perfil</TabsTrigger>
-          <TabsTrigger value="notifications">Notificaciones</TabsTrigger>
-          <TabsTrigger value="integrations">Integraciones</TabsTrigger>
-          <TabsTrigger value="security">Seguridad</TabsTrigger>
-          <TabsTrigger value="preferences">Preferencias</TabsTrigger>
+          <TabsTrigger value="profile">{t.settings.tabs.profile}</TabsTrigger>
+          <TabsTrigger value="notifications">{t.settings.tabs.notifications}</TabsTrigger>
+          <TabsTrigger value="integrations">{t.settings.tabs.integrations}</TabsTrigger>
+          <TabsTrigger value="security">{t.settings.tabs.security}</TabsTrigger>
+          <TabsTrigger value="preferences">{t.settings.tabs.preferences}</TabsTrigger>
         </TabsList>
 
         {/* Profile Tab */}
@@ -187,42 +189,42 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-3">
                   <BuildingIcon className="size-5" />
                   <div>
-                    <CardTitle>Información Empresarial</CardTitle>
-                    <CardDescription>Actualiza los datos de tu empresa</CardDescription>
+                    <CardTitle>{t.settings.companyProfile.title}</CardTitle>
+                    <CardDescription>{t.settings.companyProfile.description}</CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="companyName">Razón Social</Label>
+                  <Label htmlFor="companyName">{t.settings.companyProfile.legalName}</Label>
                   <Input id="companyName" placeholder="Mi Empresa S.A." defaultValue="Mi Empresa S.A." />
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="cuit">CUIT</Label>
+                    <Label htmlFor="cuit">{t.settings.companyProfile.taxId}</Label>
                     <Input id="cuit" placeholder="30-12345678-9" defaultValue="30-12345678-9" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="industry">Industria</Label>
+                    <Label htmlFor="industry">{t.settings.companyProfile.industry}</Label>
                     <Select defaultValue="tech">
                       <SelectTrigger id="industry">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="tech">Tecnología</SelectItem>
-                        <SelectItem value="finance">Finanzas</SelectItem>
-                        <SelectItem value="retail">Retail</SelectItem>
-                        <SelectItem value="manufacturing">Manufactura</SelectItem>
-                        <SelectItem value="services">Servicios</SelectItem>
-                        <SelectItem value="other">Otro</SelectItem>
+                        <SelectItem value="tech">{t.settings.companyProfile.industries.tech}</SelectItem>
+                        <SelectItem value="finance">{t.settings.companyProfile.industries.finance}</SelectItem>
+                        <SelectItem value="retail">{t.settings.companyProfile.industries.retail}</SelectItem>
+                        <SelectItem value="manufacturing">{t.settings.companyProfile.industries.manufacturing}</SelectItem>
+                        <SelectItem value="services">{t.settings.companyProfile.industries.services}</SelectItem>
+                        <SelectItem value="other">{t.settings.companyProfile.industries.other}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="companyEmail">Email Corporativo</Label>
+                  <Label htmlFor="companyEmail">{t.settings.companyProfile.email}</Label>
                   <Input
                     id="companyEmail"
                     type="email"
@@ -232,31 +234,31 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="companyPhone">Teléfono Corporativo</Label>
+                  <Label htmlFor="companyPhone">{t.settings.companyProfile.phone}</Label>
                   <Input id="companyPhone" type="tel" placeholder="+54 11 4000-0000" />
                 </div>
 
                 <Separator />
 
                 <div className="space-y-2">
-                  <Label htmlFor="companyAddress">Dirección Fiscal</Label>
+                  <Label htmlFor="companyAddress">{t.settings.companyProfile.address}</Label>
                   <Input id="companyAddress" placeholder="Av. Libertador 5000, CABA" />
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="employeeCount">Cantidad de Empleados</Label>
+                    <Label htmlFor="employeeCount">{t.settings.companyProfile.employeeCount}</Label>
                     <Input id="employeeCount" type="number" placeholder="50" defaultValue="50" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="foundedYear">Año de Fundación</Label>
+                    <Label htmlFor="foundedYear">{t.settings.companyProfile.foundedYear}</Label>
                     <Input id="foundedYear" type="number" placeholder="2010" />
                   </div>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-4">
-                  <Button variant="outline">Cancelar</Button>
-                  <Button>Guardar Cambios</Button>
+                  <Button variant="outline">{t.common.cancel}</Button>
+                  <Button>{t.common.saveChanges}</Button>
                 </div>
               </CardContent>
             </Card>
@@ -270,8 +272,8 @@ export default function SettingsPage() {
               <div className="flex items-center gap-3">
                 <BellIcon className="size-5" />
                 <div>
-                  <CardTitle>Preferencias de Notificaciones</CardTitle>
-                  <CardDescription>Elige qué notificaciones deseas recibir</CardDescription>
+                  <CardTitle>{t.settings.notifications.title}</CardTitle>
+                  <CardDescription>{t.settings.notifications.description}</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -280,10 +282,8 @@ export default function SettingsPage() {
                 <>
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label>Alertas de Presupuesto</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Recibe notificaciones cuando te acerques a los límites de presupuesto
-                      </p>
+                      <Label>{t.settings.notifications.budgetAlerts}</Label>
+                      <p className="text-sm text-muted-foreground">{t.settings.notifications.budgetAlertsHint}</p>
                     </div>
                     <Switch defaultChecked />
                   </div>
@@ -292,8 +292,8 @@ export default function SettingsPage() {
 
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label>Notificaciones de Transacciones</Label>
-                      <p className="text-sm text-muted-foreground">Recibe alertas de nuevas transacciones</p>
+                      <Label>{t.settings.notifications.transactions}</Label>
+                      <p className="text-sm text-muted-foreground">{t.settings.notifications.transactionsHint}</p>
                     </div>
                     <Switch defaultChecked />
                   </div>
@@ -302,8 +302,8 @@ export default function SettingsPage() {
 
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label>Actualizaciones de Metas de Ahorro</Label>
-                      <p className="text-sm text-muted-foreground">Sigue el progreso de tus metas de ahorro</p>
+                      <Label>{t.settings.notifications.goals}</Label>
+                      <p className="text-sm text-muted-foreground">{t.settings.notifications.goalsHint}</p>
                     </div>
                     <Switch defaultChecked />
                   </div>
@@ -312,10 +312,8 @@ export default function SettingsPage() {
 
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label>Actualizaciones de Inversiones</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Recibe notificaciones sobre cambios en tu portafolio
-                      </p>
+                      <Label>{t.settings.notifications.investments}</Label>
+                      <p className="text-sm text-muted-foreground">{t.settings.notifications.investmentsHint}</p>
                     </div>
                     <Switch />
                   </div>
@@ -324,8 +322,8 @@ export default function SettingsPage() {
 
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label>Contenido Educativo</Label>
-                      <p className="text-sm text-muted-foreground">Recibe nuevos cursos y artículos</p>
+                      <Label>{t.settings.notifications.education}</Label>
+                      <p className="text-sm text-muted-foreground">{t.settings.notifications.educationHint}</p>
                     </div>
                     <Switch defaultChecked />
                   </div>
@@ -334,10 +332,8 @@ export default function SettingsPage() {
                 <>
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label>Alertas de Bienestar Financiero</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Recibe notificaciones sobre cambios en el bienestar financiero de empleados
-                      </p>
+                      <Label>{t.settings.notifications.wellbeing}</Label>
+                      <p className="text-sm text-muted-foreground">{t.settings.notifications.wellbeingHint}</p>
                     </div>
                     <Switch defaultChecked />
                   </div>
@@ -346,10 +342,8 @@ export default function SettingsPage() {
 
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label>Nuevos Empleados Registrados</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Alerta cuando un empleado se registra en la plataforma
-                      </p>
+                      <Label>{t.settings.notifications.newEmployees}</Label>
+                      <p className="text-sm text-muted-foreground">{t.settings.notifications.newEmployeesHint}</p>
                     </div>
                     <Switch defaultChecked />
                   </div>
@@ -358,10 +352,8 @@ export default function SettingsPage() {
 
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label>Reportes Mensuales</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Recibe reportes mensuales de métricas empresariales
-                      </p>
+                      <Label>{t.settings.notifications.monthlyReports}</Label>
+                      <p className="text-sm text-muted-foreground">{t.settings.notifications.monthlyReportsHint}</p>
                     </div>
                     <Switch defaultChecked />
                   </div>
@@ -370,10 +362,8 @@ export default function SettingsPage() {
 
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label>Alertas de Participación</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Notificaciones sobre cambios en la tasa de participación
-                      </p>
+                      <Label>{t.settings.notifications.participation}</Label>
+                      <p className="text-sm text-muted-foreground">{t.settings.notifications.participationHint}</p>
                     </div>
                     <Switch />
                   </div>
@@ -384,14 +374,14 @@ export default function SettingsPage() {
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>Notificaciones por Email</Label>
-                  <p className="text-sm text-muted-foreground">Recibe notificaciones vía correo electrónico</p>
+                  <Label>{t.settings.notifications.email}</Label>
+                  <p className="text-sm text-muted-foreground">{t.settings.notifications.emailHint}</p>
                 </div>
                 <Switch defaultChecked />
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
-                <Button>Guardar Preferencias</Button>
+                <Button>{t.settings.notifications.save}</Button>
               </div>
             </CardContent>
           </Card>
@@ -411,13 +401,13 @@ export default function SettingsPage() {
                   <Mail className="size-5 text-red-500" />
                   <div>
                     <CardTitle>Gmail</CardTitle>
-                    <CardDescription>Procesa automáticamente facturas de servicios</CardDescription>
+                    <CardDescription>{t.settings.gmail.description}</CardDescription>
                   </div>
                 </div>
                 {gmailLinked && (
                   <Badge variant="default" className="gap-1">
                     <CheckCircle2 className="size-3" />
-                    Vinculado
+                    {t.common.linked}
                   </Badge>
                 )}
               </div>
@@ -427,27 +417,22 @@ export default function SettingsPage() {
                 <>
                   <Alert>
                     <Info className="h-4 w-4" />
-                    <AlertDescription>
-                      Conecta tu cuenta de Gmail para importar automáticamente facturas de luz, gas,
-                      agua, internet y otros servicios.
-                    </AlertDescription>
+                    <AlertDescription>{t.settings.gmail.intro}</AlertDescription>
                   </Alert>
 
                   <div className="space-y-2">
-                    <h4 className="text-sm font-medium">Servicios que detectaremos:</h4>
+                    <h4 className="text-sm font-medium">{t.settings.gmail.detectedTitle}</h4>
                     <ul className="space-y-1 text-sm text-muted-foreground">
-                      <li>• Facturas de electricidad (Edenor, Edesur, EPE)</li>
-                      <li>• Facturas de gas (MetroGAS, Camuzzi)</li>
-                      <li>• Facturas de agua (AySA, ABSA)</li>
-                      <li>• Internet y telefonía (Fibertel, Movistar, Personal)</li>
-                      <li>• Otros servicios recurrentes</li>
+                      {t.settings.gmail.detected.map((service) => (
+                        <li key={service}>• {service}</li>
+                      ))}
                     </ul>
                   </div>
 
                   <div className="pt-2">
                     <Button onClick={handleLinkGmail} className="w-full sm:w-auto gap-2">
                       <Mail className="size-4" />
-                      Conectar con Gmail
+                      {t.settings.gmail.connect}
                     </Button>
                   </div>
                 </>
@@ -460,34 +445,32 @@ export default function SettingsPage() {
                       </div>
                       <div>
                         <p className="font-medium">usuario@gmail.com</p>
-                        <p className="text-sm text-muted-foreground">Sincronización activa</p>
+                        <p className="text-sm text-muted-foreground">{t.settings.gmail.syncActive}</p>
                       </div>
                     </div>
                     <Button variant="outline" onClick={handleUnlinkGmail}>
-                      Desvincular
+                      {t.common.unlink}
                     </Button>
                   </div>
 
                   <Alert>
                     <CheckCircle2 className="h-4 w-4" />
-                    <AlertDescription>
-                      Tus facturas se procesarán automáticamente. Última sincronización: hace 5 minutos.
-                    </AlertDescription>
+                    <AlertDescription>{t.settings.gmail.syncInfo}</AlertDescription>
                   </Alert>
 
                   <div className="space-y-2">
-                    <h4 className="text-sm font-medium">Facturas procesadas este mes:</h4>
+                    <h4 className="text-sm font-medium">{t.settings.gmail.processedTitle}</h4>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm p-2 border rounded">
-                        <span>Edenor - Electricidad</span>
+                        <span>{t.settings.gmail.processed.electricity}</span>
                         <span className="font-medium">$4,500</span>
                       </div>
                       <div className="flex items-center justify-between text-sm p-2 border rounded">
-                        <span>MetroGAS - Gas Natural</span>
+                        <span>{t.settings.gmail.processed.gas}</span>
                         <span className="font-medium">$2,300</span>
                       </div>
                       <div className="flex items-center justify-between text-sm p-2 border rounded">
-                        <span>Fibertel - Internet</span>
+                        <span>{t.settings.gmail.processed.internet}</span>
                         <span className="font-medium">$8,900</span>
                       </div>
                     </div>
@@ -505,27 +488,23 @@ export default function SettingsPage() {
               <div className="flex items-center gap-3">
                 <ScanLine className="size-5 text-purple-500" />
                 <div>
-                  <CardTitle>Procesamiento OCR</CardTitle>
-                  <CardDescription>Escanea tickets y facturas con tu cámara</CardDescription>
+                  <CardTitle>{t.settings.ocr.title}</CardTitle>
+                  <CardDescription>{t.settings.ocr.description}</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <Alert>
                 <Info className="h-4 w-4" />
-                <AlertDescription>
-                  Usa la función de OCR para escanear tickets de compras y extraer automáticamente
-                  el monto y la categoría del gasto.
-                </AlertDescription>
+                <AlertDescription>{t.settings.ocr.intro}</AlertDescription>
               </Alert>
 
               <div className="space-y-2">
-                <h4 className="text-sm font-medium">Cómo usar OCR:</h4>
+                <h4 className="text-sm font-medium">{t.settings.ocr.howToTitle}</h4>
                 <ul className="space-y-1 text-sm text-muted-foreground">
-                  <li>• Toma una foto del ticket o factura</li>
-                  <li>• Envíala por Telegram o súbela en la sección de transacciones</li>
-                  <li>• El sistema extraerá automáticamente los datos</li>
-                  <li>• Confirma o edita la información antes de guardar</li>
+                  {t.settings.ocr.howTo.map((step) => (
+                    <li key={step}>• {step}</li>
+                  ))}
                 </ul>
               </div>
 
@@ -533,12 +512,12 @@ export default function SettingsPage() {
                 <Button variant="outline" asChild>
                   <a href="/dashboard/transactions?mode=ocr">
                     <ScanLine className="size-4 mr-2" />
-                    Escanear ahora
+                    {t.settings.ocr.scanNow}
                   </a>
                 </Button>
                 <Button variant="outline" disabled>
                   <Send className="size-4 mr-2" />
-                  Enviar por Telegram
+                  {t.settings.ocr.sendByTelegram}
                 </Button>
               </div>
             </CardContent>
@@ -552,8 +531,8 @@ export default function SettingsPage() {
               <div className="flex items-center gap-3">
                 <ShieldIcon className="size-5" />
                 <div>
-                  <CardTitle>Configuración de Seguridad</CardTitle>
-                  <CardDescription>Administra la seguridad de tu cuenta</CardDescription>
+                  <CardTitle>{t.settings.security.title}</CardTitle>
+                  <CardDescription>{t.settings.security.description}</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -561,10 +540,10 @@ export default function SettingsPage() {
               <form onSubmit={handleChangePassword} className="space-y-4">
                 <h3 className="font-semibold flex items-center gap-2">
                   <LockIcon className="size-4" />
-                  Cambiar Contraseña
+                  {t.settings.security.changePassword}
                 </h3>
                 <div className="space-y-2">
-                  <Label htmlFor="currentPassword">Contraseña Actual</Label>
+                  <Label htmlFor="currentPassword">{t.settings.security.currentPassword}</Label>
                   <Input
                     id="currentPassword"
                     type="password"
@@ -575,7 +554,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="newPassword">Nueva Contraseña</Label>
+                  <Label htmlFor="newPassword">{t.settings.security.newPassword}</Label>
                   <Input
                     id="newPassword"
                     type="password"
@@ -585,10 +564,10 @@ export default function SettingsPage() {
                     onChange={(e) => setNewPassword(e.target.value)}
                     required
                   />
-                  <p className="text-xs text-muted-foreground">Al menos {PASSWORD_MIN_LENGTH} caracteres.</p>
+                  <p className="text-xs text-muted-foreground">{t.settings.security.minLength(PASSWORD_MIN_LENGTH)}</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirmar Nueva Contraseña</Label>
+                  <Label htmlFor="confirmPassword">{t.settings.security.confirmPassword}</Label>
                   <Input
                     id="confirmPassword"
                     type="password"
@@ -598,11 +577,9 @@ export default function SettingsPage() {
                     required
                   />
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Al actualizarla se cierran todas tus sesiones abiertas y vas a tener que volver a iniciar sesión.
-                </p>
+                <p className="text-sm text-muted-foreground">{t.settings.security.sessionsWarning}</p>
                 <Button type="submit" disabled={changingPassword}>
-                  {changingPassword ? "Actualizando..." : "Actualizar Contraseña"}
+                  {changingPassword ? t.settings.security.updating : t.settings.security.update}
                 </Button>
               </form>
 
@@ -616,15 +593,15 @@ export default function SettingsPage() {
               <Separator />
 
               <div className="space-y-4">
-                <h3 className="font-semibold">Sesiones Activas</h3>
+                <h3 className="font-semibold">{t.settings.security.activeSessions}</h3>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between p-3 rounded-lg border">
                     <div>
-                      <p className="font-medium">Sesión Actual</p>
-                      <p className="text-sm text-muted-foreground">Chrome en MacOS • Buenos Aires, Argentina</p>
+                      <p className="font-medium">{t.settings.security.currentSession}</p>
+                      <p className="text-sm text-muted-foreground">{t.settings.security.currentSessionDevice}</p>
                     </div>
                     <Button variant="outline" size="sm">
-                      Revocar
+                      {t.settings.security.revoke}
                     </Button>
                   </div>
                 </div>
@@ -638,18 +615,18 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-3">
                   <TrashIcon className="size-5 text-destructive" />
                   <div>
-                    <CardTitle className="text-destructive">Zona de Peligro</CardTitle>
-                    <CardDescription>Acciones irreversibles</CardDescription>
+                    <CardTitle className="text-destructive">{t.settings.danger.title}</CardTitle>
+                    <CardDescription>{t.settings.danger.description}</CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between p-4 rounded-lg border border-destructive/20 bg-destructive/5">
                   <div>
-                    <p className="font-medium">Eliminar Cuenta</p>
-                    <p className="text-sm text-muted-foreground">Elimina permanentemente tu cuenta y todos los datos</p>
+                    <p className="font-medium">{t.settings.danger.deleteAccount}</p>
+                    <p className="text-sm text-muted-foreground">{t.settings.danger.deleteAccountHint}</p>
                   </div>
-                  <Button variant="destructive">Eliminar</Button>
+                  <Button variant="destructive">{t.settings.danger.delete}</Button>
                 </div>
               </CardContent>
             </Card>

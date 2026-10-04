@@ -5,6 +5,7 @@ import { useTheme } from "next-themes"
 import { toastApiError } from "@/lib/api/notify"
 import { defaultPreferences, getPreferences, updatePreferences, type Preferences } from "@/lib/api/preferences"
 import { useAuth } from "@/lib/auth-context"
+import { es } from "@/lib/i18n/es"
 
 interface PreferencesContextType {
   preferences: Preferences
@@ -48,7 +49,8 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return
-        toastApiError(error, "No pudimos cargar tus preferencias.", { showCode: false })
+        // Todavía no se sabe el idioma del empleado: el aviso sale en el idioma por defecto.
+        toastApiError(error, es.preferences.loadFailed, { showCode: false })
       })
       .finally(() => {
         if (!controller.signal.aborted) setReadyFor(owner)

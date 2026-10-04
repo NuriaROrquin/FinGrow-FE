@@ -24,6 +24,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Spinner } from "@/components/ui/spinner"
 import type { Integration, IntegrationProvider, LinkCode } from "@/lib/api"
+import { useMessages } from "@/lib/i18n"
 
 import { useLinkCodeIntegration } from "./use-link-code-integration"
 
@@ -56,10 +57,11 @@ export function LinkCodeIntegrationCard({
 }: LinkCodeIntegrationCardProps) {
   const { integration, linked, linkCode, expired, secondsLeft, generating, unlinking, generateCode, unlink, cancelCode } =
     useLinkCodeIntegration(provider, name)
+  const t = useMessages()
 
   const copy = (text: string) => {
     navigator.clipboard.writeText(text)
-    toast.success("Copiado al portapapeles")
+    toast.success(t.common.copied)
   }
 
   return (
@@ -76,7 +78,7 @@ export function LinkCodeIntegrationCard({
           {linked && (
             <Badge variant="default" className="gap-1">
               <CheckCircle2 className="size-3" />
-              Vinculado
+              {t.common.linked}
             </Badge>
           )}
         </div>
@@ -84,7 +86,7 @@ export function LinkCodeIntegrationCard({
       <CardContent className="space-y-4">
         {integration === null ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Spinner /> Consultando el estado de {name}...
+            <Spinner /> {t.linkCode.checking(name)}
           </div>
         ) : linked && linkCode === null ? (
           <div className="space-y-4">
@@ -101,17 +103,17 @@ export function LinkCodeIntegrationCard({
                 <AlertDialogTrigger asChild>
                   <Button variant="ghost" disabled={generating || unlinking} className="text-destructive">
                     {unlinking ? <Spinner className="mr-2" /> : <Unlink className="size-4 mr-2" />}
-                    Desvincular
+                    {t.common.unlink}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>¿Desvincular {name}?</AlertDialogTitle>
+                    <AlertDialogTitle>{t.linkCode.unlinkTitle(name)}</AlertDialogTitle>
                     <AlertDialogDescription>{unlinkWarning(integration)}</AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={unlink}>Desvincular</AlertDialogAction>
+                    <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+                    <AlertDialogAction onClick={unlink}>{t.common.unlink}</AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
@@ -125,7 +127,7 @@ export function LinkCodeIntegrationCard({
             </Alert>
             <Button onClick={generateCode} disabled={generating} className="w-full sm:w-auto">
               {generating && <Spinner className="mr-2" />}
-              Vincular {name}
+              {t.linkCode.link(name)}
             </Button>
           </>
         ) : (
@@ -139,7 +141,7 @@ export function LinkCodeIntegrationCard({
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                {expired ? "El código venció." : `Vence en ${formatCountdown(secondsLeft)}`}
+                {expired ? t.linkCode.expired : t.linkCode.expiresIn(formatCountdown(secondsLeft))}
               </p>
             </div>
 
@@ -149,12 +151,12 @@ export function LinkCodeIntegrationCard({
               {expired && (
                 <Button onClick={generateCode} disabled={generating} variant="outline">
                   {generating && <Spinner className="mr-2" />}
-                  Generar otro código
+                  {t.linkCode.newCode}
                 </Button>
               )}
               {linked && (
                 <Button onClick={cancelCode} variant="ghost">
-                  Cancelar
+                  {t.common.cancel}
                 </Button>
               )}
             </div>
@@ -164,7 +166,7 @@ export function LinkCodeIntegrationCard({
         <Separator />
 
         <div className="space-y-2">
-          <h4 className="text-sm font-medium">¿Qué podés hacer por {name}?</h4>
+          <h4 className="text-sm font-medium">{t.linkCode.whatCanYouDo(name)}</h4>
           <ul className="space-y-1 text-sm text-muted-foreground">
             {features.map((feature) => (
               <li key={feature} className="flex items-center gap-2">

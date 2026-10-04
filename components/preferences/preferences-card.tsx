@@ -12,6 +12,7 @@ import { toastApiError } from "@/lib/api/notify"
 import type { DateFormat, Language, Preferences, ThemePreference } from "@/lib/api/preferences"
 import type { Currency } from "@/lib/api/transactions"
 import { useAuth } from "@/lib/auth-context"
+import { useMessages } from "@/lib/i18n"
 import { usePreferences } from "@/lib/preferences-context"
 
 export function PreferencesCard() {
@@ -22,6 +23,7 @@ export function PreferencesCard() {
 
 function EmployeePreferencesForm() {
   const { preferences, savePreferences } = usePreferences()
+  const t = useMessages()
   const [draft, setDraft] = useState<Preferences>(preferences)
   const [saving, setSaving] = useState(false)
 
@@ -40,9 +42,9 @@ function EmployeePreferencesForm() {
 
     try {
       await savePreferences(draft)
-      toast.success("Preferencias guardadas")
+      toast.success(t.preferences.saved)
     } catch (error) {
-      toastApiError(error, "No pudimos guardar tus preferencias.", { showCode: false })
+      toastApiError(error, t.preferences.saveFailed, { showCode: false })
     } finally {
       setSaving(false)
     }
@@ -55,8 +57,8 @@ function EmployeePreferencesForm() {
           <div className="flex items-center gap-3">
             <PaletteIcon className="size-5" />
             <div>
-              <CardTitle>Apariencia</CardTitle>
-              <CardDescription>Personaliza cómo se ve la aplicación</CardDescription>
+              <CardTitle>{t.preferences.appearance}</CardTitle>
+              <CardDescription>{t.preferences.appearanceDescription}</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -64,15 +66,15 @@ function EmployeePreferencesForm() {
           <ThemeSelect value={draft.theme} onChange={(theme) => update("theme", theme)} />
 
           <div className="space-y-2">
-            <Label htmlFor="language">Idioma</Label>
+            <Label htmlFor="language">{t.preferences.language}</Label>
             <Select value={draft.language} onValueChange={(value) => update("language", value as Language)}>
               <SelectTrigger id="language">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="es">Español</SelectItem>
-                <SelectItem value="en">Inglés</SelectItem>
-                <SelectItem value="pt">Portugués</SelectItem>
+                <SelectItem value="es">{t.preferences.languages.es}</SelectItem>
+                <SelectItem value="en">{t.preferences.languages.en}</SelectItem>
+                <SelectItem value="pt">{t.preferences.languages.pt}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -84,14 +86,14 @@ function EmployeePreferencesForm() {
           <div className="flex items-center gap-3">
             <DollarSignIcon className="size-5" />
             <div>
-              <CardTitle>Preferencias Financieras</CardTitle>
-              <CardDescription>Configura tus ajustes financieros</CardDescription>
+              <CardTitle>{t.preferences.financial}</CardTitle>
+              <CardDescription>{t.preferences.financialDescription}</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="currency">Moneda</Label>
+            <Label htmlFor="currency">{t.preferences.currency}</Label>
             <Select value={draft.currency} onValueChange={(value) => update("currency", value as Currency)}>
               <SelectTrigger id="currency">
                 <SelectValue />
@@ -103,32 +105,29 @@ function EmployeePreferencesForm() {
                 <SelectItem value="BRL">BRL (R$)</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
-              Es la moneda con la que se abren tus resúmenes y formularios. Cada movimiento se sigue mostrando en la
-              moneda en que se registró.
-            </p>
+            <p className="text-xs text-muted-foreground">{t.preferences.currencyHint}</p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="dateFormat">Formato de Fecha</Label>
+            <Label htmlFor="dateFormat">{t.preferences.dateFormat}</Label>
             <Select value={draft.dateFormat} onValueChange={(value) => update("dateFormat", value as DateFormat)}>
               <SelectTrigger id="dateFormat">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="dmy">DD/MM/AAAA</SelectItem>
-                <SelectItem value="mdy">MM/DD/AAAA</SelectItem>
-                <SelectItem value="ymd">AAAA-MM-DD</SelectItem>
+                <SelectItem value="dmy">{t.preferences.dateFormats.dmy}</SelectItem>
+                <SelectItem value="mdy">{t.preferences.dateFormats.mdy}</SelectItem>
+                <SelectItem value="ymd">{t.preferences.dateFormats.ymd}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" disabled={!hasChanges || saving} onClick={() => setDraft(preferences)}>
-              Cancelar
+              {t.common.cancel}
             </Button>
             <Button type="submit" disabled={!hasChanges || saving}>
-              {saving ? "Guardando..." : "Guardar Preferencias"}
+              {saving ? t.preferences.saving : t.preferences.save}
             </Button>
           </div>
         </CardContent>
@@ -140,6 +139,7 @@ function EmployeePreferencesForm() {
 /** La empresa no tiene preferencias guardadas: el tema queda solo en este navegador. */
 function CompanyThemeCard() {
   const { theme, setTheme } = useTheme()
+  const t = useMessages()
 
   return (
     <Card>
@@ -147,8 +147,8 @@ function CompanyThemeCard() {
         <div className="flex items-center gap-3">
           <PaletteIcon className="size-5" />
           <div>
-            <CardTitle>Apariencia</CardTitle>
-            <CardDescription>Personaliza cómo se ve la aplicación</CardDescription>
+            <CardTitle>{t.preferences.appearance}</CardTitle>
+            <CardDescription>{t.preferences.appearanceDescription}</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -160,26 +160,22 @@ function CompanyThemeCard() {
 }
 
 function ThemeSelect({ value, onChange }: { value: ThemePreference; onChange: (theme: ThemePreference) => void }) {
+  const t = useMessages()
+
   return (
     <div className="space-y-2">
-      <Label htmlFor="theme">Tema</Label>
+      <Label htmlFor="theme">{t.preferences.theme}</Label>
       <Select value={value} onValueChange={(next) => onChange(next as ThemePreference)}>
         <SelectTrigger id="theme">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="light">Claro</SelectItem>
-          <SelectItem value="dark">Oscuro</SelectItem>
-          <SelectItem value="system">Sistema</SelectItem>
+          <SelectItem value="light">{t.preferences.themes.light}</SelectItem>
+          <SelectItem value="dark">{t.preferences.themes.dark}</SelectItem>
+          <SelectItem value="system">{t.preferences.themes.system}</SelectItem>
         </SelectContent>
       </Select>
-      <p className="text-xs text-muted-foreground">
-        {value === "system"
-          ? "El tema se ajusta automáticamente según la configuración de tu sistema"
-          : value === "dark"
-            ? "Tema oscuro"
-            : "Tema claro"}
-      </p>
+      <p className="text-xs text-muted-foreground">{t.preferences.themeHints[value]}</p>
     </div>
   )
 }
