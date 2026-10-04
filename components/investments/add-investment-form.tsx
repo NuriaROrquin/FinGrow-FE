@@ -11,24 +11,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Spinner } from "@/components/ui/spinner"
 import {
   ASSET_NAME_MAX_LENGTH,
+  FUND_NAME_MAX_LENGTH,
   SYMBOL_MAX_LENGTH,
+  canQuoteIn,
+  formatQuantity,
   getSecurityPrice,
   investmentTypeLabels,
   isApiError,
   isPricedPerNominal,
-  isQuotedCurrency,
-  isQuotedOnExchange,
+  quoteMarketOf,
+  searchSecurityPrices,
   toastApiError,
   type CreateInvestmentPayload,
   type InvestmentDto,
   type InvestmentType,
+  type QuoteMarket,
   type SecurityPriceDto,
 } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
 
 const QUOTE_DEBOUNCE_MS = 400
 
+const FUND_SEARCH_DEBOUNCE_MS = 300
+
+const FUND_SEARCH_MIN_LENGTH = 3
+
 const SYMBOL_PATTERN = /^[A-Z0-9]+$/
+
+const FUND_OPTIONS_ID = "investment-fund-options"
 
 const currencyLabels: Record<Currency, string> = {
   ARS: "ARS ($)",
@@ -47,12 +57,9 @@ const currencyNames: Record<Currency, string> = {
 type QuoteResult =
   | { status: "loading" }
   | { status: "found"; price: SecurityPriceDto }
+  | { status: "choose" }
   | { status: "missing" }
   | { status: "unavailable" }
-
-function todayForDateInput(): string {
-  return format(new Date(), "yyyy-MM-dd")
-}
 
 const symbolPlaceholders: Partial<Record<InvestmentType, string>> = {
   Stock: "ej. YPFD, GGAL",
@@ -61,14 +68,45 @@ const symbolPlaceholders: Partial<Record<InvestmentType, string>> = {
   Bond: "ej. AL30, GD30",
   CorporateBond: "ej. YMCXO",
   TreasuryBill: "ej. S30N6",
+  MutualFund: "Buscá por nombre, ej. Balanz Money Market",
+  Crypto: "ej. BTC, ETH, USDT",
 }
 
-function isPerNominal(type: InvestmentType | ""): boolean {
-  return type !== "" && isPricedPerNominal(type)
+const quoteHelp: Record<QuoteMarket, string> = {
+  Exchange:
+    "Con el símbolo y la cantidad te mostramos el precio de BYMA y calculamos el capital; después la cotizamos todos los días hábiles con el cierre. Usá la variante de la moneda de la inversión: AL30 en pesos, AL30D en dólares.",
+  MutualFund:
+    "Elegí el fondo de la lista y cargá tus cuotapartes: te mostramos el valor de la cuotaparte que publica ArgentinaDatos y calculamos el capital; después lo cotizamos todos los días hábiles.",
+  Crypto:
+    "Con el símbolo y la cantidad te mostramos el precio de CoinGecko y calculamos el capital; después la cotizamos todos los días hábiles.",
+}
+
+function todayForDateInput(): string {
+  return format(new Date(), "yyyy-MM-dd")
 }
 
 function quantityLabel(type: InvestmentType | ""): string {
-  return isPerNominal(type) ? "Cantidad de nominales" : "Cantidad de unidades"
+  if (type !== "" && isPricedPerNominal(type)) {
+    return "Cantidad de nominales"
+  }
+
+  if (type === "MutualFund") {
+    return "Cantidad de cuotapartes"
+  }
+
+  return type === "Crypto" ? "Cantidad" : "Cantidad de unidades"
+}
+
+function pricePerLabel(type: InvestmentType | ""): string {
+  if (type !== "" && isPricedPerNominal(type)) {
+    return "por nominal"
+  }
+
+  return type === "MutualFund" ? "por cuotaparte" : "por unidad"
+}
+
+function normalizeSymbol(symbol: string, market: QuoteMarket | null): string {
+  return market === "MutualFund" ? symbol.trim().replace(/\s+/g, " ") : symbol.trim().toUpperCase()
 }
 
 function formatMoney(amount: number, currency: Currency): string {
@@ -76,31 +114,23 @@ function formatMoney(amount: number, currency: Currency): string {
 }
 
 function formatUnitPrice(amount: number, currency: Currency): string {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
-  }).format(amount)
-}
+  const digits = amount >= 1 ? { minimumFractionDigits: 2, maximumFractionDigits: 6 } : { maximumSignificantDigits: 6 }
 
-function formatQuantity(quantity: number, type: InvestmentType | ""): string {
-  const unit = isPerNominal(type) ? (quantity === 1 ? "nominal" : "nominales") : quantity === 1 ? "unidad" : "unidades"
-  return `${quantity.toLocaleString("es-AR", { maximumFractionDigits: 6 })} ${unit}`
-}
-
-function pricePerLabel(type: InvestmentType | ""): string {
-  return isPerNominal(type) ? "por nominal" : "por unidad"
+  return new Intl.NumberFormat("es-AR", { style: "currency", currency, ...digits }).format(amount)
 }
 
 function pricedOnLabel(price: SecurityPriceDto): string {
   return price.pricedOn === todayForDateInput()
     ? `${price.source}, hoy`
-    : `cierre de ${price.source} del ${format(parseISO(price.pricedOn), "dd/MM")}`
+    : `${price.source}, al ${format(parseISO(price.pricedOn), "dd/MM")}`
 }
 
 function roundToCents(amount: number): number {
   return Math.round(amount * 100) / 100
+}
+
+function isAbort(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError"
 }
 
 export function AddInvestmentForm({
@@ -122,25 +152,33 @@ export function AddInvestmentForm({
   const [symbol, setSymbol] = useState(initialInvestment?.symbol ?? "")
   const [quantity, setQuantity] = useState(initialInvestment?.quantity != null ? String(initialInvestment.quantity) : "")
   const [quote, setQuote] = useState<{ key: string; result: QuoteResult } | null>(null)
+  const [fundSearch, setFundSearch] = useState<{ key: string; options: SecurityPriceDto[] | null } | null>(null)
   const [trackingError, setTrackingError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const canBeQuoted = type !== "" && isQuotedOnExchange(type)
-  const normalizedSymbol = symbol.trim().toUpperCase()
-  const hasValidSymbol = normalizedSymbol.length <= SYMBOL_MAX_LENGTH && SYMBOL_PATTERN.test(normalizedSymbol)
-  const quoteKey = canBeQuoted && hasValidSymbol && isQuotedCurrency(currency) ? `${normalizedSymbol}:${currency}` : null
+  const market = type === "" ? null : quoteMarketOf(type)
+  const canBeQuoted = market !== null
+  const isFund = market === "MutualFund"
+  const normalizedSymbol = normalizeSymbol(symbol, market)
+  const hasValidSymbol = isFund
+    ? normalizedSymbol.length >= FUND_SEARCH_MIN_LENGTH && normalizedSymbol.length <= FUND_NAME_MAX_LENGTH
+    : normalizedSymbol.length <= SYMBOL_MAX_LENGTH && SYMBOL_PATTERN.test(normalizedSymbol)
+  const currencyIsQuotable = market !== null && canQuoteIn(market, currency)
+  const quoteKey =
+    canBeQuoted && !isFund && hasValidSymbol && currencyIsQuotable ? `${market}:${normalizedSymbol}:${currency}` : null
+  const fundSearchKey = isFund && hasValidSymbol ? normalizedSymbol.toLowerCase() : null
 
   useEffect(() => {
-    if (quoteKey === null) {
+    if (quoteKey === null || type === "") {
       return
     }
 
     const controller = new AbortController()
     const timer = window.setTimeout(() => {
-      getSecurityPrice(normalizedSymbol, currency, controller.signal)
+      getSecurityPrice(normalizedSymbol, currency, type, controller.signal)
         .then((price) => setQuote({ key: quoteKey, result: { status: "found", price } }))
         .catch((error: unknown) => {
-          if (error instanceof DOMException && error.name === "AbortError") return
+          if (isAbort(error)) return
           const status = isApiError(error) && error.status === 404 ? "missing" : "unavailable"
           setQuote({ key: quoteKey, result: { status } })
         })
@@ -150,10 +188,60 @@ export function AddInvestmentForm({
       window.clearTimeout(timer)
       controller.abort()
     }
-  }, [quoteKey, normalizedSymbol, currency])
+  }, [quoteKey, normalizedSymbol, currency, type])
 
-  const quoteResult: QuoteResult | null =
-    quoteKey === null ? null : quote?.key === quoteKey ? quote.result : { status: "loading" }
+  useEffect(() => {
+    if (fundSearchKey === null || type === "") {
+      return
+    }
+
+    const controller = new AbortController()
+    const timer = window.setTimeout(() => {
+      searchSecurityPrices(type, normalizedSymbol, undefined, controller.signal)
+        .then((options) => setFundSearch({ key: fundSearchKey, options }))
+        .catch((error: unknown) => {
+          if (isAbort(error)) return
+          setFundSearch({ key: fundSearchKey, options: null })
+        })
+    }, FUND_SEARCH_DEBOUNCE_MS)
+
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+    }
+  }, [fundSearchKey, normalizedSymbol, type])
+
+  const fundOptions = isFund ? (fundSearch?.options ?? []) : []
+  const matchedFund = fundOptions.find((option) => option.symbol.toLowerCase() === normalizedSymbol.toLowerCase())
+  const currentFundSearch = fundSearchKey !== null && fundSearch?.key === fundSearchKey ? fundSearch : null
+
+  const fundQuoteResult = (): QuoteResult | null => {
+    if (fundSearchKey === null) {
+      return null
+    }
+
+    if (matchedFund) {
+      return { status: "found", price: matchedFund }
+    }
+
+    if (currentFundSearch === null) {
+      return { status: "loading" }
+    }
+
+    if (currentFundSearch.options === null) {
+      return { status: "unavailable" }
+    }
+
+    return { status: currentFundSearch.options.length === 0 ? "missing" : "choose" }
+  }
+
+  const quoteResult: QuoteResult | null = isFund
+    ? fundQuoteResult()
+    : quoteKey === null
+      ? null
+      : quote?.key === quoteKey
+        ? quote.result
+        : { status: "loading" }
   const quotedPrice = quoteResult?.status === "found" ? quoteResult.price : null
   const parsedQuantity = Number(quantity)
   const hasQuantity = quantity.trim() !== "" && Number.isFinite(parsedQuantity) && parsedQuantity > 0
@@ -161,6 +249,7 @@ export function AddInvestmentForm({
   const isAmountCalculated = marketValue !== null && !investedAmountTouched
   const effectiveInvestedAmount = isAmountCalculated ? marketValue.toFixed(2) : investedAmount
   const canUseMarketValue = marketValue !== null && investedAmountTouched && Number(investedAmount) !== marketValue
+  const fundCurrencyDiffers = isFund && quotedPrice !== null && quotedPrice.currency !== currency
 
   const handleInvestedAmountChange = (value: string) => {
     setInvestedAmount(value)
@@ -187,7 +276,11 @@ export function AddInvestmentForm({
     const trimmedQuantity = canBeQuoted ? quantity.trim() : ""
 
     if ((trimmedSymbol === "") !== (trimmedQuantity === "")) {
-      setTrackingError("Para cotizar la inversión completá el símbolo y la cantidad, o dejá los dos vacíos.")
+      setTrackingError(
+        isFund
+          ? "Para cotizar la inversión completá el fondo y la cantidad de cuotapartes, o dejá los dos vacíos."
+          : "Para cotizar la inversión completá el símbolo y la cantidad, o dejá los dos vacíos.",
+      )
       return
     }
 
@@ -295,24 +388,40 @@ export function AddInvestmentForm({
         <div className="space-y-3 rounded-md border p-3">
           <div>
             <p className="text-sm font-medium">Cotización automática (opcional)</p>
-            <p className="text-xs text-muted-foreground">
-              Con el símbolo y la cantidad te mostramos el precio de BYMA y calculamos el capital; después la cotizamos
-              todos los días hábiles con el cierre. Usá la variante de la moneda de la inversión: AL30 en pesos, AL30D
-              en dólares.
-            </p>
+            <p className="text-xs text-muted-foreground">{quoteHelp[market]}</p>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className={isFund ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 gap-2"}>
             <div className="space-y-2">
-              <Label htmlFor="investment-symbol">Símbolo</Label>
-              <Input
-                id="investment-symbol"
-                placeholder={symbolPlaceholders[type] ?? "ej. AL30, YPFD, SPY"}
-                maxLength={SYMBOL_MAX_LENGTH}
-                pattern="[A-Za-z0-9]+"
-                title="Solo letras y números"
-                value={symbol}
-                onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-              />
+              <Label htmlFor="investment-symbol">{isFund ? "Fondo" : "Símbolo"}</Label>
+              {isFund ? (
+                <>
+                  <Input
+                    id="investment-symbol"
+                    placeholder={symbolPlaceholders.MutualFund}
+                    maxLength={FUND_NAME_MAX_LENGTH}
+                    list={FUND_OPTIONS_ID}
+                    autoComplete="off"
+                    value={symbol}
+                    onChange={(e) => setSymbol(e.target.value)}
+                  />
+                  <datalist id={FUND_OPTIONS_ID}>
+                    {fundOptions.map((option) => (
+                      <option key={option.symbol} value={option.symbol} />
+                    ))}
+                  </datalist>
+                </>
+              ) : (
+                <Input
+                  id="investment-symbol"
+                  placeholder={(type === "" ? undefined : symbolPlaceholders[type]) ?? "ej. AL30, YPFD, SPY"}
+                  maxLength={SYMBOL_MAX_LENGTH}
+                  pattern="[A-Za-z0-9]+"
+                  title="Solo letras y números"
+                  autoComplete="off"
+                  value={symbol}
+                  onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+                />
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="investment-quantity">{quantityLabel(type)}</Label>
@@ -328,29 +437,33 @@ export function AddInvestmentForm({
             </div>
           </div>
 
-          {hasValidSymbol && !isQuotedCurrency(currency) && (
+          {!isFund && hasValidSymbol && !currencyIsQuotable && (
             <p className="text-sm text-muted-foreground">
-              BYMA cotiza en pesos y en dólares: elegí ARS o USD para ver el precio.
+              {market === "Crypto"
+                ? "Las criptomonedas se cotizan en pesos o en dólares: elegí ARS o USD para ver el precio."
+                : "BYMA cotiza en pesos y en dólares: elegí ARS o USD para ver el precio."}
             </p>
           )}
 
           {quoteResult?.status === "loading" && (
             <p className="flex items-center gap-2 text-sm text-muted-foreground" aria-live="polite">
               <Spinner />
-              Buscando la cotización de {normalizedSymbol}…
+              {isFund ? "Buscando fondos…" : `Buscando la cotización de ${normalizedSymbol}…`}
             </p>
           )}
 
           {quotedPrice && (
             <div className="space-y-1 rounded-md bg-muted/50 px-3 py-2 text-sm" aria-live="polite">
               <p>
-                <span className="font-medium">{quotedPrice.symbol}</span>{" "}
-                {formatUnitPrice(quotedPrice.unitPrice, quotedPrice.currency)} {pricePerLabel(type)}
+                <span className="font-medium">{quotedPrice.symbol}</span>
+                {quotedPrice.name && <span className="text-muted-foreground"> ({quotedPrice.name})</span>}{" "}
+                {formatUnitPrice(quotedPrice.unitPrice, isFund ? currency : quotedPrice.currency)} {pricePerLabel(type)}
                 <span className="text-muted-foreground"> · {pricedOnLabel(quotedPrice)}</span>
               </p>
               {marketValue !== null && (
                 <p>
-                  A este precio, {formatQuantity(parsedQuantity, type)} {parsedQuantity === 1 ? "vale" : "valen"}{" "}
+                  A este precio, {type !== "" && formatQuantity(parsedQuantity, type)}
+                  {type === "Crypto" ? ` ${quotedPrice.symbol}` : ""} {parsedQuantity === 1 ? "vale" : "valen"}{" "}
                   <span className="font-semibold">{formatMoney(marketValue, currency)}</span>
                   {canUseMarketValue && (
                     <>
@@ -367,13 +480,28 @@ export function AddInvestmentForm({
                   )}
                 </p>
               )}
+              {fundCurrencyDiffers && (
+                <p className="text-amber-700 dark:text-amber-300">
+                  Por el nombre, este fondo parece estar en {currencyNames[quotedPrice.currency]}: revisá la moneda de la
+                  inversión.
+                </p>
+              )}
             </div>
+          )}
+
+          {quoteResult?.status === "choose" && (
+            <p className="text-sm text-muted-foreground" aria-live="polite">
+              Elegí uno de los fondos de la lista para ver el valor de la cuotaparte.
+            </p>
           )}
 
           {quoteResult?.status === "missing" && (
             <p className="text-sm text-amber-700 dark:text-amber-300" aria-live="polite">
-              No encontramos {normalizedSymbol} en {currencyNames[currency]} en BYMA. Revisá el símbolo o usá la variante
-              de la moneda: AL30 en pesos, AL30D en dólares.
+              {isFund
+                ? "No encontramos fondos con ese nombre en ArgentinaDatos. Probá con otra parte del nombre."
+                : market === "Crypto"
+                  ? `No encontramos ${normalizedSymbol} en CoinGecko. Revisá el símbolo: BTC, ETH, USDT.`
+                  : `No encontramos ${normalizedSymbol} en ${currencyNames[currency]} en BYMA. Revisá el símbolo o usá la variante de la moneda: AL30 en pesos, AL30D en dólares.`}
             </p>
           )}
 

@@ -18,16 +18,58 @@ export const ASSET_NAME_MAX_LENGTH = 120
 
 export const SYMBOL_MAX_LENGTH = 20
 
-export const quotedOnExchangeTypes: InvestmentType[] = ["Stock", "Cedear", "Etf", "Bond", "CorporateBond", "TreasuryBill"]
+export const FUND_NAME_MAX_LENGTH = 150
 
-export function isQuotedOnExchange(type: InvestmentType): boolean {
-  return quotedOnExchangeTypes.includes(type)
+export type QuoteMarket = "Exchange" | "MutualFund" | "Crypto"
+
+const quoteMarkets: Partial<Record<InvestmentType, QuoteMarket>> = {
+  Stock: "Exchange",
+  Cedear: "Exchange",
+  Etf: "Exchange",
+  Bond: "Exchange",
+  CorporateBond: "Exchange",
+  TreasuryBill: "Exchange",
+  MutualFund: "MutualFund",
+  Crypto: "Crypto",
+}
+
+export function quoteMarketOf(type: InvestmentType): QuoteMarket | null {
+  return quoteMarkets[type] ?? null
+}
+
+export function isQuoted(type: InvestmentType): boolean {
+  return quoteMarketOf(type) !== null
 }
 
 export const pricedPerNominalTypes: InvestmentType[] = ["Bond", "CorporateBond", "TreasuryBill"]
 
 export function isPricedPerNominal(type: InvestmentType): boolean {
   return pricedPerNominalTypes.includes(type)
+}
+
+export function quantityUnit(type: InvestmentType, quantity: number): string {
+  const isOne = quantity === 1
+
+  if (isPricedPerNominal(type)) {
+    return isOne ? "nominal" : "nominales"
+  }
+
+  if (type === "MutualFund") {
+    return isOne ? "cuotaparte" : "cuotapartes"
+  }
+
+  if (type === "Crypto") {
+    return ""
+  }
+
+  return isOne ? "unidad" : "unidades"
+}
+
+export function formatQuantity(quantity: number, type: InvestmentType): string {
+  const amount = quantity.toLocaleString("es-AR", { maximumFractionDigits: 10 })
+  const unit = quantityUnit(type, quantity)
+
+  return unit === "" ? amount : `${amount} ${unit}`
 }
 
 export const investmentTypeLabels: Record<InvestmentType, string> = {

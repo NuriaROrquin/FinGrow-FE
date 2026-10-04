@@ -112,15 +112,19 @@ export {
 } from "./integrations"
 export {
   ASSET_NAME_MAX_LENGTH,
+  FUND_NAME_MAX_LENGTH,
   SYMBOL_MAX_LENGTH,
   createInvestment,
+  formatQuantity,
   getPortfolioSummary,
   deleteInvestment,
   investmentSortFieldLabels,
   investmentTypeLabels,
   isPricedPerNominal,
-  isQuotedOnExchange,
+  isQuoted,
   listInvestments,
+  quantityUnit,
+  quoteMarketOf,
   updateInvestment,
   type AllocationGroupDto,
   type CreateInvestmentPayload,
@@ -133,10 +137,11 @@ export {
   type LastPurchaseDto,
   type PagedResultDto,
   type PortfolioSummaryDto,
+  type QuoteMarket,
   type SortDirection,
 } from "./investments"
 export { getSavingsVsGoals, type SavingsVsGoalsDto, type SavingsVsGoalsMonthDto } from "./reports"
-export { getSecurityPrice, isQuotedCurrency, quotedCurrencies, type SecurityPriceDto } from "./security-prices"
+export { canQuoteIn, getSecurityPrice, searchSecurityPrices, type SecurityPriceDto } from "./security-prices"
 export {
   getDashboardSummary,
   getExpensesByCategory,

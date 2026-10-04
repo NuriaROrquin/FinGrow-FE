@@ -53,8 +53,8 @@ import {
   deleteInvestment,
   getMepQuote,
   getPortfolioSummary,
+  formatQuantity,
   investmentTypeLabels,
-  isPricedPerNominal,
   listInvestments,
   toastApiError,
   updateInvestment,
@@ -143,17 +143,6 @@ function formatSignedMoney(amount: number, currency: Currency): string {
 function formatPercentage(value: number): string {
   const formatted = value.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   return `${value < 0 ? "" : "+"}${formatted}%`
-}
-
-function formatQuantity(quantity: number, type: InvestmentType): string {
-  const unit = isPricedPerNominal(type)
-    ? quantity === 1
-      ? "nominal"
-      : "nominales"
-    : quantity === 1
-      ? "unidad"
-      : "unidades"
-  return `${quantity.toLocaleString("es-AR", { maximumFractionDigits: 6 })} ${unit}`
 }
 
 function formatDate(isoDate: string): string {
