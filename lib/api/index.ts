@@ -51,13 +51,17 @@ export {
   type ArticleSummaryDto,
 } from "./articles"
 export {
+  completeLesson,
   courseLevelLabels,
   courseProgressStatusLabels,
+  getCourse,
   listCourses,
+  type CourseDetailDto,
   type CourseFilters,
   type CourseLevel,
   type CourseProgressStatus,
   type CourseSummaryDto,
+  type LessonDto,
 } from "./courses"
 export { type EducationCategory } from "./education"
 export { getMepQuote, type MepQuoteDto } from "./exchange-rates"

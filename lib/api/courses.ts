@@ -33,6 +33,20 @@ export interface CourseSummaryDto {
   progressStatus: CourseProgressStatus
 }
 
+export interface LessonDto {
+  id: string
+  position: number
+  title: string
+  durationMinutes: number
+  videoUrl: string
+  isCompleted: boolean
+}
+
+export interface CourseDetailDto extends CourseSummaryDto {
+  resumeLessonId: string | null
+  lessons: LessonDto[]
+}
+
 export interface CourseFilters {
   level?: CourseLevel
   maxDuration?: number
@@ -44,4 +58,12 @@ export function listCourses(filters: CourseFilters = {}, signal?: AbortSignal): 
     query: { level: filters.level, maxDuration: filters.maxDuration, status: filters.status },
     signal,
   })
+}
+
+export function getCourse(slug: string, signal?: AbortSignal): Promise<CourseDetailDto> {
+  return api.get<CourseDetailDto>(`/api/courses/${encodeURIComponent(slug)}`, { signal })
+}
+
+export function completeLesson(slug: string, lessonId: string): Promise<CourseDetailDto> {
+  return api.put<CourseDetailDto>(`/api/courses/${encodeURIComponent(slug)}/lessons/${lessonId}/completion`)
 }
