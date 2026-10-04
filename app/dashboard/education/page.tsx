@@ -1,13 +1,10 @@
 "use client"
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import {
-  BookOpenIcon,
   CheckCircleIcon,
-  ClockIcon,
   TrendingUpIcon,
   DollarSignIcon,
   PiggyBankIcon,
@@ -15,8 +12,8 @@ import {
   GraduationCapIcon,
   AwardIcon,
 } from "lucide-react"
-import {Badge} from "@/components/ui/badge";
-import { useRouter, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
+import { ArticlesCatalog } from "@/components/education/articles-catalog"
 import { CoursesCatalog } from "@/components/education/courses-catalog"
 
 const courses = [
@@ -70,37 +67,6 @@ const courses = [
   },
 ]
 
-const articles = [
-  {
-    id: 1,
-    title: "5 Formas de Construir un Fondo de Emergencia",
-    category: "Ahorros",
-    readTime: "5 min",
-    date: "2025-01-15",
-  },
-  {
-    id: 2,
-    title: "Entendiendo el Interés Compuesto",
-    category: "Inversiones",
-    readTime: "7 min",
-    date: "2025-01-12",
-  },
-  {
-    id: 3,
-    title: "Cómo Crear un Presupuesto Mensual",
-    category: "Presupuesto",
-    readTime: "6 min",
-    date: "2025-01-10",
-  },
-  {
-    id: 4,
-    title: "Cuentas de Inversión con Ventajas Fiscales",
-    category: "Impuestos",
-    readTime: "8 min",
-    date: "2025-01-08",
-  },
-]
-
 const achievements = [
   {
     id: 1,
@@ -133,7 +99,6 @@ const achievements = [
 ]
 
 export default function EducationPage() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const activeTab = searchParams.get('tab') || 'courses'
 
@@ -212,50 +177,7 @@ export default function EducationPage() {
 
         {/* Articles Tab */}
         <TabsContent value="articles" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Lectura Recomendada</CardTitle>
-              <CardDescription>Artículos para expandir tu conocimiento financiero</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {articles.map((article) => (
-                  <div
-                    key={article.id}
-                    className="flex items-center justify-between p-4 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer"
-                    onClick={() => router.push(`/dashboard/education/articles/${article.id}`)}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                        <BookOpenIcon className="size-5" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">{article.title}</h3>
-                        <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-                          <Badge variant="outline" className="text-xs">
-                            {article.category}
-                          </Badge>
-                          <span className="flex items-center gap-1">
-                            <ClockIcon className="size-3" />
-                            {article.readTime}
-                          </span>
-                          <span>
-                            {new Date(article.date).toLocaleDateString("es-ES", {
-                              month: "short",
-                              day: "numeric",
-                            })}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="sm">
-                      Leer
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <ArticlesCatalog />
         </TabsContent>
 
         {/* Achievements Tab */}
