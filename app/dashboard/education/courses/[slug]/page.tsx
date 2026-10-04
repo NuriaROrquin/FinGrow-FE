@@ -13,6 +13,7 @@ import {
   TrophyIcon,
 } from "lucide-react"
 import { toast } from "sonner"
+import { CourseRating } from "@/components/education/course-rating"
 import { formatDuration } from "@/components/education/format-duration"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -173,6 +174,16 @@ export default function CoursePage() {
               Completaste este curso. Podés volver a ver cualquier lección cuando quieras.
             </p>
           )}
+          <div className="border-t pt-3">
+            <CourseRating
+              slug={course.slug}
+              averageRating={course.averageRating}
+              ratingCount={course.ratingCount}
+              myRating={course.myRating}
+              canRate={isCourseCompleted}
+              onRated={(updated) => setState({ status: "loaded", course: updated })}
+            />
+          </div>
         </CardContent>
       </Card>
 

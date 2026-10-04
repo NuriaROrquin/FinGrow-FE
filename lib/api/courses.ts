@@ -31,6 +31,9 @@ export interface CourseSummaryDto {
   completedLessons: number
   progressPercentage: number
   progressStatus: CourseProgressStatus
+  averageRating: number | null
+  ratingCount: number
+  myRating: number | null
 }
 
 export interface LessonDto {
@@ -66,4 +69,8 @@ export function getCourse(slug: string, signal?: AbortSignal): Promise<CourseDet
 
 export function completeLesson(slug: string, lessonId: string): Promise<CourseDetailDto> {
   return api.put<CourseDetailDto>(`/api/courses/${encodeURIComponent(slug)}/lessons/${lessonId}/completion`)
+}
+
+export function rateCourse(slug: string, score: number): Promise<CourseDetailDto> {
+  return api.put<CourseDetailDto>(`/api/courses/${encodeURIComponent(slug)}/rating`, { score })
 }

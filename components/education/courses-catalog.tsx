@@ -13,7 +13,6 @@ import {
   PiggyBankIcon,
   PlayCircleIcon,
   ReceiptIcon,
-  StarIcon,
   TrendingUpIcon,
   type LucideIcon,
 } from "lucide-react"
@@ -30,11 +29,13 @@ import {
   courseProgressStatusLabels,
   listCourses,
   toastApiError,
+  type CourseDetailDto,
   type CourseLevel,
   type CourseProgressStatus,
   type CourseSummaryDto,
   type EducationCategory,
 } from "@/lib/api"
+import { CourseRating } from "./course-rating"
 import { formatDuration } from "./format-duration"
 
 const ALL = "all"
@@ -59,8 +60,6 @@ export function CoursesCatalog() {
   const [courses, setCourses] = useState<CourseSummaryDto[] | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
-  const [courseRatings, setCourseRatings] = useState<Record<string, number>>({})
-  const [hoveredRating, setHoveredRating] = useState<Record<string, number>>({})
 
   useEffect(() => {
     const controller = new AbortController()
@@ -84,6 +83,21 @@ export function CoursesCatalog() {
 
     return () => controller.abort()
   }, [level, maxDuration, status, retryCount])
+
+  const updateRating = (updated: CourseDetailDto) => {
+    setCourses((current) =>
+      current?.map((course) =>
+        course.id === updated.id
+          ? {
+              ...course,
+              averageRating: updated.averageRating,
+              ratingCount: updated.ratingCount,
+              myRating: updated.myRating,
+            }
+          : course,
+      ) ?? current,
+    )
+  }
 
   const hasFilters = level !== ALL || maxDuration !== ALL || status !== ALL
 
@@ -133,11 +147,11 @@ export function CoursesCatalog() {
           onValueChange={(value) => setMaxDuration(value || ALL)}
           aria-label="Filtrar por duración"
         >
-          <ToggleGroupItem value={ALL} className="px-3">
+          <ToggleGroupItem value={ALL} className="flex-none px-3">
             Cualquier duración
           </ToggleGroupItem>
           {durationOptions.map((minutes) => (
-            <ToggleGroupItem key={minutes} value={String(minutes)} className="px-3">
+            <ToggleGroupItem key={minutes} value={String(minutes)} className="flex-none px-3">
               ≤ {minutes} min
             </ToggleGroupItem>
           ))}
@@ -194,8 +208,6 @@ export function CoursesCatalog() {
           {courses.map((course) => {
             const Icon = categoryIcons[course.category]
             const isCompleted = course.progressStatus === "Completed"
-            const currentRating = courseRatings[course.id] || 0
-            const currentHover = hoveredRating[course.id] || 0
 
             return (
               <Card key={course.id}>
@@ -233,36 +245,16 @@ export function CoursesCatalog() {
                     <Progress value={course.progressPercentage} className="h-2" />
                   </div>
 
-                  {isCompleted && (
-                    <div className="space-y-2 pt-2 border-t">
-                      <p className="text-sm font-medium text-muted-foreground">
-                        {currentRating > 0 ? "Tu calificación:" : "Califica este curso:"}
-                      </p>
-                      <div className="flex items-center gap-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <button
-                            key={star}
-                            onClick={() => setCourseRatings((prev) => ({ ...prev, [course.id]: star }))}
-                            onMouseEnter={() => setHoveredRating((prev) => ({ ...prev, [course.id]: star }))}
-                            onMouseLeave={() => setHoveredRating((prev) => ({ ...prev, [course.id]: 0 }))}
-                            className="transition-transform hover:scale-110 focus:outline-none"
-                            aria-label={`Calificar con ${star} estrella${star > 1 ? "s" : ""}`}
-                          >
-                            <StarIcon
-                              className={`size-6 transition-colors ${
-                                star <= (currentHover || currentRating)
-                                  ? "fill-yellow-400 text-yellow-400"
-                                  : "text-gray-300"
-                              }`}
-                            />
-                          </button>
-                        ))}
-                        {currentRating > 0 && (
-                          <span className="ml-2 text-sm text-muted-foreground">({currentRating}/5)</span>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                  <div className="border-t pt-3">
+                    <CourseRating
+                      slug={course.slug}
+                      averageRating={course.averageRating}
+                      ratingCount={course.ratingCount}
+                      myRating={course.myRating}
+                      canRate={isCompleted}
+                      onRated={updateRating}
+                    />
+                  </div>
 
                   <Button
                     className="w-full"
