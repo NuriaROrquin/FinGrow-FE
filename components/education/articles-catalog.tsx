@@ -20,7 +20,6 @@ import {
 
 const ALL = "all"
 
-/** Topes de tiempo de lectura que se ofrecen como filtro rápido, en minutos. */
 const READING_TIME_OPTIONS = [3, 5, 10]
 
 export function ArticlesCatalog() {
@@ -81,7 +80,6 @@ export function ArticlesCatalog() {
             type="single"
             variant="outline"
             value={maxReadingTime}
-            // Radix deja deseleccionar el ítem activo; en ese caso se vuelve a "Cualquiera".
             onValueChange={(value) => setMaxReadingTime(value || ALL)}
             aria-label="Filtrar por tiempo de lectura"
           >

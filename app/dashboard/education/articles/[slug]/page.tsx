@@ -76,7 +76,6 @@ export default function ArticlePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header with Back Button */}
       <div className="flex items-center gap-4">
         {backButton}
         <div className="flex-1">
@@ -98,7 +97,6 @@ export default function ArticlePage() {
         </div>
       </div>
 
-      {/* Article Content */}
       <Card>
         <CardContent className="pt-6">
           <p className="mb-6 text-lg text-muted-foreground">{article.summary}</p>
@@ -106,7 +104,6 @@ export default function ArticlePage() {
         </CardContent>
       </Card>
 
-      {/* Back Button at Bottom */}
       <div className="flex justify-start">
         <Button variant="outline" onClick={() => router.push(BACK_TO_ARTICLES)}>
           <ArrowLeftIcon className="size-4" />

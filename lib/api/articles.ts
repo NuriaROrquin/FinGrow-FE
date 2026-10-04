@@ -9,7 +9,6 @@ export type EducationCategory =
   | "Retirement"
   | "Taxes"
 
-/** Etiqueta en castellano de cada categoría, en el orden en que se muestran en los filtros. */
 export const EDUCATION_CATEGORY_LABELS: Record<EducationCategory, string> = {
   Basics: "Básico",
   Savings: "Ahorro",
@@ -32,13 +31,11 @@ export interface ArticleSummaryDto {
 }
 
 export interface ArticleDto extends ArticleSummaryDto {
-  /** Cuerpo del artículo en Markdown. */
   content: string
 }
 
 export interface ArticleFilters {
   category?: EducationCategory
-  /** Solo los artículos que se leen en esta cantidad de minutos o menos. */
   maxReadingTime?: number
 }
 
