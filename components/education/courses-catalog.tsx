@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import {
+  AlertCircleIcon,
   BookOpenIcon,
   CheckCircleIcon,
   ClockIcon,
@@ -61,14 +62,16 @@ export function CoursesCatalog() {
   const [level, setLevel] = useState<CourseLevel | typeof ALL>(ALL)
   const [maxDuration, setMaxDuration] = useState<string>(ALL)
   const [status, setStatus] = useState<CourseProgressStatus | typeof ALL>(ALL)
-  const [courses, setCourses] = useState<CourseSummaryDto[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [courses, setCourses] = useState<CourseSummaryDto[] | null>(null)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
   const [courseRatings, setCourseRatings] = useState<Record<string, number>>({})
   const [hoveredRating, setHoveredRating] = useState<Record<string, number>>({})
 
   useEffect(() => {
     const controller = new AbortController()
-    setIsLoading(true)
+    setCourses(null)
+    setLoadFailed(false)
 
     listCourses(
       {
@@ -82,13 +85,11 @@ export function CoursesCatalog() {
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return
         toastApiError(error, "No se pudieron cargar los cursos.")
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setIsLoading(false)
+        setLoadFailed(true)
       })
 
     return () => controller.abort()
-  }, [level, maxDuration, status])
+  }, [level, maxDuration, status, retryCount])
 
   const hasFilters = level !== ALL || maxDuration !== ALL || status !== ALL
 
@@ -149,7 +150,24 @@ export function CoursesCatalog() {
         </ToggleGroup>
       </div>
 
-      {isLoading ? (
+      {loadFailed ? (
+        <Card>
+          <CardContent>
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <AlertCircleIcon />
+                </EmptyMedia>
+                <EmptyTitle>No se pudieron cargar los cursos</EmptyTitle>
+                <EmptyDescription>Probá de nuevo en un momento.</EmptyDescription>
+              </EmptyHeader>
+              <Button variant="outline" onClick={() => setRetryCount((count) => count + 1)}>
+                Reintentar
+              </Button>
+            </Empty>
+          </CardContent>
+        </Card>
+      ) : courses === null ? (
         <div className="grid gap-4 md:grid-cols-2">
           <Skeleton className="h-64 w-full" />
           <Skeleton className="h-64 w-full" />
