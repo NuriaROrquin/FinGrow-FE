@@ -508,11 +508,6 @@ export function AddInvestmentForm({
           )}
 
           {trackingError && <p className="text-sm text-destructive">{trackingError}</p>}
-
-          <p className="text-xs text-muted-foreground">
-            Es opcional. Con {isFund ? "el fondo y las cuotapartes" : "el símbolo y la cantidad"} la actualizamos sola cada
-            día hábil; sin eso la inversión queda valuada al costo.
-          </p>
         </section>
       )}
 
