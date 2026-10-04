@@ -1,13 +1,10 @@
 "use client"
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import {
-  BookOpenIcon,
   CheckCircleIcon,
-  ClockIcon,
   TrendingUpIcon,
   DollarSignIcon,
   PiggyBankIcon,
@@ -15,8 +12,7 @@ import {
   GraduationCapIcon,
   AwardIcon,
 } from "lucide-react"
-import {Badge} from "@/components/ui/badge";
-import { useRouter, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import { ArticlesCatalog } from "@/components/education/articles-catalog"
 import { CoursesCatalog } from "@/components/education/courses-catalog"
 
@@ -103,7 +99,6 @@ const achievements = [
 ]
 
 export default function EducationPage() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const activeTab = searchParams.get('tab') || 'courses'
 
