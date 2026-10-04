@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
-  EDUCATION_CATEGORY_LABELS,
+  educationCategoryLabels,
   listArticles,
   toastApiError,
   type ArticleSummaryDto,
@@ -20,7 +20,7 @@ import {
 
 const ALL = "all"
 
-const READING_TIME_OPTIONS = [3, 5, 10]
+const readingTimeOptions = [3, 5, 10]
 
 export function ArticlesCatalog() {
   const router = useRouter()
@@ -68,7 +68,7 @@ export function ArticlesCatalog() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>Todas las categorías</SelectItem>
-              {Object.entries(EDUCATION_CATEGORY_LABELS).map(([value, label]) => (
+              {Object.entries(educationCategoryLabels).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
                 </SelectItem>
@@ -86,7 +86,7 @@ export function ArticlesCatalog() {
             <ToggleGroupItem value={ALL} className="px-3">
               Cualquiera
             </ToggleGroupItem>
-            {READING_TIME_OPTIONS.map((minutes) => (
+            {readingTimeOptions.map((minutes) => (
               <ToggleGroupItem key={minutes} value={String(minutes)} className="px-3">
                 ≤ {minutes} min
               </ToggleGroupItem>
@@ -143,7 +143,7 @@ export function ArticlesCatalog() {
                     <p className="text-sm text-muted-foreground line-clamp-1">{article.summary}</p>
                     <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mt-1">
                       <Badge variant="outline" className="text-xs">
-                        {EDUCATION_CATEGORY_LABELS[article.category]}
+                        {educationCategoryLabels[article.category]}
                       </Badge>
                       <span className="flex items-center gap-1">
                         <ClockIcon className="size-3" />

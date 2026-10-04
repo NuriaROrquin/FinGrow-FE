@@ -1,7 +1,7 @@
 import { api } from "./client"
 import type { EducationCategory } from "./education"
 
-export const EDUCATION_CATEGORY_LABELS: Record<EducationCategory, string> = {
+export const educationCategoryLabels: Record<EducationCategory, string> = {
   Basics: "Básico",
   Savings: "Ahorro",
   Budgeting: "Presupuesto",

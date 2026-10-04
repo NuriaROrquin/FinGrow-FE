@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { EDUCATION_CATEGORY_LABELS, getArticle, isApiError, toastApiError, type ArticleDto } from "@/lib/api"
+import { educationCategoryLabels, getArticle, isApiError, toastApiError, type ArticleDto } from "@/lib/api"
 
 const BACK_TO_ARTICLES = "/dashboard/education?tab=articles"
 
@@ -81,7 +81,7 @@ export default function ArticlePage() {
         <div className="flex-1">
           <h1 className="text-3xl font-bold">{article.title}</h1>
           <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-muted-foreground">
-            <Badge variant="outline">{EDUCATION_CATEGORY_LABELS[article.category]}</Badge>
+            <Badge variant="outline">{educationCategoryLabels[article.category]}</Badge>
             <span className="flex items-center gap-1">
               <ClockIcon className="size-3" />
               {article.readingTimeMinutes} min de lectura

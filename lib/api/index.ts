@@ -22,7 +22,7 @@ export { clearSession, getRole, loginPathForCurrentRole, saveSession, type Sessi
 export { getSession, loginEmpleado, loginEmpresa, logout, type LoginRequest, type SessionResponse } from "./auth"
 export { getApiBaseUrl } from "./config"
 export {
-  EDUCATION_CATEGORY_LABELS,
+  educationCategoryLabels,
   getArticle,
   listArticles,
   type ArticleDto,
