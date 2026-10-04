@@ -662,8 +662,8 @@ export default function InvestmentsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-4">
-          <Card>
+        <div className="lg:col-span-2">
+          <Card className="h-full">
             <CardHeader>
               <CardTitle>Distribución por Tipo de Activo</CardTitle>
               <CardDescription>Cómo se reparte tu portafolio según el valor actual de cada activo</CardDescription>
@@ -675,7 +675,7 @@ export default function InvestmentsPage() {
                 />
               )}
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex flex-1 flex-col justify-center">
               {allocation.slices.length === 0 || !selectedAllocationCurrency ? (
                 <p className="text-sm text-muted-foreground">{emptyHint}</p>
               ) : (
@@ -729,8 +729,8 @@ export default function InvestmentsPage() {
           </Card>
         </div>
 
-        <div className="space-y-4">
-          <Card className="bg-primary/5 border-primary/20">
+        <div>
+          <Card className="h-full bg-primary/5 border-primary/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <LightbulbIcon className="size-5 text-primary" />
