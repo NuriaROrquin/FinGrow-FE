@@ -118,6 +118,7 @@ export {
   deleteInvestment,
   investmentSortFieldLabels,
   investmentTypeLabels,
+  isPricedPerNominal,
   isQuotedOnExchange,
   listInvestments,
   updateInvestment,

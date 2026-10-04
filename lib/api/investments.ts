@@ -1,23 +1,46 @@
 import { api } from "./client"
 import type { Currency } from "./transactions"
 
-export type InvestmentType = "Etf" | "Stock" | "Bond" | "MutualFund" | "Crypto"
+export type InvestmentType =
+  | "Stock"
+  | "Cedear"
+  | "Etf"
+  | "Bond"
+  | "CorporateBond"
+  | "TreasuryBill"
+  | "MutualFund"
+  | "FixedTermDeposit"
+  | "Repo"
+  | "RemuneratedAccount"
+  | "Crypto"
 
 export const ASSET_NAME_MAX_LENGTH = 120
 
 export const SYMBOL_MAX_LENGTH = 20
 
-export const quotedOnExchangeTypes: InvestmentType[] = ["Stock", "Etf", "Bond"]
+export const quotedOnExchangeTypes: InvestmentType[] = ["Stock", "Cedear", "Etf", "Bond", "CorporateBond", "TreasuryBill"]
 
 export function isQuotedOnExchange(type: InvestmentType): boolean {
   return quotedOnExchangeTypes.includes(type)
 }
 
+export const pricedPerNominalTypes: InvestmentType[] = ["Bond", "CorporateBond", "TreasuryBill"]
+
+export function isPricedPerNominal(type: InvestmentType): boolean {
+  return pricedPerNominalTypes.includes(type)
+}
+
 export const investmentTypeLabels: Record<InvestmentType, string> = {
-  Etf: "ETF",
   Stock: "Acción",
+  Cedear: "CEDEAR",
+  Etf: "ETF",
   Bond: "Bono",
+  CorporateBond: "Obligación Negociable",
+  TreasuryBill: "Letra del Tesoro",
   MutualFund: "Fondo Común",
+  FixedTermDeposit: "Plazo Fijo",
+  Repo: "Caución",
+  RemuneratedAccount: "Cuenta Remunerada",
   Crypto: "Criptomoneda",
 }
 
