@@ -1,4 +1,6 @@
 import { api } from "./client"
+import type { EducationCategory } from "./education"
+import type { InvestmentType } from "./investments"
 
 export type CourseLevel = "Beginner" | "Intermediate" | "Advanced"
 
@@ -22,8 +24,8 @@ export interface CourseSummaryDto {
   title: string
   description: string
   level: CourseLevel
-  category: string
-  relatedInvestmentType: string | null
+  category: EducationCategory
+  relatedInvestmentType: InvestmentType | null
   durationMinutes: number
   lessonCount: number
   completedLessons: number

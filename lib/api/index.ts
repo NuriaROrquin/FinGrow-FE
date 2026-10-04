@@ -30,6 +30,7 @@ export {
   type CourseProgressStatus,
   type CourseSummaryDto,
 } from "./courses"
+export { type EducationCategory } from "./education"
 export { getMepQuote, type MepQuoteDto } from "./exchange-rates"
 export {
   addContribution,
