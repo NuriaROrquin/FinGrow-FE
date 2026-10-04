@@ -1,9 +1,6 @@
 "use client"
 
-import type React from "react"
-
 import { useEffect, useState } from "react"
-import { toast } from "sonner"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -14,32 +11,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { PlusIcon, TrendingUpIcon, AlertCircleIcon, PiggyBankIcon, TrophyIcon } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { GoalContributionsDialog } from "@/components/goals/goal-contributions-dialog"
 import { AchievedGoalCard, InProgressGoalCard } from "@/components/goals/goal-cards"
+import { DeleteGoalDialog } from "@/components/goals/delete-goal-dialog"
+import { GoalForm } from "@/components/goals/goal-form"
 import { MonthlyBudgetSection } from "@/components/budgets/monthly-budget-section"
 import { formatAmount } from "@/components/budgets/budget-month"
-import { createGoal, GOAL_NAME_MAX_LENGTH, listGoals, toastApiError, type BudgetDto, type GoalDto } from "@/lib/api"
-import type { Currency } from "@/lib/api/transactions"
-import { usePreferences } from "@/lib/preferences-context"
-
-const currencyLabels: Record<Currency, string> = {
-  ARS: "ARS ($)",
-  USD: "USD ($)",
-  EUR: "EUR (€)",
-  BRL: "BRL (R$)",
-}
-
-function todayLocal(): string {
-  const now = new Date()
-  const offsetMs = now.getTimezoneOffset() * 60 * 1000
-  return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10)
-}
+import { listGoals, toastApiError, type BudgetDto, type GoalDto } from "@/lib/api"
 
 export default function BudgetsPage() {
   const [currentBudget, setCurrentBudget] = useState<BudgetDto | null>(null)
@@ -48,6 +29,10 @@ export default function BudgetsPage() {
   const [isLoadingGoals, setIsLoadingGoals] = useState(true)
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null)
   const selectedGoal = savingsGoals.find((goal) => goal.id === selectedGoalId) ?? null
+  const [editingGoalId, setEditingGoalId] = useState<string | null>(null)
+  const editingGoal = savingsGoals.find((goal) => goal.id === editingGoalId) ?? null
+  const [deletingGoalId, setDeletingGoalId] = useState<string | null>(null)
+  const deletingGoal = savingsGoals.find((goal) => goal.id === deletingGoalId) ?? null
   const goalsInProgress = savingsGoals.filter((goal) => goal.status === "Active")
   const achievedGoals = savingsGoals
     .filter((goal) => goal.status === "Achieved")
@@ -159,8 +144,8 @@ export default function BudgetsPage() {
                   <DialogTitle>Crear Meta de Ahorro</DialogTitle>
                   <DialogDescription>Establece un monto objetivo y fecha límite para tu ahorro</DialogDescription>
                 </DialogHeader>
-                <AddSavingsGoalForm
-                  onCreated={(goal) => setSavingsGoals((current) => [goal, ...current])}
+                <GoalForm
+                  onSaved={(goal) => setSavingsGoals((current) => [goal, ...current])}
                   onClose={() => setIsSavingsDialogOpen(false)}
                 />
               </DialogContent>
@@ -195,6 +180,8 @@ export default function BudgetsPage() {
                         key={goal.id}
                         goal={goal}
                         onOpenContributions={() => setSelectedGoalId(goal.id)}
+                        onEdit={() => setEditingGoalId(goal.id)}
+                        onDelete={() => setDeletingGoalId(goal.id)}
                       />
                     ))}
                   </div>
@@ -213,6 +200,8 @@ export default function BudgetsPage() {
                         key={goal.id}
                         goal={goal}
                         onOpenContributions={() => setSelectedGoalId(goal.id)}
+                        onEdit={() => setEditingGoalId(goal.id)}
+                        onDelete={() => setDeletingGoalId(goal.id)}
                       />
                     ))}
                   </div>
@@ -227,6 +216,32 @@ export default function BudgetsPage() {
               open
               onOpenChange={(open) => !open && setSelectedGoalId(null)}
               onGoalChange={replaceGoal}
+            />
+          )}
+
+          <Dialog open={editingGoal !== null} onOpenChange={(open) => !open && setEditingGoalId(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Editar Meta de Ahorro</DialogTitle>
+                <DialogDescription>Ajustá el nombre, el monto objetivo o la fecha límite de tu meta</DialogDescription>
+              </DialogHeader>
+              {editingGoal && (
+                <GoalForm
+                  key={editingGoal.id}
+                  goal={editingGoal}
+                  onSaved={replaceGoal}
+                  onClose={() => setEditingGoalId(null)}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {deletingGoal && (
+            <DeleteGoalDialog
+              goal={deletingGoal}
+              open
+              onOpenChange={(open) => !open && setDeletingGoalId(null)}
+              onDeleted={(goalId) => setSavingsGoals((current) => current.filter((goal) => goal.id !== goalId))}
             />
           )}
         </TabsContent>
@@ -275,110 +290,5 @@ export default function BudgetsPage() {
         </CardContent>
       </Card>
     </div>
-  )
-}
-
-function AddSavingsGoalForm({
-  onCreated,
-  onClose,
-}: {
-  onCreated: (goal: GoalDto) => void
-  onClose: () => void
-}) {
-  const [name, setName] = useState("")
-  const [targetAmount, setTargetAmount] = useState("")
-  const { preferences } = usePreferences()
-  const [currency, setCurrency] = useState<Currency>(preferences.currency)
-  const [deadline, setDeadline] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    setIsSubmitting(true)
-    try {
-      const goal = await createGoal({
-        name: name.trim(),
-        targetAmount: parseFloat(targetAmount),
-        currency,
-        deadline,
-      })
-      onCreated(goal)
-      toast.success(`Meta "${goal.name}" creada`)
-      onClose()
-    } catch (error) {
-      // Si el validador del backend rechaza la fecha o el monto, el mensaje ya viene en castellano.
-      toastApiError(error, "No se pudo crear la meta.")
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="goal-name">Nombre de la Meta</Label>
-        <Input
-          id="goal-name"
-          placeholder="ej., Fondo de Emergencia"
-          maxLength={GOAL_NAME_MAX_LENGTH}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-      </div>
-
-      <div className="grid grid-cols-3 gap-2">
-        <div className="col-span-2 space-y-2">
-          <Label htmlFor="goal-target">Monto Objetivo</Label>
-          <Input
-            id="goal-target"
-            type="number"
-            placeholder="0.00"
-            step="0.01"
-            min="0.01"
-            value={targetAmount}
-            onChange={(e) => setTargetAmount(e.target.value)}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="goal-currency">Moneda</Label>
-          <Select value={currency} onValueChange={(value) => setCurrency(value as Currency)}>
-            <SelectTrigger id="goal-currency">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(currencyLabels).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="goal-deadline">Fecha Límite</Label>
-        <Input
-          id="goal-deadline"
-          type="date"
-          min={todayLocal()}
-          value={deadline}
-          onChange={(e) => setDeadline(e.target.value)}
-          required
-        />
-      </div>
-
-      <div className="flex gap-2 justify-end pt-4">
-        <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Guardando..." : "Crear Meta"}
-        </Button>
-      </div>
-    </form>
   )
 }

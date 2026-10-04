@@ -30,6 +30,12 @@ export interface CreateGoalPayload {
   deadline: string
 }
 
+export interface UpdateGoalPayload {
+  name: string
+  targetAmount: number
+  deadline: string
+}
+
 export interface GoalContributionDto {
   id: string
   goalId: string
@@ -58,6 +64,14 @@ export function listGoals(signal?: AbortSignal): Promise<GoalDto[]> {
 
 export function createGoal(payload: CreateGoalPayload, signal?: AbortSignal): Promise<GoalDto> {
   return api.post<GoalDto>("/api/goals", payload, { signal })
+}
+
+export function updateGoal(goalId: string, payload: UpdateGoalPayload, signal?: AbortSignal): Promise<GoalDto> {
+  return api.put<GoalDto>(`/api/goals/${goalId}`, payload, { signal })
+}
+
+export function deleteGoal(goalId: string, signal?: AbortSignal): Promise<void> {
+  return api.delete(`/api/goals/${goalId}`, { signal })
 }
 
 export function listContributions(goalId: string, signal?: AbortSignal): Promise<GoalContributionDto[]> {

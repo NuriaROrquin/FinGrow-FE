@@ -1,6 +1,6 @@
 "use client"
 
-import { HandCoinsIcon, TrophyIcon } from "lucide-react"
+import { HandCoinsIcon, PencilIcon, Trash2Icon, TrophyIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,7 +24,17 @@ function describeTimeLeft(goal: GoalDto, deadlineLabel: string): string {
   return `${goal.daysRemaining} días restantes · ${deadlineLabel}`
 }
 
-export function InProgressGoalCard({ goal, onOpenContributions }: { goal: GoalDto; onOpenContributions: () => void }) {
+export function InProgressGoalCard({
+  goal,
+  onOpenContributions,
+  onEdit,
+  onDelete,
+}: {
+  goal: GoalDto
+  onOpenContributions: () => void
+  onEdit: () => void
+  onDelete: () => void
+}) {
   return (
     <Card className={goal.isOverdue ? "border-destructive/50" : undefined}>
       <CardHeader>
@@ -38,11 +48,19 @@ export function InProgressGoalCard({ goal, onOpenContributions }: { goal: GoalDt
               </CardDescription>
             </div>
           </div>
-          {goal.isOverdue ? (
-            <Badge variant="destructive">Vencida</Badge>
-          ) : (
-            <Badge variant="outline">{goal.progressPercentage.toFixed(0)}%</Badge>
-          )}
+          <div className="flex items-center gap-1">
+            {goal.isOverdue ? (
+              <Badge variant="destructive">Vencida</Badge>
+            ) : (
+              <Badge variant="outline">{goal.progressPercentage.toFixed(0)}%</Badge>
+            )}
+            <Button variant="ghost" size="icon" aria-label={`Editar la meta ${goal.name}`} onClick={onEdit}>
+              <PencilIcon className="size-4" />
+            </Button>
+            <Button variant="ghost" size="icon" aria-label={`Eliminar la meta ${goal.name}`} onClick={onDelete}>
+              <Trash2Icon className="size-4" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -66,7 +84,17 @@ export function InProgressGoalCard({ goal, onOpenContributions }: { goal: GoalDt
   )
 }
 
-export function AchievedGoalCard({ goal, onOpenContributions }: { goal: GoalDto; onOpenContributions: () => void }) {
+export function AchievedGoalCard({
+  goal,
+  onOpenContributions,
+  onEdit,
+  onDelete,
+}: {
+  goal: GoalDto
+  onOpenContributions: () => void
+  onEdit: () => void
+  onDelete: () => void
+}) {
   return (
     <Card className="border-success/40 bg-success/5">
       <CardHeader>
@@ -82,7 +110,15 @@ export function AchievedGoalCard({ goal, onOpenContributions }: { goal: GoalDto;
               </CardDescription>
             </div>
           </div>
-          <Badge className="bg-success text-white">Alcanzada</Badge>
+          <div className="flex items-center gap-1">
+            <Badge className="hover:bg-primary">Alcanzada</Badge>
+            <Button variant="ghost" size="icon" aria-label={`Editar la meta ${goal.name}`} onClick={onEdit}>
+              <PencilIcon className="size-4" />
+            </Button>
+            <Button variant="ghost" size="icon" aria-label={`Eliminar la meta ${goal.name}`} onClick={onDelete}>
+              <Trash2Icon className="size-4" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">

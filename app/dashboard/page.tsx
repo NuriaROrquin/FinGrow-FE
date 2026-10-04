@@ -22,8 +22,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { EmptyContent } from "@/components/ui/empty"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -44,6 +42,7 @@ import {
   type DashboardSummaryDto,
   type ExpenseCategoryTotalDto,
 } from "@/lib/api"
+import { GoalForm } from "@/components/goals/goal-form"
 import { AddTransactionForm } from "@/components/transactions/add-transaction-form"
 import { PeriodFilter, getCurrentMonthStart, getToday } from "@/components/period-filter"
 import { formatDateText, formatMoney } from "@/lib/format"
@@ -409,30 +408,10 @@ export default function DashboardPage() {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Nueva Meta de Ahorro</DialogTitle>
-                  <DialogDescription>Define tu objetivo de ahorro</DialogDescription>
+                  <DialogTitle>Crear Meta de Ahorro</DialogTitle>
+                  <DialogDescription>Establece un monto objetivo y fecha límite para tu ahorro</DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="goal-name">Nombre de la Meta</Label>
-                    <Input id="goal-name" placeholder="Ej: Vacaciones" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="goal-amount">Monto Objetivo</Label>
-                    <Input id="goal-amount" type="number" placeholder="0.00" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="goal-current">Monto Actual</Label>
-                    <Input id="goal-current" type="number" placeholder="0.00" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="goal-deadline">Fecha Límite</Label>
-                    <Input id="goal-deadline" type="date" />
-                  </div>
-                  <Button className="w-full" onClick={() => setOpenSavings(false)}>
-                    Crear Meta
-                  </Button>
-                </div>
+                <GoalForm onClose={() => setOpenSavings(false)} />
               </DialogContent>
             </Dialog>
 
