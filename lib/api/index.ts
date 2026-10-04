@@ -28,8 +28,8 @@ export {
   type ArticleDto,
   type ArticleFilters,
   type ArticleSummaryDto,
-  type EducationCategory,
 } from "./articles"
+export { type EducationCategory } from "./education"
 export {
   addContribution,
   CONTRIBUTION_NOTE_MAX_LENGTH,
