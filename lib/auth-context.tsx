@@ -25,7 +25,7 @@ interface AuthContextType {
   isAuthenticated: boolean
   isHydrated: boolean
   login: (email: string, password: string, role?: UserRole) => Promise<TwoFactorChallenge | null>
-  completeTwoFactorLogin: (challengeToken: string, code: string) => Promise<void>
+  completeTwoFactorLogin: (challengeToken: string, code: string, role?: UserRole) => Promise<void>
   logout: (redirectTo?: string) => Promise<void>
 }
 
@@ -91,25 +91,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthState(createAuthenticatedState(user))
   }
 
-  const login = async (email: string, password: string, role: UserRole = "empleado") => {
-    if (role === "empresa") {
-      startSession(await loginEmpresa({ email, password }))
-      return null
-    }
+const login = async (email: string, password: string, role: UserRole = "empleado") => {
+  const response =
+    role === "empresa" ? await loginEmpresa({ email, password }) : await loginEmpleado({ email, password })
 
-    const response = await loginEmpleado({ email, password })
-
-    if (isTwoFactorChallenge(response)) {
-      return response
-    }
-
-    startSession(response)
-    return null
+  if (isTwoFactorChallenge(response)) {
+    return response
   }
 
-  const completeTwoFactorLogin = async (challengeToken: string, code: string) => {
-    startSession(await verifyTwoFactorLogin(challengeToken, code))
-  }
+  startSession(response)
+  return null
+}
+
+const completeTwoFactorLogin = async (challengeToken: string, code: string, role: UserRole = "empleado") => {
+  startSession(await verifyTwoFactorLogin(challengeToken, code, role))
+}
 
   const clearSession = useCallback(
     (redirectTo = "/") => {

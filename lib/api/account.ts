@@ -33,3 +33,7 @@ export function setupTwoFactor(): Promise<TwoFactorSetup> {
 export function enableTwoFactor(code: string): Promise<void> {
   return api.post("/account/2fa/enable", { code })
 }
+
+export function disableTwoFactor(code: string): Promise<void> {
+  return api.post("/account/2fa/disable", { code })
+}

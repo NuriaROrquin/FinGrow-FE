@@ -1,39 +1,99 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import Link from "next/link"
-import Image from "next/image"
-import { useRouter } from "next/navigation"
-import { Building2, Mail, Lock, ArrowLeft } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { useAuth } from "@/lib/auth-context"
-import { toastApiError } from "@/lib/api"
+import { useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { Building2, Mail, Lock, ArrowLeft, ShieldCheck } from "lucide-react";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useAuth } from "@/lib/auth-context";
+import {
+  isApiError,
+  toastApiError,
+  TWO_FACTOR_CODE_LENGTH,
+  type TwoFactorChallenge,
+} from "@/lib/api";
 
 export default function EmpresaLoginPage() {
-  const router = useRouter()
-  const { login } = useAuth()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter();
+  const { login, completeTwoFactorLogin } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [challenge, setChallenge] = useState<TwoFactorChallenge | null>(null);
+  const [code, setCode] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      await login(email, password, "empresa");
+      const pendingChallenge = await login(email, password, "empresa");
+
+      if (pendingChallenge) {
+        setChallenge(pendingChallenge);
+        setCode("");
+        return;
+      }
+
       router.push("/dashboard/company");
     } catch (error) {
-      toastApiError(error, error instanceof Error ? error.message : "Intentá nuevamente.")
+      toastApiError(
+        error,
+        error instanceof Error ? error.message : "Intentá nuevamente.",
+        { showCode: false },
+      );
     } finally {
       setIsLoading(false);
     }
-  }
+  };
+
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!challenge || code.length !== TWO_FACTOR_CODE_LENGTH) return;
+
+    setIsLoading(true);
+
+    try {
+      await completeTwoFactorLogin(challenge.challengeToken, code, "empresa");
+      router.push("/dashboard/company");
+    } catch (error) {
+      toastApiError(
+        error,
+        "No pudimos verificar el código. Intentá nuevamente.",
+        { showCode: false },
+      );
+      setCode("");
+
+      if (isApiError(error) && error.code === "Auth.DesafioInvalido") {
+        backToCredentials();
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const backToCredentials = () => {
+    setChallenge(null);
+    setCode("");
+    setPassword("");
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
@@ -51,82 +111,158 @@ export default function EmpresaLoginPage() {
         <div className="text-center mb-8">
           <div className="flex flex-col items-center justify-center gap-3 mb-4">
             <Image
-                src="/9.png"
-                alt="FinGrow Logo"
-                width={60}
-                height={40}
-                className="object-contain"
-                priority
+              src="/9.png"
+              alt="FinGrow Logo"
+              width={60}
+              height={40}
+              className="object-contain"
+              priority
             />
-            <h1 className="text-4xl font-bold text-secondary-foreground">FinGrow</h1>
+            <h1 className="text-4xl font-bold text-secondary-foreground">
+              FinGrow
+            </h1>
           </div>
           <p className="text-muted-foreground">Portal Empresarial</p>
         </div>
 
         {/* Login Card */}
-        <Card>
-          <CardHeader className="space-y-1">
-            <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <Building2 className="h-8 w-8 text-primary"/>
-            </div>
-            <CardTitle className="text-2xl text-center">Acceso Empresarial</CardTitle>
-            <CardDescription className="text-center">Ingresa las credenciales de tu empresa</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Correo Corporativo</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="admin@empresa.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10"
-                    required
-                  />
-                </div>
+        {challenge ? (
+          <Card>
+            <CardHeader className="space-y-1">
+              <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <ShieldCheck className="h-8 w-8 text-primary" />
               </div>
+              <CardTitle className="text-2xl text-center">
+                Verificación en dos pasos
+              </CardTitle>
+              <CardDescription className="text-center">
+                Ingresá el código de 6 dígitos que muestra tu app de
+                autenticación
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleVerifyCode} className="space-y-6">
+                <div className="flex justify-center">
+                  <InputOTP
+                    id="two-factor-code"
+                    maxLength={TWO_FACTOR_CODE_LENGTH}
+                    inputMode="numeric"
+                    pattern="^[0-9]+$"
+                    autoFocus
+                    value={code}
+                    onChange={setCode}
+                  >
+                    <InputOTPGroup>
+                      {Array.from(
+                        { length: TWO_FACTOR_CODE_LENGTH },
+                        (_, index) => (
+                          <InputOTPSlot key={index} index={index} />
+                        ),
+                      )}
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Contraseña</Label>
-                  <Link href="/recuperar-password" className="text-xs text-primary hover:underline">
-                    ¿Olvidaste tu contraseña?
-                  </Link>
-                </div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10"
-                    required
-                  />
-                </div>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  size="lg"
+                  disabled={isLoading || code.length !== TWO_FACTOR_CODE_LENGTH}
+                >
+                  {isLoading ? "Verificando..." : "Verificar"}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full"
+                  onClick={backToCredentials}
+                  disabled={isLoading}
+                >
+                  Volver
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader className="space-y-1">
+              <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <Building2 className="h-8 w-8 text-primary" />
               </div>
+              <CardTitle className="text-2xl text-center">
+                Acceso Empresarial
+              </CardTitle>
+              <CardDescription className="text-center">
+                Ingresa las credenciales de tu empresa
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Correo Corporativo</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="admin@empresa.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
 
-              <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-                {isLoading ? "Iniciando sesión..." : "Acceder al Panel"}
-              </Button>
-            </form>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password">Contraseña</Label>
+                    <Link
+                      href="/recuperar-password"
+                      className="text-xs text-primary hover:underline"
+                    >
+                      ¿Olvidaste tu contraseña?
+                    </Link>
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
 
-            <div className="mt-6 text-center text-sm text-muted-foreground">
-              ¿No tienes acceso? Contacta al equipo de FinGrow para obtener credenciales empresariales.
-            </div>
-          </CardContent>
-        </Card>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  size="lg"
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Iniciando sesión..." : "Acceder al Panel"}
+                </Button>
+              </form>
+
+              <div className="mt-6 text-center text-sm text-muted-foreground">
+                ¿No tienes acceso? Contacta al equipo de FinGrow para obtener
+                credenciales empresariales.
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Demo Info */}
         <Card className="mt-4 bg-muted/50">
           <CardContent className="pt-6">
             <p className="text-xs text-muted-foreground text-center">
-              <strong>Demo:</strong> Usa cualquier email corporativo y contraseña para acceder
+              <strong>Demo:</strong> Usa cualquier email corporativo y
+              contraseña para acceder
             </p>
           </CardContent>
         </Card>
@@ -153,5 +289,5 @@ export default function EmpresaLoginPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

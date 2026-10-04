@@ -32,6 +32,7 @@ export {
 } from "./auth"
 export {
   changePassword,
+  disableTwoFactor,
   enableTwoFactor,
   getTwoFactorStatus,
   PASSWORD_MIN_LENGTH,

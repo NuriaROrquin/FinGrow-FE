@@ -609,12 +609,8 @@ export default function SettingsPage() {
                 </Button>
               </form>
 
-              {role === "empleado" && (
-                <>
-                  <Separator />
-                  <TwoFactorCard />
-                </>
-              )}
+              <Separator />
+              <TwoFactorCard />
 
               <Separator />
 
