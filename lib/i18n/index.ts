@@ -19,7 +19,11 @@ const messagesByLanguage: Record<Language, Messages> = { es, en, pt }
  */
 export function useMessages(): Messages {
   const { preferences } = usePreferences()
-  return messagesByLanguage[preferences.language]
+  return messagesFor(preferences.language)
+}
+
+export function messagesFor(language: Language): Messages {
+  return messagesByLanguage[language]
 }
 
 export type { Messages }

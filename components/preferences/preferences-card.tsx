@@ -12,7 +12,7 @@ import { toastApiError } from "@/lib/api/notify"
 import type { DateFormat, Language, Preferences, ThemePreference } from "@/lib/api/preferences"
 import type { Currency } from "@/lib/api/transactions"
 import { useAuth } from "@/lib/auth-context"
-import { useMessages } from "@/lib/i18n"
+import { messagesFor, useMessages } from "@/lib/i18n"
 import { usePreferences } from "@/lib/preferences-context"
 
 export function PreferencesCard() {
@@ -42,7 +42,8 @@ function EmployeePreferencesForm() {
 
     try {
       await savePreferences(draft)
-      toast.success(t.preferences.saved)
+      // El aviso va en el idioma recién elegido, no en el que tenía la pantalla al guardar.
+      toast.success(messagesFor(draft.language).preferences.saved)
     } catch (error) {
       toastApiError(error, t.preferences.saveFailed, { showCode: false })
     } finally {
