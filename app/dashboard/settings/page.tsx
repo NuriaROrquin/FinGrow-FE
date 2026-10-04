@@ -11,7 +11,6 @@ import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
-  UserIcon,
   BellIcon,
   ShieldIcon,
   LockIcon,
@@ -26,6 +25,7 @@ import {
 import { useAuth } from "@/lib/auth-context"
 import { useMessages } from "@/lib/i18n"
 import { changePassword, PASSWORD_MIN_LENGTH, toastApiError } from "@/lib/api"
+import { ProfileCard } from "@/components/profile/profile-card"
 import { TwoFactorCard } from "@/components/security/two-factor-card"
 import { PreferencesCard } from "@/components/preferences/preferences-card"
 import { MercadoPagoCard } from "@/components/integrations/mercado-pago-card"
@@ -123,66 +123,7 @@ export default function SettingsPage() {
         {/* Profile Tab */}
         <TabsContent value="profile" className="space-y-4">
           {role === "empleado" ? (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <UserIcon className="size-5" />
-                  <div>
-                    <CardTitle>Información Personal</CardTitle>
-                    <CardDescription>Actualiza tus datos personales</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">Nombre</Label>
-                    <Input id="firstName" placeholder="Juan" defaultValue="Juan" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Apellido</Label>
-                    <Input id="lastName" placeholder="Pérez" defaultValue="Pérez" />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">Correo Electrónico</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="juan.perez@ejemplo.com"
-                    defaultValue="juan.perez@ejemplo.com"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Número de Teléfono</Label>
-                  <Input id="phone" type="tel" placeholder="+54 11 1234-5678" />
-                </div>
-
-                <Separator />
-
-                <div className="space-y-2">
-                  <Label htmlFor="dni">DNI</Label>
-                  <Input id="dni" placeholder="12345678" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="birthDate">Fecha de Nacimiento</Label>
-                  <Input id="birthDate" type="date" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="address">Dirección</Label>
-                  <Input id="address" placeholder="Av. Corrientes 1234, CABA" />
-                </div>
-
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button variant="outline">Cancelar</Button>
-                  <Button>Guardar Cambios</Button>
-                </div>
-              </CardContent>
-            </Card>
+            <ProfileCard />
           ) : (
             <Card>
               <CardHeader>
