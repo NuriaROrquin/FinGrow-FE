@@ -56,6 +56,7 @@ export {
   courseProgressStatusLabels,
   getCourse,
   listCourses,
+  rateCourse,
   type CourseDetailDto,
   type CourseFilters,
   type CourseLevel,
