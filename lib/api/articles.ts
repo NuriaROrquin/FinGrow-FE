@@ -1,5 +1,6 @@
 import { api } from "./client"
 import type { EducationCategory } from "./education"
+import type { InvestmentType } from "./investments"
 
 export const educationCategoryLabels: Record<EducationCategory, string> = {
   Basics: "Básico",
@@ -18,7 +19,7 @@ export interface ArticleSummaryDto {
   summary: string
   category: EducationCategory
   readingTimeMinutes: number
-  relatedInvestmentType: string | null
+  relatedInvestmentType: InvestmentType | null
   publishedAt: string
 }
 
