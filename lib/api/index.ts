@@ -118,6 +118,7 @@ export {
   deleteInvestment,
   investmentSortFieldLabels,
   investmentTypeLabels,
+  isPricedPerNominal,
   isQuotedOnExchange,
   listInvestments,
   updateInvestment,
@@ -135,6 +136,7 @@ export {
   type SortDirection,
 } from "./investments"
 export { getSavingsVsGoals, type SavingsVsGoalsDto, type SavingsVsGoalsMonthDto } from "./reports"
+export { getSecurityPrice, isQuotedCurrency, quotedCurrencies, type SecurityPriceDto } from "./security-prices"
 export {
   getDashboardSummary,
   getExpensesByCategory,

@@ -54,6 +54,7 @@ import {
   getMepQuote,
   getPortfolioSummary,
   investmentTypeLabels,
+  isPricedPerNominal,
   listInvestments,
   toastApiError,
   updateInvestment,
@@ -94,9 +95,15 @@ const educationalTips = [
 
 const investmentTypeColors: Record<InvestmentType, string> = {
   Stock: "#3b5998",
+  Cedear: "#0ea5e9",
   Etf: "#10b981",
   Bond: "#f59e0b",
+  CorporateBond: "#f97316",
+  TreasuryBill: "#84cc16",
   MutualFund: "#8b5cf6",
+  FixedTermDeposit: "#64748b",
+  Repo: "#14b8a6",
+  RemuneratedAccount: "#ec4899",
   Crypto: "#ef4444",
 }
 
@@ -139,7 +146,13 @@ function formatPercentage(value: number): string {
 }
 
 function formatQuantity(quantity: number, type: InvestmentType): string {
-  const unit = type === "Bond" ? (quantity === 1 ? "nominal" : "nominales") : quantity === 1 ? "unidad" : "unidades"
+  const unit = isPricedPerNominal(type)
+    ? quantity === 1
+      ? "nominal"
+      : "nominales"
+    : quantity === 1
+      ? "unidad"
+      : "unidades"
   return `${quantity.toLocaleString("es-AR", { maximumFractionDigits: 6 })} ${unit}`
 }
 
