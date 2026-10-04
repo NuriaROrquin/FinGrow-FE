@@ -27,6 +27,7 @@ interface AuthContextType {
   login: (email: string, password: string, role?: UserRole) => Promise<TwoFactorChallenge | null>
   completeTwoFactorLogin: (challengeToken: string, code: string, role?: UserRole) => Promise<void>
   logout: (redirectTo?: string) => Promise<void>
+  refreshUser: () => Promise<void>
 }
 
 interface AuthState {
@@ -107,6 +108,12 @@ const completeTwoFactorLogin = async (challengeToken: string, code: string, role
   startSession(await verifyTwoFactorLogin(challengeToken, code, role))
 }
 
+  // El nombre viaja dentro del token: después de editar el perfil hay que renovar la sesión
+  // para que GET /session deje de devolver el anterior.
+  const refreshUser = async () => {
+    startSession(await refreshSession())
+  }
+
   const clearSession = useCallback(
     (redirectTo = "/") => {
       clearStoredSession()
@@ -182,6 +189,7 @@ const completeTwoFactorLogin = async (challengeToken: string, code: string, role
         login,
         completeTwoFactorLogin,
         logout,
+        refreshUser,
       }}
     >
       {children}

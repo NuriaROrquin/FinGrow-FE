@@ -31,16 +31,30 @@ export {
   type TwoFactorChallenge,
 } from "./auth"
 export {
+  ADDRESS_MAX_LENGTH,
   changePassword,
   disableTwoFactor,
   enableTwoFactor,
+  FULL_NAME_MAX_LENGTH,
+  FULL_NAME_MIN_LENGTH,
+  getProfile,
   getTwoFactorStatus,
+  NATIONAL_ID_MAX_LENGTH,
+  NATIONAL_ID_MIN_LENGTH,
   PASSWORD_MIN_LENGTH,
+  PHONE_NUMBER_MAX_DIGITS,
+  PHONE_NUMBER_MAX_LENGTH,
+  PHONE_NUMBER_MIN_DIGITS,
+  PROFILE_MAX_AGE,
+  PROFILE_MIN_AGE,
   setupTwoFactor,
   TWO_FACTOR_CODE_LENGTH,
+  updateProfile,
   type ChangePasswordPayload,
+  type EmployeeProfile,
   type TwoFactorSetup,
   type TwoFactorStatus,
+  type UpdateProfilePayload,
 } from "./account"
 export { getApiBaseUrl } from "./config"
 export {
