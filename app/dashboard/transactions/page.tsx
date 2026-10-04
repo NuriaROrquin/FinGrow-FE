@@ -77,6 +77,7 @@ import {
   listTransactions,
   paymentMethodLabels,
   transactionStatusLabels,
+  type Currency,
   type PaymentMethod,
   type TransactionDto,
   type TransactionListStatus,
@@ -93,6 +94,8 @@ import {
   getCurrentMonthStart,
   getToday,
 } from "@/components/period-filter"
+import { formatDate, formatMoney } from "@/lib/format"
+import { usePreferences } from "@/lib/preferences-context"
 
 const emptyTransactionsResponse: TransactionsResponse = {
   items: [],
@@ -143,7 +146,8 @@ export default function TransactionsPage() {
   const [isStatusPickerOpen, setIsStatusPickerOpen] = useState(false)
   const [dateFrom, setDateFrom] = useState(() => getCurrentMonthStart())
   const [dateTo, setDateTo] = useState(() => getToday())
-  const [summaryCurrency, setSummaryCurrency] = useState<"ARS" | "USD">("ARS")
+  const { preferences } = usePreferences()
+  const [summaryCurrency, setSummaryCurrency] = useState<"ARS" | "USD">(preferences.currency === "USD" ? "USD" : "ARS")
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
@@ -442,9 +446,7 @@ export default function TransactionsPage() {
     ARS: totalIncome.ARS - totalExpense.ARS,
     USD: totalIncome.USD - totalExpense.USD,
   }
-  // Función de formateo consistente
-  const formatCurrency = (amount: number, currency: string) =>
-    `${currency === "USD" ? "US$" : "$"}${amount.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`
+  const formatCurrency = (amount: number, currency: Currency) => formatMoney(amount, currency)
 
   const handleExport = async () => {
     if (isExporting) return
@@ -1019,10 +1021,7 @@ export default function TransactionsPage() {
                   <AlertDialogTitle>¿Eliminar transacción?</AlertDialogTitle>
                   <AlertDialogDescription>
                     Vas a eliminar la transacción de {transactionToDelete?.description ?? ""} por {transactionToDelete
-                      ? `${transactionToDelete.currency === "USD" ? "US$" : "$"}${transactionToDelete.amount.toLocaleString("es-AR", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })} ${transactionToDelete.currency}`
+                      ? formatMoney(transactionToDelete.amount, transactionToDelete.currency)
                       : ""}. Esta acción no se puede deshacer.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
@@ -1381,11 +1380,7 @@ export default function TransactionsPage() {
                     return (
                       <TableRow key={transaction.id}>
                         <TableCell className={`${transactionTableCellClassName} font-medium`}>
-                          {new Date(transaction.occurredOn).toLocaleDateString("es-ES", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
+                          {formatDate(transaction.occurredOn)}
                         </TableCell>
                         <TableCell className={`${transactionTableCellClassName} max-w-[240px]`}>
                           <span className="block truncate" title={transaction.description}>
@@ -1426,11 +1421,7 @@ export default function TransactionsPage() {
                             className={`font-semibold ${transaction.type === "Income" ? "text-emerald-500 dark:text-emerald-300" : "text-rose-500 dark:text-rose-300"}`}
                           >
                             {transaction.type === "Income" ? "+" : "-"}
-                            {transaction.currency === "USD" ? "US$" : "$"}
-                            {Math.abs(transaction.amount).toLocaleString("es-AR", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })} {transaction.currency}
+                            {formatMoney(Math.abs(transaction.amount), transaction.currency)}
                           </span>
                         </TableCell>
                         <TableCell className={transactionTableCellClassName}>

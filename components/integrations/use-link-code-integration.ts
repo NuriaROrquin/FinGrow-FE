@@ -13,10 +13,12 @@ import {
   type IntegrationProvider,
   type LinkCode,
 } from "@/lib/api"
+import { useMessages } from "@/lib/i18n"
 
 const LINK_POLL_INTERVAL_MS = 5_000
 
 export function useLinkCodeIntegration(provider: IntegrationProvider, name: string) {
+  const t = useMessages()
   const [integration, setIntegration] = useState<Integration | null>(null)
   const [linkCode, setLinkCode] = useState<LinkCode | null>(null)
   const [generating, setGenerating] = useState(false)
@@ -32,12 +34,12 @@ export function useLinkCodeIntegration(provider: IntegrationProvider, name: stri
       .then(setIntegration)
       .catch((error) => {
         if (controller.signal.aborted) return
-        toastApiError(error, `No pudimos consultar el estado de ${name}.`)
+        toastApiError(error, t.linkCode.statusFailed(name))
         setIntegration(NOT_LINKED)
       })
 
     return () => controller.abort()
-  }, [provider, name])
+  }, [provider, name, t])
 
   const awaitingLink = linkCode !== null && !expired
   const linkedAtBeforeCode = integration?.linkedAt ?? null
@@ -52,7 +54,7 @@ export function useLinkCodeIntegration(provider: IntegrationProvider, name: stri
         if (current.linked && current.linkedAt !== linkedAtBeforeCode) {
           setIntegration(current)
           setLinkCode(null)
-          toast.success(`${name} vinculado`)
+          toast.success(t.linkCode.linkedToast(name))
         }
       } catch {
         return
@@ -63,14 +65,14 @@ export function useLinkCodeIntegration(provider: IntegrationProvider, name: stri
       clearInterval(interval)
       controller.abort()
     }
-  }, [awaitingLink, linkedAtBeforeCode, provider, name])
+  }, [awaitingLink, linkedAtBeforeCode, provider, name, t])
 
   const generateCode = async () => {
     setGenerating(true)
     try {
       setLinkCode(await requestLinkCode(provider))
     } catch (error) {
-      toastApiError(error, "No pudimos generar el código. Intentá de nuevo.")
+      toastApiError(error, t.linkCode.codeFailed)
     } finally {
       setGenerating(false)
     }
@@ -82,9 +84,9 @@ export function useLinkCodeIntegration(provider: IntegrationProvider, name: stri
       await unlinkIntegration(provider)
       setIntegration(NOT_LINKED)
       setLinkCode(null)
-      toast.success(`${name} desvinculado`)
+      toast.success(t.linkCode.unlinkedToast(name))
     } catch (error) {
-      toastApiError(error, `No pudimos desvincular ${name}. Intentá de nuevo.`)
+      toastApiError(error, t.linkCode.unlinkFailed(name))
     } finally {
       setUnlinking(false)
     }

@@ -17,6 +17,7 @@ import {
   type ArticleSummaryDto,
   type EducationCategory,
 } from "@/lib/api"
+import { formatDateText } from "@/lib/format"
 
 const ALL = "all"
 
@@ -163,10 +164,7 @@ export function ArticlesCatalog() {
                         {article.readingTimeMinutes} min de lectura
                       </span>
                       <span>
-                        {new Date(article.publishedAt).toLocaleDateString("es-AR", {
-                          month: "short",
-                          day: "numeric",
-                        })}
+                        {formatDateText(article.publishedAt, { month: "short", day: "numeric" })}
                       </span>
                     </div>
                   </div>

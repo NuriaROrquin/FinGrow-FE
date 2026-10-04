@@ -34,6 +34,8 @@ import {
   type GoalContributionDto,
   type GoalDto,
 } from "@/lib/api"
+import type { Currency } from "@/lib/api/transactions"
+import { formatDate, formatMoney } from "@/lib/format"
 
 function todayLocal(): string {
   const now = new Date()
@@ -41,16 +43,8 @@ function todayLocal(): string {
   return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10)
 }
 
-function formatDate(value: string): string {
-  return new Date(`${value}T00:00:00`).toLocaleDateString("es-AR", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  })
-}
-
-function formatAmount(amount: number, currency: string): string {
-  return `$${amount.toLocaleString("es-AR")} ${currency}`
+function formatAmount(amount: number, currency: Currency): string {
+  return formatMoney(amount, currency)
 }
 
 async function fetchGoalState(goalId: string, signal?: AbortSignal) {

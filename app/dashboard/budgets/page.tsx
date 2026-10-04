@@ -26,6 +26,7 @@ import { MonthlyBudgetSection } from "@/components/budgets/monthly-budget-sectio
 import { formatAmount } from "@/components/budgets/budget-month"
 import { createGoal, GOAL_NAME_MAX_LENGTH, listGoals, toastApiError, type BudgetDto, type GoalDto } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
+import { usePreferences } from "@/lib/preferences-context"
 
 const currencyLabels: Record<Currency, string> = {
   ARS: "ARS ($)",
@@ -286,7 +287,8 @@ function AddSavingsGoalForm({
 }) {
   const [name, setName] = useState("")
   const [targetAmount, setTargetAmount] = useState("")
-  const [currency, setCurrency] = useState<Currency>("ARS")
+  const { preferences } = usePreferences()
+  const [currency, setCurrency] = useState<Currency>(preferences.currency)
   const [deadline, setDeadline] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
