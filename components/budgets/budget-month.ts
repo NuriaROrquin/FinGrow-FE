@@ -1,4 +1,5 @@
 import type { Currency, ExpenseCategory } from "@/lib/api/transactions"
+import { formatDateText, formatMoney, formatNumber } from "@/lib/format"
 
 export interface YearMonth {
   year: number
@@ -16,11 +17,11 @@ export function shiftMonth({ year, month }: YearMonth, delta: number): YearMonth
 }
 
 export function formatYearMonth({ year, month }: YearMonth): string {
-  return new Date(year, month - 1, 1).toLocaleDateString("es-AR", { month: "long", year: "numeric" })
+  return formatDateText(new Date(year, month - 1, 1), { month: "long", year: "numeric" })
 }
 
-export function formatAmount(amount: number, currency: string | null): string {
-  return `$${amount.toLocaleString("es-AR")}${currency ? ` ${currency}` : ""}`
+export function formatAmount(amount: number, currency: Currency | null): string {
+  return currency ? formatMoney(amount, currency) : formatNumber(amount)
 }
 
 export const expenseCategoryIcons: Record<ExpenseCategory, string> = {

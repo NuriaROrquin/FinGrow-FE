@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { format, parseISO } from "date-fns"
 import { toast } from "sonner"
 import { Card, CardAction, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -68,6 +67,7 @@ import {
   type PortfolioSummaryDto,
 } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
+import { formatDate, formatDateTime, formatMoney, formatNumber } from "@/lib/format"
 
 const educationalTips = [
   {
@@ -132,25 +132,13 @@ interface ConsolidatedTotal {
 
 type MepStatus = "loading" | "ready" | "unavailable"
 
-function formatMoney(amount: number, currency: Currency): string {
-  return new Intl.NumberFormat("es-AR", { style: "currency", currency }).format(amount)
-}
-
 function formatSignedMoney(amount: number, currency: Currency): string {
   return `${amount < 0 ? "-" : "+"}${formatMoney(Math.abs(amount), currency)}`
 }
 
 function formatPercentage(value: number): string {
-  const formatted = value.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const formatted = formatNumber(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   return `${value < 0 ? "" : "+"}${formatted}%`
-}
-
-function formatDate(isoDate: string): string {
-  return format(parseISO(isoDate), "dd/MM/yyyy")
-}
-
-function formatDateTime(isoDateTime: string): string {
-  return format(parseISO(isoDateTime), "dd/MM/yyyy HH:mm")
 }
 
 function listCurrencies(currencies: Currency[]): string {

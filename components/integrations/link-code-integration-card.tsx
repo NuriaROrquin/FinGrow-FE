@@ -27,6 +27,7 @@ import type { Integration, IntegrationProvider, LinkCode } from "@/lib/api"
 import { useMessages } from "@/lib/i18n"
 
 import { useLinkCodeIntegration } from "./use-link-code-integration"
+import { formatDateText } from "@/lib/format"
 
 export interface LinkCodeIntegrationCardProps {
   provider: IntegrationProvider
@@ -181,7 +182,7 @@ export function LinkCodeIntegrationCard({
 }
 
 export function formatLinkedDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })
+  return formatDateText(iso, { day: "numeric", month: "long", year: "numeric" })
 }
 
 function formatCode(code: string): string {

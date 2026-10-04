@@ -5,6 +5,7 @@ import { useTheme } from "next-themes"
 import { toastApiError } from "@/lib/api/notify"
 import { defaultPreferences, getPreferences, updatePreferences, type Preferences } from "@/lib/api/preferences"
 import { useAuth } from "@/lib/auth-context"
+import { setRegionalPreferences } from "@/lib/format"
 import { es } from "@/lib/i18n/es"
 
 interface PreferencesContextType {
@@ -58,6 +59,10 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 
     return () => controller.abort()
   }, [isHydrated, owner, setTheme])
+
+  // Se aplica durante el render y no en un efecto: así los hijos que se dibujan en esta misma
+  // pasada ya formatean montos y fechas con las preferencias nuevas.
+  setRegionalPreferences(preferences.language, preferences.dateFormat)
 
   useEffect(() => {
     document.documentElement.lang = preferences.language

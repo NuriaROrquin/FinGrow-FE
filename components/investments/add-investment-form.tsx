@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useEffect, useState } from "react"
-import { format, parseISO } from "date-fns"
+import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -30,6 +30,7 @@ import {
   type SecurityPriceDto,
 } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
+import { formatDateText, formatMoney } from "@/lib/format"
 
 const QUOTE_DEBOUNCE_MS = 400
 
@@ -117,24 +118,21 @@ function normalizeSymbol(symbol: string, market: QuoteMarket | null): string {
   return market === "MutualFund" ? symbol.trim().replace(/\s+/g, " ") : symbol.trim().toUpperCase()
 }
 
-function formatMoney(amount: number, currency: Currency): string {
-  return new Intl.NumberFormat("es-AR", { style: "currency", currency }).format(amount)
-}
 
 function formatUnitPrice(amount: number, currency: Currency): string {
   const digits = amount >= 1 ? { minimumFractionDigits: 2, maximumFractionDigits: 6 } : { maximumSignificantDigits: 6 }
 
-  return new Intl.NumberFormat("es-AR", { style: "currency", currency, ...digits }).format(amount)
+  return formatMoney(amount, currency, digits)
 }
 
 function pricedOnLabel(price: SecurityPriceDto): string {
   return price.pricedOn === todayForDateInput()
     ? `${price.source}, hoy`
-    : `${price.source}, al ${format(parseISO(price.pricedOn), "dd/MM")}`
+    : `${price.source}, al ${formatDateText(price.pricedOn, { day: "2-digit", month: "2-digit" })}`
 }
 
 function quotedOnText(price: SecurityPriceDto): string {
-  return price.pricedOn === todayForDateInput() ? "de hoy" : `del ${format(parseISO(price.pricedOn), "dd/MM")}`
+  return price.pricedOn === todayForDateInput() ? "de hoy" : `del ${formatDateText(price.pricedOn, { day: "2-digit", month: "2-digit" })}`
 }
 
 function roundToCents(amount: number): number {

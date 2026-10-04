@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { educationCategoryLabels, getArticle, isApiError, toastApiError, type ArticleDto } from "@/lib/api"
+import { formatDateText } from "@/lib/format"
 
 const BACK_TO_ARTICLES = "/dashboard/education?tab=articles"
 
@@ -87,11 +88,7 @@ export default function ArticlePage() {
               {article.readingTimeMinutes} min de lectura
             </span>
             <span>
-              {new Date(article.publishedAt).toLocaleDateString("es-AR", {
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-              })}
+              {formatDateText(article.publishedAt, { month: "long", day: "numeric", year: "numeric" })}
             </span>
           </div>
         </div>
