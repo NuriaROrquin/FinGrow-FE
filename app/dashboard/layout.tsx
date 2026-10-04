@@ -42,6 +42,7 @@ import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { CompanyProvider } from "@/lib/company-context"
+import { usePreferences } from "@/lib/preferences-context"
 import { useEffect } from "react"
 
 const empleadoNavigation = [
@@ -63,6 +64,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname()
   const router = useRouter()
   const { role, userName, logout, isAuthenticated, isHydrated } = useAuth()
+  const { isReady: preferencesReady } = usePreferences()
 
   // Protección de rutas según el rol
   useEffect(() => {
@@ -100,7 +102,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     (role === "empresa" && isEmployeeRoute) ||
     (role === "empleado" && isCompanyRoute)
 
-  if (!isHydrated || !isAuthenticated || hasInvalidRoleRoute) {
+  if (!isHydrated || !isAuthenticated || hasInvalidRoleRoute || !preferencesReady) {
     return <div className="min-h-screen bg-background" />
   }
 

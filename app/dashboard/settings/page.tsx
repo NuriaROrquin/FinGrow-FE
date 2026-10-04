@@ -14,8 +14,6 @@ import {
   UserIcon,
   BellIcon,
   ShieldIcon,
-  PaletteIcon,
-  DollarSignIcon,
   LockIcon,
   TrashIcon,
   BuildingIcon,
@@ -28,17 +26,16 @@ import {
 import { useAuth } from "@/lib/auth-context"
 import { changePassword, PASSWORD_MIN_LENGTH, toastApiError } from "@/lib/api"
 import { TwoFactorCard } from "@/components/security/two-factor-card"
+import { PreferencesCard } from "@/components/preferences/preferences-card"
 import { MercadoPagoCard } from "@/components/integrations/mercado-pago-card"
 import { TelegramCard } from "@/components/integrations/telegram-card"
 import { WhatsAppCard } from "@/components/integrations/whatsapp-card"
-import { useTheme } from "next-themes"
 import { useEffect, useState, type FormEvent } from "react"
 import { toast as sonnerToast } from "sonner"
 import { useToast } from "@/hooks/use-toast"
 
 export default function SettingsPage() {
   const { role, logout } = useAuth()
-  const { theme, setTheme } = useTheme()
   const { toast } = useToast()
   const [mounted, setMounted] = useState(false)
 
@@ -661,116 +658,7 @@ export default function SettingsPage() {
 
         {/* Preferences Tab */}
         <TabsContent value="preferences" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <PaletteIcon className="size-5" />
-                <div>
-                  <CardTitle>Apariencia</CardTitle>
-                  <CardDescription>Personaliza cómo se ve la aplicación</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="theme">Tema</Label>
-                <Select value={theme} onValueChange={setTheme}>
-                  <SelectTrigger id="theme">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="light">Claro</SelectItem>
-                    <SelectItem value="dark">Oscuro</SelectItem>
-                    <SelectItem value="system">Sistema</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  {theme === "system"
-                    ? "El tema se ajusta automáticamente según la configuración de tu sistema"
-                    : theme === "dark"
-                    ? "Tema oscuro activado"
-                    : "Tema claro activado"}
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="language">Idioma</Label>
-                <Select defaultValue="es">
-                  <SelectTrigger id="language">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="es">Español</SelectItem>
-                    <SelectItem value="en">Inglés</SelectItem>
-                    <SelectItem value="pt">Portugués</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <DollarSignIcon className="size-5" />
-                <div>
-                  <CardTitle>Preferencias Financieras</CardTitle>
-                  <CardDescription>Configura tus ajustes financieros</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="currency">Moneda</Label>
-                <Select defaultValue="ars">
-                  <SelectTrigger id="currency">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ars">ARS ($)</SelectItem>
-                    <SelectItem value="usd">USD ($)</SelectItem>
-                    <SelectItem value="eur">EUR (€)</SelectItem>
-                    <SelectItem value="brl">BRL (R$)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="dateFormat">Formato de Fecha</Label>
-                <Select defaultValue="dmy">
-                  <SelectTrigger id="dateFormat">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="dmy">DD/MM/AAAA</SelectItem>
-                    <SelectItem value="mdy">MM/DD/AAAA</SelectItem>
-                    <SelectItem value="ymd">AAAA-MM-DD</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {role === "empleado" && (
-                <div className="space-y-2">
-                  <Label htmlFor="fiscalYear">Inicio de Año Fiscal</Label>
-                  <Select defaultValue="jan">
-                    <SelectTrigger id="fiscalYear">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="jan">Enero</SelectItem>
-                      <SelectItem value="apr">Abril</SelectItem>
-                      <SelectItem value="jul">Julio</SelectItem>
-                      <SelectItem value="oct">Octubre</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2 pt-4">
-                <Button>Guardar Preferencias</Button>
-              </div>
-            </CardContent>
-          </Card>
+          <PreferencesCard />
         </TabsContent>
       </Tabs>
     </div>
