@@ -2,7 +2,17 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
-import { getSession, loginEmpleado, loginEmpresa, logout as logoutRequest, refreshSession } from "@/lib/api/auth"
+import {
+  getSession,
+  isTwoFactorChallenge,
+  loginEmpleado,
+  loginEmpresa,
+  logout as logoutRequest,
+  refreshSession,
+  verifyTwoFactorLogin,
+  type SessionResponse,
+  type TwoFactorChallenge,
+} from "@/lib/api/auth"
 import { setUnauthorizedHandler } from "@/lib/api/client"
 import { clearSession as clearStoredSession, saveSession } from "@/lib/api/session"
 import { isSessionActive, toSessionUser } from "@/lib/auth/session-user"
@@ -14,8 +24,9 @@ interface AuthContextType {
   userName: string
   isAuthenticated: boolean
   isHydrated: boolean
-  login: (email: string, password: string, role?: UserRole) => Promise<void>
-  logout: () => Promise<void>
+  login: (email: string, password: string, role?: UserRole) => Promise<TwoFactorChallenge | null>
+  completeTwoFactorLogin: (challengeToken: string, code: string) => Promise<void>
+  logout: (redirectTo?: string) => Promise<void>
 }
 
 interface AuthState {
@@ -69,8 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const login = async (email: string, password: string, role: UserRole = "empleado") => {
-    const session = role === "empresa" ? await loginEmpresa({ email, password }) : await loginEmpleado({ email, password })
+  const startSession = (session: SessionResponse) => {
     const user = toSessionUser(session)
 
     if (!user || !isSessionActive(user)) {
@@ -81,17 +91,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthState(createAuthenticatedState(user))
   }
 
-  const clearSession = useCallback(() => {
-    clearStoredSession()
-    setAuthState(unauthenticatedState)
-    router.replace("/")
-  }, [router])
+  const login = async (email: string, password: string, role: UserRole = "empleado") => {
+    if (role === "empresa") {
+      startSession(await loginEmpresa({ email, password }))
+      return null
+    }
 
-  const logout = async () => {
+    const response = await loginEmpleado({ email, password })
+
+    if (isTwoFactorChallenge(response)) {
+      return response
+    }
+
+    startSession(response)
+    return null
+  }
+
+  const completeTwoFactorLogin = async (challengeToken: string, code: string) => {
+    startSession(await verifyTwoFactorLogin(challengeToken, code))
+  }
+
+  const clearSession = useCallback(
+    (redirectTo = "/") => {
+      clearStoredSession()
+      setAuthState(unauthenticatedState)
+      router.replace(redirectTo)
+    },
+    [router],
+  )
+
+  const logout = async (redirectTo?: string) => {
     try {
       await logoutRequest()
     } finally {
-      clearSession()
+      clearSession(redirectTo)
     }
   }
 
@@ -151,6 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated,
         isHydrated,
         login,
+        completeTwoFactorLogin,
         logout,
       }}
     >

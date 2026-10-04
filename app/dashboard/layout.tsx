@@ -237,7 +237,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={logout} className="cursor-pointer text-destructive">
+                  <DropdownMenuItem onClick={() => logout()} className="cursor-pointer text-destructive">
                     <LogOutIcon className="size-4 mr-2" />
                     Cerrar Sesión
                   </DropdownMenuItem>
