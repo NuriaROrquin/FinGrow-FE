@@ -38,11 +38,12 @@ export const incomeCategoryLabels: Record<IncomeCategory, string> = {
 }
 
 export type TransactionStatus = "Confirmed" | "Pending"
-type ApiTransactionStatus = TransactionStatus | "Eliminated"
+export type TransactionListStatus = TransactionStatus | "Eliminated"
 
-export const transactionStatusLabels: Record<TransactionStatus, string> = {
+export const transactionStatusLabels: Record<TransactionListStatus, string> = {
   Confirmed: "Confirmada",
   Pending: "Pendiente",
+  Eliminated: "Eliminada",
 }
 
 export type Currency = "ARS" | "USD" | "EUR" | "BRL"
@@ -73,7 +74,7 @@ export interface TransactionDto {
   occurredOn: string
   paymentMethod: PaymentMethodLabel
   source: string
-  status: TransactionStatus
+  status: TransactionListStatus
   createdAt: string
 }
 
@@ -114,7 +115,7 @@ export interface TransactionFilters {
   type?: TransactionType
   expenseCategory?: ExpenseCategory
   incomeCategory?: IncomeCategory
-  status?: TransactionStatus
+  status?: TransactionListStatus[]
   paymentMethod?: PaymentMethod
   /** Fecha desde, formato yyyy-MM-dd (inclusive). */
   dateFrom?: string
@@ -137,7 +138,12 @@ export function getTransactionSummary(
   })
 }
 
-function translateTransaction(transaction: Omit<TransactionDto, "paymentMethod"> & { paymentMethod: PaymentMethod }) {
+type ApiTransaction = Omit<TransactionDto, "paymentMethod" | "status"> & {
+  paymentMethod: PaymentMethod
+  status: TransactionListStatus
+}
+
+function translateTransaction(transaction: ApiTransaction) {
   return {
     ...transaction,
     paymentMethod: paymentMethodLabels[transaction.paymentMethod] ?? transaction.paymentMethod,
@@ -150,7 +156,7 @@ export function listTransactions(
   filters: TransactionFilters = {},
   signal?: AbortSignal,
 ): Promise<TransactionsResponse> {
-  return api.get<{ items: (Omit<TransactionDto, "paymentMethod" | "status"> & { paymentMethod: PaymentMethod; status: ApiTransactionStatus })[]; pageNumber: number; pageSize: number; totalCount: number; totalPages: number }>("/api/transactions", {
+  return api.get<{ items: ApiTransaction[]; pageNumber: number; pageSize: number; totalCount: number; totalPages: number }>("/api/transactions", {
     query: {
       pageNumber,
       pageSize,
@@ -166,10 +172,27 @@ export function listTransactions(
     signal,
   }).then((response) => ({
     ...response,
-    items: response.items
-      .filter((transaction) => transaction.status !== "Eliminated")
-      .map(translateTransaction),
+    items: response.items.map(translateTransaction),
   }))
+}
+
+export function exportTransactions(filters: TransactionFilters = {}): Promise<Blob> {
+  return api.get<Blob>("/api/transactions/export", {
+    query: {
+      search: filters.search,
+      transactionType: filters.type,
+      expenseCategory: filters.expenseCategory,
+      incomeCategory: filters.incomeCategory,
+      transactionStatus: filters.status,
+      paymentMethod: filters.paymentMethod,
+      dateFrom: filters.dateFrom,
+      dateTo: filters.dateTo,
+    },
+    headers: {
+      Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    },
+    responseType: "blob",
+  })
 }
 
 export function createTransaction(payload: CreateTransactionPayload, signal?: AbortSignal): Promise<TransactionDto> {

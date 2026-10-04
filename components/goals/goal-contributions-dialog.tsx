@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { Trash2Icon } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -26,7 +26,9 @@ import { Textarea } from "@/components/ui/textarea"
 import {
   addContribution,
   CONTRIBUTION_NOTE_MAX_LENGTH,
+  isApiError,
   listContributions,
+  listGoals,
   removeContribution,
   toastApiError,
   type GoalContributionDto,
@@ -51,6 +53,11 @@ function formatAmount(amount: number, currency: string): string {
   return `$${amount.toLocaleString("es-AR")} ${currency}`
 }
 
+async function fetchGoalState(goalId: string, signal?: AbortSignal) {
+  const [goals, history] = await Promise.all([listGoals(signal), listContributions(goalId, signal)])
+  return { goal: goals.find((candidate) => candidate.id === goalId) ?? null, history }
+}
+
 export function GoalContributionsDialog({
   goal,
   open,
@@ -66,6 +73,10 @@ export function GoalContributionsDialog({
   const [isLoading, setIsLoading] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<GoalContributionDto | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const onGoalChangeRef = useRef(onGoalChange)
+  useEffect(() => {
+    onGoalChangeRef.current = onGoalChange
+  })
 
   useEffect(() => {
     if (!open) {
@@ -75,8 +86,11 @@ export function GoalContributionsDialog({
     const controller = new AbortController()
     setIsLoading(true)
 
-    listContributions(goal.id, controller.signal)
-      .then(setContributions)
+    fetchGoalState(goal.id, controller.signal)
+      .then(({ goal: fresh, history }) => {
+        setContributions(history)
+        if (fresh) onGoalChangeRef.current(fresh)
+      })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return
         toastApiError(error, "No se pudo cargar el historial de aportes.")
@@ -102,6 +116,17 @@ export function GoalContributionsDialog({
       toastApiError(error, "No se pudo eliminar el aporte.")
     } finally {
       setIsDeleting(false)
+    }
+  }
+
+  const refreshGoal = async (): Promise<GoalDto | null> => {
+    try {
+      const { goal: fresh, history } = await fetchGoalState(goal.id)
+      setContributions(history)
+      if (fresh) onGoalChange(fresh)
+      return fresh
+    } catch {
+      return null
     }
   }
 
@@ -133,6 +158,8 @@ export function GoalContributionsDialog({
                 )
                 onGoalChange(updatedGoal)
               }}
+              onRefreshGoal={refreshGoal}
+              isRefreshing={isLoading}
             />
           ) : (
             <p className="text-sm text-muted-foreground">
@@ -219,22 +246,30 @@ export function GoalContributionsDialog({
 function AddContributionForm({
   goal,
   onAdded,
+  onRefreshGoal,
+  isRefreshing,
 }: {
   goal: GoalDto
   onAdded: (contribution: GoalContributionDto, goal: GoalDto) => void
+  onRefreshGoal: () => Promise<GoalDto | null>
+  isRefreshing: boolean
 }) {
   const [amount, setAmount] = useState("")
   const [contributedOn, setContributedOn] = useState(todayLocal)
   const [note, setNote] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const submittingRef = useRef(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (submittingRef.current) return
 
+    submittingRef.current = true
     setIsSubmitting(true)
+    const attemptedAmount = parseFloat(amount)
     try {
       const result = await addContribution(goal.id, {
-        amount: parseFloat(amount),
+        amount: attemptedAmount,
         currency: goal.currency,
         contributedOn,
         note: note.trim() || undefined,
@@ -246,8 +281,22 @@ function AddContributionForm({
       setAmount("")
       setNote("")
     } catch (error) {
-      toastApiError(error, "No se pudo registrar el aporte.")
+
+      const fresh = await onRefreshGoal()
+      const savedAnyway =
+        fresh !== null && Math.abs(fresh.currentAmount - goal.currentAmount - attemptedAmount) < 0.005
+
+      if (isApiError(error) && error.status === 409) {
+        toast.info("Esta meta ya no está activa: actualizamos su estado.")
+      } else if (savedAnyway) {
+        toast.success("No recibimos la confirmación, pero el aporte quedó registrado.")
+        setAmount("")
+        setNote("")
+      } else {
+        toastApiError(error, "No se pudo registrar el aporte.")
+      }
     } finally {
+      submittingRef.current = false
       setIsSubmitting(false)
     }
   }
@@ -294,7 +343,7 @@ function AddContributionForm({
       </div>
 
       <div className="flex justify-end">
-        <Button type="submit" disabled={isSubmitting}>
+        <Button type="submit" disabled={isSubmitting || isRefreshing}>
           {isSubmitting ? "Guardando..." : "Registrar aporte"}
         </Button>
       </div>

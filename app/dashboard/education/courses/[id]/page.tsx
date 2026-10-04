@@ -9,6 +9,7 @@ import { ArrowLeftIcon, ClockIcon, BookOpenIcon } from "lucide-react"
 const courses = [
   {
     id: "1",
+    slug: "fundamentos-finanzas-personales",
     title: "Fundamentos de Finanzas Personales",
     description: "Aprende a gestionar tu dinero, crear un presupuesto y ahorrar efectivamente",
     duration: "2 horas",
@@ -38,6 +39,7 @@ const courses = [
   },
   {
     id: "2",
+    slug: "estrategias-de-inversion-101",
     title: "Estrategias de Inversión 101",
     description: "Comprende acciones, bonos, ETFs y cómo construir un portafolio diversificado",
     duration: "3 horas",
@@ -67,6 +69,7 @@ const courses = [
   },
   {
     id: "3",
+    slug: "gestion-de-deudas-y-credito",
     title: "Gestión de Deudas y Crédito",
     description: "Domina el puntaje crediticio, estrategias de pago de deudas y manejo de tarjetas",
     duration: "1.5 horas",
@@ -96,6 +99,7 @@ const courses = [
   },
   {
     id: "4",
+    slug: "planificacion-de-jubilacion",
     title: "Planificación de Jubilación",
     description: "Planifica tu futuro con estrategias de ahorro para el retiro",
     duration: "2.5 horas",
@@ -128,7 +132,7 @@ const courses = [
 export default function CoursePage() {
   const params = useParams()
   const router = useRouter()
-  const course = courses.find((c) => c.id === params.id)
+  const course = courses.find((c) => c.slug === params.id || c.id === params.id)
 
   if (!course) {
     return (

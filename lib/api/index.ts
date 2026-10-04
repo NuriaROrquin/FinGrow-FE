@@ -29,7 +29,32 @@ export {
   type ArticleFilters,
   type ArticleSummaryDto,
 } from "./articles"
+export {
+  courseLevelLabels,
+  courseProgressStatusLabels,
+  listCourses,
+  type CourseFilters,
+  type CourseLevel,
+  type CourseProgressStatus,
+  type CourseSummaryDto,
+} from "./courses"
 export { type EducationCategory } from "./education"
+export { getMepQuote, type MepQuoteDto } from "./exchange-rates"
+export {
+  changeBudgetCurrency,
+  createBudget,
+  deleteBudget,
+  duplicatePreviousBudget,
+  getBudget,
+  removeBudgetLimit,
+  setBudgetLimit,
+  type BudgetDto,
+  type BudgetHealth,
+  type BudgetLimitDto,
+  type BudgetPeriod,
+  type CreateBudgetPayload,
+  type SetBudgetLimitPayload,
+} from "./budgets"
 export {
   addContribution,
   CONTRIBUTION_NOTE_MAX_LENGTH,
@@ -59,3 +84,40 @@ export {
   type MercadoPagoLinkResult,
   type MercadoPagoSyncSummary,
 } from "./integrations"
+export {
+  ASSET_NAME_MAX_LENGTH,
+  SYMBOL_MAX_LENGTH,
+  createInvestment,
+  getPortfolioSummary,
+  deleteInvestment,
+  investmentSortFieldLabels,
+  investmentTypeLabels,
+  isQuotedOnExchange,
+  listInvestments,
+  updateInvestment,
+  type AllocationGroupDto,
+  type CreateInvestmentPayload,
+  type CurrencyPortfolioDto,
+  type InvestmentDto,
+  type InvestmentListQuery,
+  type InvestmentPerformance,
+  type InvestmentSortField,
+  type InvestmentType,
+  type LastPurchaseDto,
+  type PagedResultDto,
+  type PortfolioSummaryDto,
+  type SortDirection,
+} from "./investments"
+export { getSavingsVsGoals, type SavingsVsGoalsDto, type SavingsVsGoalsMonthDto } from "./reports"
+export {
+  getDashboardSummary,
+  getExpensesByCategory,
+  getIncomeVsExpenses,
+  getMonthlyExpenses,
+  type DashboardDateRangeQuery,
+  type DashboardPeriodQuery,
+  type DashboardSummaryDto,
+  type ExpenseCategoryTotalDto,
+  type IncomeExpenseMonthDto,
+  type MonthlyExpenseDto,
+} from "./dashboard"

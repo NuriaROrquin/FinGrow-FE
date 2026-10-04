@@ -8,6 +8,7 @@ import Image from "next/image"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
 import {
@@ -43,7 +44,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   PlusIcon,
   SearchIcon,
-  FilterIcon,
   DownloadIcon,
   ArrowUpIcon,
   ArrowDownIcon,
@@ -65,11 +65,13 @@ import {
   Trash2,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import {
   createTransaction,
   deleteTransaction,
   expenseCategoryLabels,
+  exportTransactions,
   getTransactionSummary,
   incomeCategoryLabels,
   listTransactions,
@@ -77,6 +79,7 @@ import {
   transactionStatusLabels,
   type PaymentMethod,
   type TransactionDto,
+  type TransactionListStatus,
   type TransactionSummaryResponse,
   type TransactionsResponse,
   updateTransaction,
@@ -85,6 +88,11 @@ import { AddTransactionForm } from "@/components/transactions/add-transaction-fo
 import { TransactionActionsMenu } from "@/components/transactions/transaction-actions-menu"
 import { getCategoryIcon, getPaymentMethodIcon } from "@/components/transactions/transaction-icons"
 import { isApiError } from "@/lib/api/errors"
+import {
+  PeriodFilter,
+  getCurrentMonthStart,
+  getToday,
+} from "@/components/period-filter"
 
 const emptyTransactionsResponse: TransactionsResponse = {
   items: [],
@@ -109,54 +117,15 @@ const paymentMethodFilterOptions = (Object.entries(paymentMethodLabels) as [Paym
   ([, labelA], [, labelB]) => labelA.localeCompare(labelB, "es"),
 )
 
-const monthNames = [
-  "enero", "febrero", "marzo", "abril", "mayo", "junio",
-  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+const transactionStatusFilterOptions: [TransactionListStatus, string][] = [
+  ["Confirmed", "Confirmada"],
+  ["Pending", "Pendiente"],
+  ["Eliminated", "Eliminada"],
 ]
+const defaultTransactionStatuses: TransactionListStatus[] = ["Confirmed", "Pending"]
 
 const transactionTableHeadClassName = "py-3 pr-2 text-left align-middle whitespace-nowrap"
 const transactionTableCellClassName = "py-3 pr-2 align-middle whitespace-nowrap"
-
-function formatDateInput(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, "0")
-  const day = String(date.getDate()).padStart(2, "0")
-  return `${year}-${month}-${day}`
-}
-
-function parseDateInput(value: string): Date {
-  const [year, month, day] = value.split("-").map(Number)
-  return new Date(year, month - 1, day)
-}
-
-function getCurrentMonthStart(): string {
-  const now = new Date()
-  return formatDateInput(new Date(now.getFullYear(), now.getMonth(), 1))
-}
-
-function getToday(): string {
-  return formatDateInput(new Date())
-}
-
-function getPeriodLabel(dateFrom: string, dateTo: string): string {
-  if (!dateFrom && !dateTo) return "Mostrando todos los períodos"
-  if (!dateFrom || !dateTo) {
-    const from = dateFrom ? parseDateInput(dateFrom).toLocaleDateString("es-AR") : "el inicio"
-    const to = dateTo ? parseDateInput(dateTo).toLocaleDateString("es-AR") : "hoy"
-    return `Período: desde ${from} hasta ${to}`
-  }
-
-  const from = parseDateInput(dateFrom)
-  const to = parseDateInput(dateTo)
-  const isFullCalendarMonth =
-    from.getDate() === 1 && from.getFullYear() === to.getFullYear() && from.getMonth() === to.getMonth()
-
-  if (isFullCalendarMonth) {
-    return `Período: mes de ${monthNames[from.getMonth()]} ${from.getFullYear()}`
-  }
-
-  return `Período: ${from.toLocaleDateString("es-AR")} – ${to.toLocaleDateString("es-AR")}`
-}
 
 export default function TransactionsPage() {
   const searchParams = useSearchParams()
@@ -168,13 +137,13 @@ export default function TransactionsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [filterType, setFilterType] = useState<"all" | "Income" | "Expense">("all")
   const [filterCategory, setFilterCategory] = useState("all")
-  const [filterStatus, setFilterStatus] = useState("all")
+  const [filterStatus, setFilterStatus] = useState<TransactionListStatus[]>(defaultTransactionStatuses)
   const [filterPaymentMethod, setFilterPaymentMethod] = useState("all")
   const [isCategoryPickerOpen, setIsCategoryPickerOpen] = useState(false)
+  const [isStatusPickerOpen, setIsStatusPickerOpen] = useState(false)
   const [dateFrom, setDateFrom] = useState(() => getCurrentMonthStart())
   const [dateTo, setDateTo] = useState(() => getToday())
-  const [dateFromDraft, setDateFromDraft] = useState(() => getCurrentMonthStart())
-  const [dateToDraft, setDateToDraft] = useState(() => getToday())
+  const [summaryCurrency, setSummaryCurrency] = useState<"ARS" | "USD">("ARS")
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
@@ -182,6 +151,7 @@ export default function TransactionsPage() {
   const [transactionToDelete, setTransactionToDelete] = useState<TransactionDto | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
   const [isOcrDialogOpen, setIsOcrDialogOpen] = useState(false)
   const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false)
   const [ocrImage, setOcrImage] = useState<string | null>(null)
@@ -282,7 +252,7 @@ export default function TransactionsPage() {
           filterType === "Income" && filterCategory !== "all"
             ? (filterCategory as keyof typeof incomeCategoryLabels)
             : undefined,
-        status: filterStatus === "all" ? undefined : (filterStatus as "Confirmed" | "Pending"),
+        status: filterStatus.length > 0 ? filterStatus : undefined,
         paymentMethod: filterPaymentMethod === "all" ? undefined : (filterPaymentMethod as PaymentMethod),
         dateFrom: dateFrom || undefined,
         dateTo: dateTo || undefined,
@@ -354,7 +324,6 @@ export default function TransactionsPage() {
 
   const defaultDateFrom = getCurrentMonthStart()
   const defaultDateTo = getToday()
-  const periodLabel = getPeriodLabel(dateFrom, dateTo)
   const shouldShowPagination = transactionsResponse.totalPages > 1
   const visibleResultsStart = transactionsResponse.totalCount === 0 ? 0 : (transactionsResponse.pageNumber - 1) * pageSize + 1
   const visibleResultsEnd = transactionsResponse.totalCount === 0 ? 0 : Math.min(transactionsResponse.pageNumber * pageSize, transactionsResponse.totalCount)
@@ -363,7 +332,8 @@ export default function TransactionsPage() {
     searchQuery.trim().length > 0 ||
     filterType !== "all" ||
     filterCategory !== "all" ||
-    filterStatus !== "all" ||
+    filterStatus.length !== defaultTransactionStatuses.length ||
+    defaultTransactionStatuses.some((status) => !filterStatus.includes(status)) ||
     filterPaymentMethod !== "all" ||
     dateFrom !== defaultDateFrom ||
     dateTo !== defaultDateTo
@@ -372,12 +342,10 @@ export default function TransactionsPage() {
     setSearchQuery("")
     setFilterType("all")
     setFilterCategory("all")
-    setFilterStatus("all")
+    setFilterStatus([...defaultTransactionStatuses])
     setFilterPaymentMethod("all")
     setDateFrom(defaultDateFrom)
     setDateTo(defaultDateTo)
-    setDateFromDraft(defaultDateFrom)
-    setDateToDraft(defaultDateTo)
     setCurrentPage(1)
   }
 
@@ -455,9 +423,9 @@ export default function TransactionsPage() {
     }
   }
 
-  const applyDateFilter = () => {
-    setDateFrom(dateFromDraft)
-    setDateTo(dateToDraft)
+  const changePeriod = (nextDateFrom: string, nextDateTo: string) => {
+    setDateFrom(nextDateFrom)
+    setDateTo(nextDateTo)
     setCurrentPage(1)
     setSummaryRefreshKey((key) => key + 1)
   }
@@ -474,49 +442,53 @@ export default function TransactionsPage() {
     ARS: totalIncome.ARS - totalExpense.ARS,
     USD: totalIncome.USD - totalExpense.USD,
   }
-
   // Función de formateo consistente
   const formatCurrency = (amount: number, currency: string) =>
     `${currency === "USD" ? "US$" : "$"}${amount.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`
 
-  const renderCurrencyTotals = (totals: Record<string, number>) => (
-    <div className="space-y-1">
-      <div>{formatCurrency(totals.ARS ?? 0, "ARS")}</div>
-      <div className="text-base text-muted-foreground">{formatCurrency(totals.USD ?? 0, "USD")}</div>
-    </div>
-  )
+  const handleExport = async () => {
+    if (isExporting) return
 
-  const handleExportCSV = () => {
-    // Crear encabezados del CSV
-    const headers = ["Fecha", "Descripción", "Categoría", "Método de Pago", "Tipo", "Fuente", "Monto"]
+    setIsExporting(true)
 
-    // Crear filas de datos
-    const rows = filteredTransactions.map((transaction) => {
-      const date = new Date(transaction.occurredOn).toLocaleDateString("es-ES")
-      const type = transaction.type === "Income" ? "Ingreso" : "Gasto"
-      const amount = transaction.type === "Income" ? `+${transaction.amount.toFixed(2)}` : `-${transaction.amount.toFixed(2)}`
+    try {
+      const blob = await exportTransactions({
+        search: searchQuery.trim() || undefined,
+        type: filterType === "all" ? undefined : filterType,
+        expenseCategory:
+          filterType === "Expense" && filterCategory !== "all"
+            ? (filterCategory as keyof typeof expenseCategoryLabels)
+            : undefined,
+        incomeCategory:
+          filterType === "Income" && filterCategory !== "all"
+            ? (filterCategory as keyof typeof incomeCategoryLabels)
+            : undefined,
+        status: filterStatus.length > 0 ? filterStatus : undefined,
+        paymentMethod: filterPaymentMethod === "all" ? undefined : (filterPaymentMethod as PaymentMethod),
+        dateFrom: dateFrom || undefined,
+        dateTo: dateTo || undefined,
+      })
+      const link = document.createElement("a")
+      const url = URL.createObjectURL(blob)
+      const dateFromForFilename = dateFrom.replaceAll("-", "") || "sin-fecha"
+      const dateToForFilename = dateTo.replaceAll("-", "") || "sin-fecha"
 
-      return [date, transaction.description, transaction.category, transaction.paymentMethod, type, transaction.source, amount]
-    })
-
-    // Combinar encabezados y filas
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
-    ].join("\n")
-
-    // Crear blob y descargar
-    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" })
-    const link = document.createElement("a")
-    const url = URL.createObjectURL(blob)
-
-    link.setAttribute("href", url)
-    link.setAttribute("download", `transacciones_${new Date().toISOString().split("T")[0]}.csv`)
-    link.style.visibility = "hidden"
-
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+      link.href = url
+      link.download = `transacciones_${dateFromForFilename}_${dateToForFilename}.xlsx`
+      link.style.visibility = "hidden"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      toast({
+        title: "No se pudo exportar las transacciones",
+        description: error instanceof Error ? error.message : "Intenta de nuevo en unos segundos.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   const startCamera = async () => {
@@ -680,15 +652,14 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="w-full max-w-full space-y-6 overflow-x-hidden pr-1 sm:pr-2">
-      <div className="w-full max-w-full space-y-4">
-        <div>
+    <div className="flex w-full max-w-full flex-col space-y-6 overflow-x-hidden pr-1 sm:pr-2">
+      <div className="contents">
+        <div className="order-0">
           <h1 className="text-3xl font-bold text-balance">Transacciones</h1>
           <p className="text-muted-foreground mt-1">Rastrea y gestiona tus ingresos y gastos</p>
+        </div>
 
-          <Card className="mt-4 w-full border-border/70 bg-white shadow-sm">
-            <CardContent className="p-4">
-              <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="order-4 grid w-full grid-cols-1 gap-2 py-3 sm:grid-cols-2 lg:grid-cols-3">
             <Dialog open={isOcrDialogOpen} onOpenChange={setIsOcrDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="w-full">
@@ -1071,114 +1042,27 @@ export default function TransactionsPage() {
               </AlertDialogContent>
             </AlertDialog>
               </div>
-            </CardContent>
-          </Card>
-
-          <div className="mt-4 w-full max-w-3xl space-y-3">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,170px)_minmax(0,170px)_minmax(0,1fr)_auto] sm:items-end">
-              <div className="flex min-w-0 flex-col gap-1">
-                <Label htmlFor="date-from" className="text-xs text-muted-foreground">
-                  Desde
-                </Label>
-                <Input
-                  id="date-from"
-                  type="date"
-                  value={dateFromDraft}
-                  max={dateToDraft || undefined}
-                  onChange={(e) => setDateFromDraft(e.target.value)}
-                  className="w-full bg-white"
-                />
-              </div>
-              <div className="flex min-w-0 flex-col gap-1">
-                <Label htmlFor="date-to" className="text-xs text-muted-foreground">
-                  Hasta
-                </Label>
-                <Input
-                  id="date-to"
-                  type="date"
-                  value={dateToDraft}
-                  min={dateFromDraft || undefined}
-                  onChange={(e) => setDateToDraft(e.target.value)}
-                  className="w-full bg-white"
-                />
-              </div>
-              <div className="rounded-md border border-border/60 bg-white px-3 py-2 text-sm text-muted-foreground">
-                {periodLabel}
-              </div>
-              <Button size="sm" className="h-8 w-full px-3 sm:w-auto" onClick={applyDateFilter}>
-                <FilterIcon className="size-4" />
-                Filtrar
-              </Button>
-            </div>
-          </div>
-        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="border border-border bg-white shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-start gap-3">
-              <ArrowUpIcon className="size-5 shrink-0 text-success" />
-              <div>
-                <CardDescription className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                  Ingresos
-                </CardDescription>
-                <CardTitle className="mt-1 space-y-1 text-2xl text-success">{renderCurrencyTotals(totalIncome)}</CardTitle>
-              </div>
-            </div>
-            <div className="mt-4 flex items-center gap-1 text-xs font-medium text-success">
-              <ArrowUpIcon className="size-3.5" />
-              <span>{transactionSummary.totalIncomeTransactions} ingresos</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-border bg-white shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-start gap-3">
-              <ArrowDownIcon className="size-5 shrink-0 text-muted-foreground" />
-              <div>
-                <CardDescription className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                  Gastos
-                </CardDescription>
-                <CardTitle className="mt-1 space-y-1 text-2xl">{renderCurrencyTotals(totalExpense)}</CardTitle>
-              </div>
-            </div>
-            <div className="mt-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
-              <ArrowDownIcon className="size-3.5" />
-              <span>{transactionSummary.totalExpenseTransactions} gastos</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-primary/20 bg-white shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-start gap-3">
-              <ScaleIcon className="size-5 shrink-0 text-muted-foreground" />
-              <div>
-                <CardDescription className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                  Balance Neto
-                </CardDescription>
-                <CardTitle className="mt-1 space-y-1 text-2xl text-success">{renderCurrencyTotals(balanceByCurrency)}</CardTitle>
-              </div>
-            </div>
-            <div className="mt-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
-              <ArrowUpIcon className="size-3.5" />
-              <span>{transactionSummary.totalTransactions} transacciones totales</span>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="order-1 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <PeriodFilter dateFrom={dateFrom} dateTo={dateTo} onChange={({ dateFrom: nextDateFrom, dateTo: nextDateTo }) => changePeriod(nextDateFrom, nextDateTo)} />
+        <Tabs value={summaryCurrency} onValueChange={(value) => setSummaryCurrency(value as "ARS" | "USD")} className="w-fit">
+          <TabsList>
+            <TabsTrigger value="ARS">Pesos (ARS)</TabsTrigger>
+            <TabsTrigger value="USD">Dólares (USD)</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
-      <Alert className="border-sky-200 bg-sky-50 text-sky-900">
-        <AlertDescription className="flex flex-wrap items-center gap-1.5 text-sky-900">
+      <Alert className="order-2 border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-800/70 dark:bg-sky-950/40 dark:text-sky-100">
+        <AlertDescription className="flex flex-wrap items-center gap-1.5 text-sky-900 dark:text-sky-100">
           <span>Los movimientos pendientes no se incluyen en los totales hasta que sean confirmados.</span>
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-6 rounded-full text-sky-700 hover:bg-sky-100 hover:text-sky-800"
+                className="size-6 rounded-full text-sky-700 hover:bg-sky-100 hover:text-sky-800 dark:text-sky-300 dark:hover:bg-sky-900/60 dark:hover:text-sky-100"
                 aria-label="Más información sobre el cálculo de los totales"
               >
                 <Info className="size-4" />
@@ -1197,7 +1081,67 @@ export default function TransactionsPage() {
         </AlertDescription>
       </Alert>
 
-      <Card>
+      <div className="order-3 grid gap-4 md:grid-cols-3">
+        <Card className="border border-border bg-card shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-3">
+              <ArrowUpIcon className="size-5 shrink-0 text-muted-foreground" />
+              <div>
+                <CardDescription className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  Ingresos
+                </CardDescription>
+                <CardTitle className="mt-1 text-2xl text-foreground">{formatCurrency(totalIncome[summaryCurrency], summaryCurrency)}</CardTitle>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
+              <ArrowUpIcon className="size-3.5" />
+              <span>{transactionSummary.totalIncomeTransactions} ingresos</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border border-border bg-card shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-3">
+              <ArrowDownIcon className="size-5 shrink-0 text-muted-foreground" />
+              <div>
+                <CardDescription className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  Gastos
+                </CardDescription>
+                <CardTitle className="mt-1 text-2xl text-foreground">{formatCurrency(totalExpense[summaryCurrency], summaryCurrency)}</CardTitle>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
+              <ArrowDownIcon className="size-3.5" />
+              <span>{transactionSummary.totalExpenseTransactions} gastos</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border border-border bg-card shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-3">
+              <ScaleIcon className="size-5 shrink-0 text-muted-foreground" />
+              <div>
+                <CardDescription className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  Balance Neto
+                </CardDescription>
+                <CardTitle className="mt-1 text-2xl text-foreground">{formatCurrency(balanceByCurrency[summaryCurrency], summaryCurrency)}</CardTitle>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
+              {balanceByCurrency[summaryCurrency] >= 0 ? <ArrowUpIcon className="size-3.5" /> : <ArrowDownIcon className="size-3.5" />}
+              <span>{transactionSummary.totalTransactions} transacciones totales</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="order-5">
+        <CardHeader>
+          <CardTitle>Historial de Transacciones</CardTitle>
+          <CardDescription>Todas tus transacciones financieras en un solo lugar</CardDescription>
+        </CardHeader>
         <CardContent className="pt-6">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[minmax(0,1.2fr)_repeat(4,minmax(0,1fr))_auto]">
@@ -1215,25 +1159,71 @@ export default function TransactionsPage() {
                       setSearchQuery(e.target.value)
                       setCurrentPage(1)
                     }}
-                    className="w-full border-border/70 bg-white pl-9"
+                    className="w-full border-border/70 bg-card pl-9"
                   />
                 </div>
               </div>
               <div className="flex min-w-0 flex-col gap-1">
                 <Label className="text-xs text-muted-foreground">Estado</Label>
-                <Select value={filterStatus} onValueChange={(value) => {
-                  setFilterStatus(value)
-                  setCurrentPage(1)
-                }}>
-                  <SelectTrigger className="w-full bg-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="Confirmed">Confirmada</SelectItem>
-                    <SelectItem value="Pending">Pendiente</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Popover open={isStatusPickerOpen} onOpenChange={setIsStatusPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" aria-expanded={isStatusPickerOpen} className="w-full justify-between bg-card font-normal">
+                      <span className="truncate">
+                        {filterStatus.length === 0
+                          ? "Ningún estado"
+                          : filterStatus.length === transactionStatusFilterOptions.length
+                            ? "Todos"
+                            : transactionStatusFilterOptions
+                                .filter(([value]) => filterStatus.includes(value))
+                                .map(([, label]) => label)
+                                .join(", ")}
+                      </span>
+                      <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[200px] p-0">
+                    <Command>
+                      <CommandList>
+                        <CommandGroup>
+                          <CommandItem
+                            value="Todos"
+                            onSelect={() => {
+                              setFilterStatus((current) =>
+                                current.length === transactionStatusFilterOptions.length
+                                  ? [...defaultTransactionStatuses]
+                                  : transactionStatusFilterOptions.map(([value]) => value),
+                              )
+                              setCurrentPage(1)
+                            }}
+                          >
+                            <Checkbox
+                              checked={filterStatus.length === transactionStatusFilterOptions.length}
+                              tabIndex={-1}
+                            />
+                            Todos
+                          </CommandItem>
+                          {transactionStatusFilterOptions.map(([value, label]) => (
+                            <CommandItem
+                              key={value}
+                              value={label}
+                              onSelect={() => {
+                                setFilterStatus((current) =>
+                                  current.includes(value)
+                                    ? current.filter((status) => status !== value)
+                                    : [...current, value],
+                                )
+                                setCurrentPage(1)
+                              }}
+                            >
+                              <Checkbox checked={filterStatus.includes(value)} tabIndex={-1} />
+                              {label}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="flex min-w-0 flex-col gap-1">
                 <Label className="text-xs text-muted-foreground">Método de pago</Label>
@@ -1241,7 +1231,7 @@ export default function TransactionsPage() {
                   setFilterPaymentMethod(value)
                   setCurrentPage(1)
                 }}>
-                  <SelectTrigger className="w-full bg-white">
+                  <SelectTrigger className="w-full bg-card">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1261,7 +1251,7 @@ export default function TransactionsPage() {
                   setFilterCategory("all")
                   setCurrentPage(1)
                 }}>
-                  <SelectTrigger className="w-full bg-white">
+                  <SelectTrigger className="w-full bg-card">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1279,7 +1269,7 @@ export default function TransactionsPage() {
                       variant="outline"
                       role="combobox"
                       aria-expanded={isCategoryPickerOpen}
-                      className="w-full justify-between border-border/70 bg-white font-normal disabled:bg-white disabled:opacity-55"
+                      className="w-full justify-between border-border/70 bg-card font-normal disabled:bg-card disabled:opacity-55"
                       disabled={filterType === "all"}
                     >
                       {filterType === "all"
@@ -1339,19 +1329,12 @@ export default function TransactionsPage() {
                 <Trash2 className="size-4" />
               </Button>
             </div>
-            <Button variant="outline" className="w-full shrink-0 xl:w-auto" onClick={handleExportCSV}>
+            <Button variant="outline" className="w-full shrink-0 xl:w-auto" onClick={handleExport} disabled={isExporting}>
               <DownloadIcon className="size-4" />
-              Exportar
+              {isExporting ? "Generando..." : "Exportar"}
             </Button>
           </div>
         </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Historial de Transacciones</CardTitle>
-          <CardDescription>Todas tus transacciones financieras en un solo lugar</CardDescription>
-        </CardHeader>
         <CardContent>
           <div className={`${shouldShowPagination ? "min-h-[520px]" : "min-h-[220px]"} w-full`}>
             <Table className="w-full table-auto">
@@ -1426,7 +1409,7 @@ export default function TransactionsPage() {
                             variant="outline"
                             className={`gap-1 rounded-full font-medium ${
                               transaction.status === "Confirmed"
-                                ? "border-success/40 bg-success/10 text-success"
+                                ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-600 dark:text-emerald-300"
                                 : "border-amber-500/40 bg-amber-500/10 text-amber-600"
                             }`}
                           >
@@ -1440,9 +1423,14 @@ export default function TransactionsPage() {
                         </TableCell>
                         <TableCell className={transactionTableCellClassName}>
                           <span
-                            className={`font-semibold ${transaction.type === "Income" ? "text-success" : "text-foreground"}`}
+                            className={`font-semibold ${transaction.type === "Income" ? "text-emerald-500 dark:text-emerald-300" : "text-rose-500 dark:text-rose-300"}`}
                           >
-                            {transaction.type === "Income" ? "+" : "-"}${transaction.amount.toFixed(2)} {transaction.currency}
+                            {transaction.type === "Income" ? "+" : "-"}
+                            {transaction.currency === "USD" ? "US$" : "$"}
+                            {Math.abs(transaction.amount).toLocaleString("es-AR", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })} {transaction.currency}
                           </span>
                         </TableCell>
                         <TableCell className={transactionTableCellClassName}>

@@ -25,6 +25,10 @@ export function getSession() {
   return api.get<SessionResponse>("/session", { skipAuthRedirect: true })
 }
 
+export function refreshSession() {
+  return api.post<SessionResponse>("/session/refresh", undefined, { skipAuthRedirect: true })
+}
+
 export function logout() {
   return api.delete("/session", { skipAuthRedirect: true })
 }

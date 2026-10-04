@@ -6,7 +6,6 @@ import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
 import {
   Dialog,
   DialogContent,
@@ -18,57 +17,15 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { PlusIcon, TrendingUpIcon, AlertCircleIcon, CheckCircleIcon, PiggyBankIcon, TrophyIcon } from "lucide-react"
+import { PlusIcon, TrendingUpIcon, AlertCircleIcon, PiggyBankIcon, TrophyIcon } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { GoalContributionsDialog } from "@/components/goals/goal-contributions-dialog"
 import { AchievedGoalCard, InProgressGoalCard } from "@/components/goals/goal-cards"
-import { createGoal, GOAL_NAME_MAX_LENGTH, listGoals, toastApiError, type GoalDto } from "@/lib/api"
+import { MonthlyBudgetSection } from "@/components/budgets/monthly-budget-section"
+import { formatAmount } from "@/components/budgets/budget-month"
+import { createGoal, GOAL_NAME_MAX_LENGTH, listGoals, toastApiError, type BudgetDto, type GoalDto } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
-
-const mockBudgets = [
-  {
-    id: 1,
-    category: "Comida y Restaurantes",
-    limit: 500000,
-    spent: 385000.5,
-    period: "mensual",
-    icon: "🍔",
-  },
-  {
-    id: 2,
-    category: "Transporte",
-    limit: 300000,
-    spent: 260000,
-    period: "mensual",
-    icon: "🚗",
-  },
-  {
-    id: 3,
-    category: "Entretenimiento",
-    limit: 200000,
-    spent: 230000,
-    period: "mensual",
-    icon: "🎬",
-  },
-  {
-    id: 4,
-    category: "Servicios y Facturas",
-    limit: 400000,
-    spent: 320000,
-    period: "mensual",
-    icon: "💡",
-  },
-  {
-    id: 5,
-    category: "Compras",
-    limit: 350000,
-    spent: 180000,
-    period: "mensual",
-    icon: "🛍️",
-  },
-]
-
 
 const currencyLabels: Record<Currency, string> = {
   ARS: "ARS ($)",
@@ -84,7 +41,7 @@ function todayLocal(): string {
 }
 
 export default function BudgetsPage() {
-  const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false)
+  const [currentBudget, setCurrentBudget] = useState<BudgetDto | null>(null)
   const [isSavingsDialogOpen, setIsSavingsDialogOpen] = useState(false)
   const [savingsGoals, setSavingsGoals] = useState<GoalDto[]>([])
   const [isLoadingGoals, setIsLoadingGoals] = useState(true)
@@ -114,15 +71,7 @@ export default function BudgetsPage() {
   const replaceGoal = (updated: GoalDto) =>
     setSavingsGoals((current) => current.map((goal) => (goal.id === updated.id ? updated : goal)))
 
-  const getBudgetStatus = (spent: number, limit: number) => {
-    const percentage = (spent / limit) * 100
-    if (percentage >= 100) return { status: "exceeded", color: "text-destructive", icon: AlertCircleIcon }
-    if (percentage >= 80) return { status: "warning", color: "text-amber-500", icon: AlertCircleIcon }
-    return { status: "good", color: "text-success", icon: CheckCircleIcon }
-  }
-
-  const totalBudget = mockBudgets.reduce((sum, b) => sum + b.limit, 0)
-  const totalSpent = mockBudgets.reduce((sum, b) => sum + b.spent, 0)
+  const totalBudget = currentBudget?.limits.reduce((sum, limit) => sum + limit.amount, 0) ?? 0
   const totalSavingsTarget = savingsGoals.reduce((sum, g) => sum + g.targetAmount, 0)
   const totalSavingsCurrent = savingsGoals.reduce((sum, g) => sum + g.currentAmount, 0)
 
@@ -139,23 +88,24 @@ export default function BudgetsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Presupuesto Total</CardDescription>
-            <CardTitle className="text-2xl">${totalBudget.toLocaleString()}</CardTitle>
+            <CardTitle className="text-2xl">
+              {currentBudget ? formatAmount(totalBudget, currentBudget.currency) : "—"}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">Asignación mensual</p>
+            <p className="text-sm text-muted-foreground">
+              {currentBudget ? "Suma de los topes del mes" : "Sin presupuesto para el mes"}
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Total Gastado</CardDescription>
-            <CardTitle className="text-2xl">${totalSpent.toLocaleString()}</CardTitle>
+            <CardDescription>Categorías con Tope</CardDescription>
+            <CardTitle className="text-2xl">{currentBudget?.limits.length ?? 0}</CardTitle>
           </CardHeader>
           <CardContent>
-            <Progress value={(totalSpent / totalBudget) * 100} className="h-2" />
-            <p className="text-sm text-muted-foreground mt-2">
-              {((totalSpent / totalBudget) * 100).toFixed(1)}% del presupuesto usado
-            </p>
+            <p className="text-sm text-muted-foreground">En el mes seleccionado</p>
           </CardContent>
         </Card>
 
@@ -190,62 +140,7 @@ export default function BudgetsPage() {
         </TabsList>
 
         <TabsContent value="budgets" className="space-y-4">
-          <div className="flex justify-between items-center gap-2">
-            <h2 className="text-xl font-semibold">Presupuestos Mensuales</h2>
-            <Dialog open={isBudgetDialogOpen} onOpenChange={setIsBudgetDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <PlusIcon className="size-4" />
-                  Agregar Presupuesto
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Crear Nuevo Presupuesto</DialogTitle>
-                  <DialogDescription>Establece un límite de gasto para una categoría</DialogDescription>
-                </DialogHeader>
-                <AddBudgetForm onClose={() => setIsBudgetDialogOpen(false)} />
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            {mockBudgets.map((budget) => {
-              const percentage = (budget.spent / budget.limit) * 100
-              const status = getBudgetStatus(budget.spent, budget.limit)
-              const StatusIcon = status.icon
-
-              return (
-                <Card key={budget.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="text-3xl">{budget.icon}</div>
-                        <div>
-                          <CardTitle className="text-lg">{budget.category}</CardTitle>
-                          <CardDescription className="capitalize">{budget.period}</CardDescription>
-                        </div>
-                      </div>
-                      <StatusIcon className={`size-5 ${status.color}`} />
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-2xl font-bold">${budget.spent.toLocaleString()}</span>
-                      <span className="text-sm text-muted-foreground">de ${budget.limit.toLocaleString()}</span>
-                    </div>
-                    <Progress value={percentage} className="h-2" />
-                    <div className="flex items-center justify-between text-sm">
-                      <span className={status.color}>{percentage.toFixed(1)}% usado</span>
-                      <span className="text-muted-foreground">
-                        ${(budget.limit - budget.spent).toLocaleString()} restante
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
+          <MonthlyBudgetSection onBudgetChange={setCurrentBudget} />
         </TabsContent>
 
         <TabsContent value="savings" className="space-y-4">
@@ -379,62 +274,6 @@ export default function BudgetsPage() {
         </CardContent>
       </Card>
     </div>
-  )
-}
-
-function AddBudgetForm({ onClose }: { onClose: () => void }) {
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onClose()
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="budget-category">Categoría</Label>
-        <Select>
-          <SelectTrigger id="budget-category">
-            <SelectValue placeholder="Selecciona categoría" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="food">Comida y Restaurantes</SelectItem>
-            <SelectItem value="transport">Transporte</SelectItem>
-            <SelectItem value="entertainment">Entretenimiento</SelectItem>
-            <SelectItem value="bills">Servicios y Facturas</SelectItem>
-            <SelectItem value="shopping">Compras</SelectItem>
-            <SelectItem value="health">Salud</SelectItem>
-            <SelectItem value="education">Educación</SelectItem>
-            <SelectItem value="other">Otros</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="budget-limit">Límite de Presupuesto</Label>
-        <Input id="budget-limit" type="number" placeholder="0.00" step="0.01" required />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="budget-period">Período</Label>
-        <Select defaultValue="monthly">
-          <SelectTrigger id="budget-period">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="weekly">Semanal</SelectItem>
-            <SelectItem value="monthly">Mensual</SelectItem>
-            <SelectItem value="yearly">Anual</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex gap-2 justify-end pt-4">
-        <Button type="button" variant="outline" onClick={onClose}>
-          Cancelar
-        </Button>
-        <Button type="submit">Crear Presupuesto</Button>
-      </div>
-    </form>
   )
 }
 

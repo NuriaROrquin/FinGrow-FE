@@ -3,12 +3,13 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts"
-import { DownloadIcon, TrendingUpIcon, TrendingDownIcon, CalendarIcon, DollarSignIcon } from "lucide-react"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts"
+import { DownloadIcon, TrendingUpIcon, TrendingDownIcon, DollarSignIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useState } from "react"
+import { SavingsVsGoalsReport } from "@/components/reports/savings-vs-goals-report"
+import { PeriodFilter, getCurrentMonthStart, getInclusiveMonthCount, getToday } from "@/components/period-filter"
 
 const monthlyIncomeExpense = [
 	{ month: "Ene", income: 500000, expense: 240000, savings: 260000 },
@@ -28,15 +29,6 @@ const categoryBreakdown = [
 	{ category: "Otros", amount: 50000, percentage: 10 },
 ]
 
-const savingsProgress = [
-	{ month: "Ene", target: 200000, actual: 260000 },
-	{ month: "Feb", target: 200000, actual: 360200 },
-	{ month: "Mar", target: 200000, actual: 140000 },
-	{ month: "Abr", target: 200000, actual: 129200 },
-	{ month: "May", target: 200000, actual: 70000 },
-	{ month: "Jun", target: 200000, actual: 170000 },
-]
-
 const chartConfig = {
 	income: {
 		label: "Ingresos",
@@ -54,14 +46,6 @@ const chartConfig = {
 		label: "Monto",
 		color: "hsl(var(--chart-1))",
 	},
-	target: {
-		label: "Objetivo",
-		color: "hsl(var(--chart-3))",
-	},
-	actual: {
-		label: "Real",
-		color: "hsl(var(--chart-2))",
-	},
 }
 
 export default function ReportsPage() {
@@ -71,6 +55,8 @@ export default function ReportsPage() {
 	const avgMonthlySavings = totalSavings / monthlyIncomeExpense.length
 
 	const [isExporting, setIsExporting] = useState(false)
+	const [dateFrom, setDateFrom] = useState(() => getCurrentMonthStart())
+	const [dateTo, setDateTo] = useState(() => getToday())
 
 	const handleExportPDF = () => {
 		setIsExporting(true)
@@ -119,19 +105,14 @@ export default function ReportsPage() {
 					<p className="text-muted-foreground mt-1">Análisis completo de tus datos financieros</p>
 				</div>
 				<div className="flex items-center gap-2 no-print">
-					<Select defaultValue="6months">
-						<SelectTrigger className="w-[180px]">
-							<CalendarIcon className="size-4 mr-2" />
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="1month">Último Mes</SelectItem>
-							<SelectItem value="3months">Últimos 3 Meses</SelectItem>
-							<SelectItem value="6months">Últimos 6 Meses</SelectItem>
-							<SelectItem value="1year">Último Año</SelectItem>
-							<SelectItem value="all">Todo el Tiempo</SelectItem>
-						</SelectContent>
-					</Select>
+					<PeriodFilter
+						dateFrom={dateFrom}
+						dateTo={dateTo}
+						onChange={({ dateFrom: nextDateFrom, dateTo: nextDateTo }) => {
+							setDateFrom(nextDateFrom)
+							setDateTo(nextDateTo)
+						}}
+					/>
 					<Button onClick={handleExportPDF} disabled={isExporting}>
 						<DownloadIcon className="size-4" />
 						{isExporting ? "Preparando..." : "Exportar PDF"}
@@ -412,67 +393,7 @@ export default function ReportsPage() {
 
 					{/* Savings Report Tab */}
 					<TabsContent value="savings" className="space-y-4">
-						<Card>
-							<CardHeader>
-								<CardTitle>Rendimiento de Ahorros</CardTitle>
-								<CardDescription>Objetivo vs ahorros reales en el tiempo</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<ChartContainer config={chartConfig} className="h-[400px] w-full">
-									<LineChart data={savingsProgress}>
-										<CartesianGrid strokeDasharray="3 3" />
-										<XAxis dataKey="month" />
-										<YAxis />
-										<ChartTooltip
-											content={<ChartTooltipContent />}
-											cursor={{ stroke: "rgba(0, 0, 0, 0.2)" }}
-										/>
-										<Line
-											type="monotone"
-											dataKey="target"
-											stroke="#c084fc"
-											strokeWidth={2}
-											strokeDasharray="5 5"
-										/>
-										<Line type="monotone" dataKey="actual" stroke="#a78bfa" strokeWidth={2} />
-									</LineChart>
-								</ChartContainer>
-							</CardContent>
-						</Card>
-
-						<div className="grid gap-4 md:grid-cols-3">
-							<Card>
-								<CardHeader className="pb-2">
-									<CardDescription>Meses Sobre el Objetivo</CardDescription>
-									<CardTitle className="text-2xl text-success">3/6</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<p className="text-sm text-muted-foreground">50% de éxito</p>
-								</CardContent>
-							</Card>
-
-							<Card>
-								<CardHeader className="pb-2">
-									<CardDescription>Total Ahorrado vs Objetivo</CardDescription>
-									<CardTitle className="text-2xl">
-										${totalSavings.toLocaleString()}
-									</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<p className="text-sm text-muted-foreground">Objetivo: $12,000</p>
-								</CardContent>
-							</Card>
-
-							<Card>
-								<CardHeader className="pb-2">
-									<CardDescription>Tasa de Ahorro</CardDescription>
-									<CardTitle className="text-2xl text-success">32%</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<p className="text-sm text-muted-foreground">Del ingreso total</p>
-								</CardContent>
-							</Card>
-						</div>
+						<SavingsVsGoalsReport months={getInclusiveMonthCount(dateFrom, dateTo)} />
 					</TabsContent>
 				</Tabs>
 			</div>
