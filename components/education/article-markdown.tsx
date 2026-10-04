@@ -1,10 +1,12 @@
-import ReactMarkdown, { type Components } from "react-markdown"
+import ReactMarkdown, { type Components, type ExtraProps } from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { cn } from "@/lib/utils"
 
-// react-markdown le pasa a cada componente el nodo del AST en `node`; no hay que mandarlo al DOM.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const omitNode = <P extends { node?: unknown }>({ node, ...rest }: P) => rest
+function omitNode<P extends ExtraProps>(props: P): Omit<P, "node"> {
+  const rest: Omit<P, "node"> & ExtraProps = { ...props }
+  delete rest.node
+  return rest
+}
 
 const components: Components = {
   h1: (props) => <h1 {...omitNode(props)} className="mt-8 mb-4 text-3xl font-bold first:mt-0" />,
