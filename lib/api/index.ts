@@ -21,6 +21,16 @@ export { toastApiError } from "./notify"
 export { clearSession, getRole, loginPathForCurrentRole, saveSession, type SessionRole } from "./session"
 export { getSession, loginEmpleado, loginEmpresa, logout, type LoginRequest, type SessionResponse } from "./auth"
 export { getApiBaseUrl } from "./config"
+export {
+  courseLevelLabels,
+  courseProgressStatusLabels,
+  listCourses,
+  type CourseFilters,
+  type CourseLevel,
+  type CourseProgressStatus,
+  type CourseSummaryDto,
+} from "./courses"
+export { type EducationCategory } from "./education"
 export { getMepQuote, type MepQuoteDto } from "./exchange-rates"
 export {
   changeBudgetCurrency,
