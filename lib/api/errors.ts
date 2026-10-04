@@ -110,7 +110,7 @@ export function parseApiError(status: number, body: unknown): ApiError {
   const problem = body as ProblemDetailsBody
 
   return new ApiError({
-    code: typeof problem.type === "string" ? problem.type : String(status),
+    code: pickFirstString(problem.type, problem.title) ?? String(status),
     description:
       pickFirstString(problem.detail, problem.title) ?? fallback,
     status,

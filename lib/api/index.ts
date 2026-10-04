@@ -19,7 +19,28 @@ export { api, setUnauthorizedHandler, type RequestOptions } from "./client"
 export { ApiError, ClientErrorCodes, isApiError, parseApiError } from "./errors"
 export { toastApiError } from "./notify"
 export { clearSession, getRole, loginPathForCurrentRole, saveSession, type SessionRole } from "./session"
-export { getSession, loginEmpleado, loginEmpresa, logout, type LoginRequest, type SessionResponse } from "./auth"
+export {
+  getSession,
+  isTwoFactorChallenge,
+  loginEmpleado,
+  loginEmpresa,
+  logout,
+  verifyTwoFactorLogin,
+  type LoginRequest,
+  type SessionResponse,
+  type TwoFactorChallenge,
+} from "./auth"
+export {
+  changePassword,
+  enableTwoFactor,
+  getTwoFactorStatus,
+  PASSWORD_MIN_LENGTH,
+  setupTwoFactor,
+  TWO_FACTOR_CODE_LENGTH,
+  type ChangePasswordPayload,
+  type TwoFactorSetup,
+  type TwoFactorStatus,
+} from "./account"
 export { getApiBaseUrl } from "./config"
 export {
   educationCategoryLabels,
