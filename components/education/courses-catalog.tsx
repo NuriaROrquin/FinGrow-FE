@@ -24,8 +24,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
-  COURSE_LEVEL_LABELS,
-  COURSE_PROGRESS_STATUS_LABELS,
+  courseLevelLabels,
+  courseProgressStatusLabels,
   listCourses,
   toastApiError,
   type CourseLevel,
@@ -35,9 +35,9 @@ import {
 
 const ALL = "all"
 
-const DURATION_OPTIONS = [40, 50, 60]
+const durationOptions = [40, 50, 60]
 
-const CATEGORY_ICONS: Record<string, LucideIcon> = {
+const categoryIcons: Record<string, LucideIcon> = {
   Basics: DollarSignIcon,
   Savings: PiggyBankIcon,
   Budgeting: DollarSignIcon,
@@ -105,7 +105,7 @@ export function CoursesCatalog() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>Todos los niveles</SelectItem>
-              {Object.entries(COURSE_LEVEL_LABELS).map(([value, label]) => (
+              {Object.entries(courseLevelLabels).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
                 </SelectItem>
@@ -119,7 +119,7 @@ export function CoursesCatalog() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>Todo el progreso</SelectItem>
-              {Object.entries(COURSE_PROGRESS_STATUS_LABELS).map(([value, label]) => (
+              {Object.entries(courseProgressStatusLabels).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
                 </SelectItem>
@@ -138,7 +138,7 @@ export function CoursesCatalog() {
           <ToggleGroupItem value={ALL} className="px-3">
             Cualquier duración
           </ToggleGroupItem>
-          {DURATION_OPTIONS.map((minutes) => (
+          {durationOptions.map((minutes) => (
             <ToggleGroupItem key={minutes} value={String(minutes)} className="px-3">
               ≤ {minutes} min
             </ToggleGroupItem>
@@ -177,7 +177,7 @@ export function CoursesCatalog() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {courses.map((course) => {
-            const Icon = CATEGORY_ICONS[course.category] ?? GraduationCapIcon
+            const Icon = categoryIcons[course.category] ?? GraduationCapIcon
             const isCompleted = course.progressStatus === "Completed"
             const currentRating = courseRatings[course.id] || 0
             const currentHover = hoveredRating[course.id] || 0
@@ -205,7 +205,7 @@ export function CoursesCatalog() {
                       <BookOpenIcon className="size-4" />
                       <span>{course.lessonCount} lecciones</span>
                     </div>
-                    <Badge variant="outline">{COURSE_LEVEL_LABELS[course.level]}</Badge>
+                    <Badge variant="outline">{courseLevelLabels[course.level]}</Badge>
                   </div>
 
                   <div className="space-y-2">

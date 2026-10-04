@@ -22,8 +22,8 @@ export { clearSession, getRole, loginPathForCurrentRole, saveSession, type Sessi
 export { getSession, loginEmpleado, loginEmpresa, logout, type LoginRequest, type SessionResponse } from "./auth"
 export { getApiBaseUrl } from "./config"
 export {
-  COURSE_LEVEL_LABELS,
-  COURSE_PROGRESS_STATUS_LABELS,
+  courseLevelLabels,
+  courseProgressStatusLabels,
   listCourses,
   type CourseFilters,
   type CourseLevel,

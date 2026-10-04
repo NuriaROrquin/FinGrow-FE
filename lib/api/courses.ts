@@ -6,13 +6,13 @@ export type CourseLevel = "Beginner" | "Intermediate" | "Advanced"
 
 export type CourseProgressStatus = "NotStarted" | "InProgress" | "Completed"
 
-export const COURSE_LEVEL_LABELS: Record<CourseLevel, string> = {
+export const courseLevelLabels: Record<CourseLevel, string> = {
   Beginner: "Principiante",
   Intermediate: "Intermedio",
   Advanced: "Avanzado",
 }
 
-export const COURSE_PROGRESS_STATUS_LABELS: Record<CourseProgressStatus, string> = {
+export const courseProgressStatusLabels: Record<CourseProgressStatus, string> = {
   NotStarted: "Sin empezar",
   InProgress: "En curso",
   Completed: "Completado",
