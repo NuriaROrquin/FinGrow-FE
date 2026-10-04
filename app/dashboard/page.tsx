@@ -46,6 +46,8 @@ import {
 } from "@/lib/api"
 import { AddTransactionForm } from "@/components/transactions/add-transaction-form"
 import { PeriodFilter, getCurrentMonthStart, getToday } from "@/components/period-filter"
+import { formatDateText, formatMoney } from "@/lib/format"
+import { usePreferences } from "@/lib/preferences-context"
 
 const categoryColors = ["#3b5998", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#ef4444", "#14b8a6"]
 
@@ -75,9 +77,7 @@ function formatMonth(month: string): string {
   const [year, monthNumber] = month.split("-").map(Number)
   if (!year || !monthNumber || monthNumber < 1 || monthNumber > 12) return month
 
-  return new Intl.DateTimeFormat("es-AR", { month: "short" })
-    .format(new Date(year, monthNumber - 1, 1))
-    .replace(".", "")
+  return formatDateText(new Date(year, monthNumber - 1, 1), { month: "short" }).replace(".", "")
 }
 
 function getCategoryLabel(category: string): string {
@@ -93,7 +93,7 @@ function toCategoryChartData(items: ExpenseCategoryTotalDto[]) {
 }
 
 function formatCurrency(value: number, currency: Currency): string {
-  return new Intl.NumberFormat("es-AR", { style: "currency", currency }).format(value)
+  return formatMoney(value, currency)
 }
 
 function ChartEmptyState({ title, description }: { title: string; description: string }) {
@@ -120,7 +120,9 @@ export default function DashboardPage() {
   const [isLoadingCharts, setIsLoadingCharts] = useState(true)
   const [chartsError, setChartsError] = useState<string | null>(null)
   const [chartsRefreshKey, setChartsRefreshKey] = useState(0)
-  const [currency, setCurrency] = useState<"ARS" | "USD">("ARS")
+  const { preferences } = usePreferences()
+  // El resumen solo se calcula en pesos o dólares: otra moneda preferida arranca en pesos.
+  const [currency, setCurrency] = useState<"ARS" | "USD">(preferences.currency === "USD" ? "USD" : "ARS")
   const [dashboardSummary, setDashboardSummary] = useState<DashboardSummaryDto | null>(null)
   const [isLoadingSummary, setIsLoadingSummary] = useState(true)
   const [summaryError, setSummaryError] = useState<string | null>(null)

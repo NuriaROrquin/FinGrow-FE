@@ -43,6 +43,15 @@ export {
 } from "./account"
 export { getApiBaseUrl } from "./config"
 export {
+  defaultPreferences,
+  getPreferences,
+  updatePreferences,
+  type DateFormat,
+  type Language,
+  type Preferences,
+  type ThemePreference,
+} from "./preferences"
+export {
   educationCategoryLabels,
   getArticle,
   listArticles,

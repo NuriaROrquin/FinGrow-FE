@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { formatDateText } from "@/lib/format"
 
 export type PeriodDateRange = {
   dateFrom: string
@@ -56,10 +57,7 @@ export function PeriodFilter({ dateFrom, dateTo, onChange }: PeriodFilterProps) 
   const [customDateFrom, setCustomDateFrom] = useState(dateFrom)
   const [customDateTo, setCustomDateTo] = useState(dateTo)
   const [isCustomPeriodOpen, setIsCustomPeriodOpen] = useState(false)
-  const periodLabel = parseDateInput(dateFrom).toLocaleDateString("es-AR", {
-    month: "long",
-    year: "numeric",
-  })
+  const periodLabel = formatDateText(parseDateInput(dateFrom), { month: "long", year: "numeric" })
 
   const changePeriod = (offset: number) => {
     const currentPeriod = parseDateInput(dateFrom)

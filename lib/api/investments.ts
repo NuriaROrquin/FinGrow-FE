@@ -1,5 +1,6 @@
 import { api } from "./client"
 import type { Currency } from "./transactions"
+import { formatNumber } from "@/lib/format"
 
 export type InvestmentType =
   | "Stock"
@@ -66,7 +67,7 @@ export function quantityUnit(type: InvestmentType, quantity: number): string {
 }
 
 export function formatQuantity(quantity: number, type: InvestmentType): string {
-  const amount = quantity.toLocaleString("es-AR", { maximumFractionDigits: 10 })
+  const amount = formatNumber(quantity, { maximumFractionDigits: 10 })
   const unit = quantityUnit(type, quantity)
 
   return unit === "" ? amount : `${amount} ${unit}`

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import type { BudgetHealth, BudgetLimitDto } from "@/lib/api"
-import { expenseCategoryLabels } from "@/lib/api/transactions"
+import { expenseCategoryLabels, type Currency } from "@/lib/api/transactions"
 import { cn } from "@/lib/utils"
 import { expenseCategoryIcons, formatAmount } from "./budget-month"
 
@@ -51,7 +51,7 @@ export function BudgetLimitCard({
   canRemove,
 }: {
   limit: BudgetLimitDto
-  currency: string | null
+  currency: Currency | null
   onEdit: () => void
   onRemove: () => void
   canRemove: boolean

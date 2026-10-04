@@ -15,6 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { getSavingsVsGoals, toastApiError, type SavingsVsGoalsDto } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
+import { formatMoney } from "@/lib/format"
+import { usePreferences } from "@/lib/preferences-context"
 
 const currencies: Currency[] = ["ARS", "USD", "EUR", "BRL"]
 
@@ -25,12 +27,10 @@ const chartConfig = {
   contributed: { label: "Aportado", color: "#a78bfa" },
 } satisfies ChartConfig
 
-function formatMoney(amount: number): string {
-  return `$${amount.toLocaleString("es-AR", { maximumFractionDigits: 2 })}`
-}
 
 export function SavingsVsGoalsReport({ months }: { months: number | null }) {
-  const [currency, setCurrency] = useState<Currency>("ARS")
+  const { preferences } = usePreferences()
+  const [currency, setCurrency] = useState<Currency>(preferences.currency)
   const [report, setReport] = useState<SavingsVsGoalsDto | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -138,11 +138,11 @@ export function SavingsVsGoalsReport({ months }: { months: number | null }) {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Aportado vs Objetivo</CardDescription>
-            <CardTitle className="text-2xl">{report ? formatMoney(report.totalContributed) : "—"}</CardTitle>
+            <CardTitle className="text-2xl">{report ? formatMoney(report.totalContributed, currency) : "—"}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Objetivo: {report ? formatMoney(report.totalCommitted) : "—"}
+              Objetivo: {report ? formatMoney(report.totalCommitted, currency) : "—"}
             </p>
           </CardContent>
         </Card>

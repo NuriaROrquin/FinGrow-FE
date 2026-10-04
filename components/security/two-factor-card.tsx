@@ -20,8 +20,10 @@ import {
   TWO_FACTOR_CODE_LENGTH,
   type TwoFactorSetup,
 } from "@/lib/api"
+import { useMessages } from "@/lib/i18n"
 
 export function TwoFactorCard() {
+  const t = useMessages()
   const [enabled, setEnabled] = useState<boolean | null>(null)
   const [setup, setSetup] = useState<TwoFactorSetup | null>(null)
   const [code, setCode] = useState("")
@@ -35,12 +37,12 @@ export function TwoFactorCard() {
       .then((status) => setEnabled(status.enabled))
       .catch((error) => {
         if (controller.signal.aborted) return
-        toastApiError(error, "No pudimos consultar el estado del doble factor.")
+        toastApiError(error, t.twoFactor.statusFailed)
         setEnabled(false)
       })
 
     return () => controller.abort()
-  }, [])
+  }, [t])
 
   const start = async () => {
     setStarting(true)
@@ -54,7 +56,7 @@ export function TwoFactorCard() {
         return
       }
 
-      toastApiError(error, "No pudimos generar el código QR.")
+      toastApiError(error, t.twoFactor.qrFailed)
     } finally {
       setStarting(false)
     }
@@ -70,11 +72,11 @@ export function TwoFactorCard() {
       await enableTwoFactor(code)
       setEnabled(true)
       setSetup(null)
-      toast.success("Doble factor activado", {
-        description: "Desde ahora te vamos a pedir el código de la app al iniciar sesión.",
+      toast.success(t.twoFactor.enabledToast, {
+        description: t.twoFactor.enabledToastDescription,
       })
     } catch (error) {
-      toastApiError(error, "No pudimos activar el doble factor.", { showCode: false })
+      toastApiError(error, t.twoFactor.enableFailed, { showCode: false })
       setCode("")
     } finally {
       setConfirming(false)
@@ -83,7 +85,7 @@ export function TwoFactorCard() {
 
   const copySecret = (secret: string) => {
     navigator.clipboard.writeText(secret)
-    toast.success("Clave copiada al portapapeles")
+    toast.success(t.twoFactor.secretCopied)
   }
 
   return (
@@ -91,46 +93,38 @@ export function TwoFactorCard() {
       <div className="flex items-center justify-between gap-3">
         <h3 className="font-semibold flex items-center gap-2">
           <ShieldCheck className="size-4" />
-          Autenticación de Dos Factores
+          {t.twoFactor.title}
         </h3>
         {enabled && (
           <Badge variant="default" className="gap-1">
             <CheckCircle2 className="size-3" />
-            Activo
+            {t.twoFactor.active}
           </Badge>
         )}
       </div>
 
       {enabled === null ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Spinner /> Consultando el estado del doble factor...
+          <Spinner /> {t.twoFactor.checking}
         </div>
       ) : enabled ? (
         <Alert>
           <CheckCircle2 className="h-4 w-4" />
-          <AlertDescription>
-            Al iniciar sesión, además de la contraseña te pedimos el código de 6 dígitos de tu app de autenticación.
-          </AlertDescription>
+          <AlertDescription>{t.twoFactor.enabledInfo}</AlertDescription>
         </Alert>
       ) : setup === null ? (
         <>
-          <p className="text-sm text-muted-foreground">
-            Agregá una capa extra de seguridad: además de la contraseña, al iniciar sesión vas a necesitar un código
-            que genera tu celular con Google Authenticator, Microsoft Authenticator o Authy.
-          </p>
+          <p className="text-sm text-muted-foreground">{t.twoFactor.intro}</p>
           <Button onClick={start} disabled={starting} className="w-full sm:w-auto">
             {starting && <Spinner className="mr-2" />}
-            Activar doble factor
+            {t.twoFactor.enable}
           </Button>
         </>
       ) : (
         <form onSubmit={confirm} className="space-y-4">
           <Alert>
             <Info className="h-4 w-4" />
-            <AlertDescription>
-              1. Escaneá el código QR con tu app de autenticación. 2. Ingresá el código de 6 dígitos que te muestra
-              para confirmar.
-            </AlertDescription>
+            <AlertDescription>{t.twoFactor.steps}</AlertDescription>
           </Alert>
 
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
@@ -138,7 +132,7 @@ export function TwoFactorCard() {
               <QRCodeSVG value={setup.provisioningUri} size={168} />
             </div>
             <div className="w-full space-y-2">
-              <Label htmlFor="two-factor-secret">¿No podés escanearlo? Ingresá esta clave a mano</Label>
+              <Label htmlFor="two-factor-secret">{t.twoFactor.manualKey}</Label>
               <div className="flex gap-2">
                 <code
                   id="two-factor-secret"
@@ -154,7 +148,7 @@ export function TwoFactorCard() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="two-factor-confirm-code">Código de verificación</Label>
+            <Label htmlFor="two-factor-confirm-code">{t.twoFactor.code}</Label>
             <InputOTP
               id="two-factor-confirm-code"
               maxLength={TWO_FACTOR_CODE_LENGTH}
@@ -174,10 +168,10 @@ export function TwoFactorCard() {
           <div className="flex flex-wrap gap-2">
             <Button type="submit" disabled={confirming || code.length !== TWO_FACTOR_CODE_LENGTH}>
               {confirming && <Spinner className="mr-2" />}
-              Confirmar y activar
+              {t.twoFactor.confirm}
             </Button>
             <Button type="button" variant="ghost" onClick={() => setSetup(null)} disabled={confirming}>
-              Cancelar
+              {t.common.cancel}
             </Button>
           </div>
         </form>
