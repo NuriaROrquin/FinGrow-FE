@@ -35,7 +35,6 @@ import {
 
 const ALL = "all"
 
-/** Topes de duración que se ofrecen como filtro rápido, en minutos. */
 const DURATION_OPTIONS = [40, 50, 60]
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
@@ -61,7 +60,6 @@ export function CoursesCatalog() {
   const [status, setStatus] = useState<CourseProgressStatus | typeof ALL>(ALL)
   const [courses, setCourses] = useState<CourseSummaryDto[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  // La calificación todavía es local: la persiste HU-40.
   const [courseRatings, setCourseRatings] = useState<Record<string, number>>({})
   const [hoveredRating, setHoveredRating] = useState<Record<string, number>>({})
 
@@ -134,7 +132,6 @@ export function CoursesCatalog() {
           type="single"
           variant="outline"
           value={maxDuration}
-          // Radix deja deseleccionar el ítem activo; en ese caso se vuelve a "Cualquiera".
           onValueChange={(value) => setMaxDuration(value || ALL)}
           aria-label="Filtrar por duración"
         >

@@ -132,7 +132,6 @@ const courses = [
 export default function CoursePage() {
   const params = useParams()
   const router = useRouter()
-  // El catálogo (HU-36) enlaza por slug; el detalle sigue siendo de prueba hasta HU-37.
   const course = courses.find((c) => c.slug === params.id || c.id === params.id)
 
   if (!course) {

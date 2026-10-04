@@ -19,7 +19,6 @@ import {Badge} from "@/components/ui/badge";
 import { useRouter, useSearchParams } from "next/navigation"
 import { CoursesCatalog } from "@/components/education/courses-catalog"
 
-// Solo alimenta el resumen de arriba, que todavía es de prueba: el progreso general es HU-39.
 const courses = [
   {
     id: 1,

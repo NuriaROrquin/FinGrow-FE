@@ -4,7 +4,6 @@ export type CourseLevel = "Beginner" | "Intermediate" | "Advanced"
 
 export type CourseProgressStatus = "NotStarted" | "InProgress" | "Completed"
 
-/** Etiqueta en castellano de cada nivel, de más básico a más avanzado. */
 export const COURSE_LEVEL_LABELS: Record<CourseLevel, string> = {
   Beginner: "Principiante",
   Intermediate: "Intermedio",
@@ -34,7 +33,6 @@ export interface CourseSummaryDto {
 
 export interface CourseFilters {
   level?: CourseLevel
-  /** Solo los cursos que duran esta cantidad de minutos o menos. */
   maxDuration?: number
   status?: CourseProgressStatus
 }
