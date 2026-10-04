@@ -15,6 +15,7 @@ import {
   getSecurityPrice,
   investmentTypeLabels,
   isApiError,
+  isPricedPerNominal,
   isQuotedCurrency,
   isQuotedOnExchange,
   toastApiError,
@@ -53,8 +54,21 @@ function todayForDateInput(): string {
   return format(new Date(), "yyyy-MM-dd")
 }
 
+const symbolPlaceholders: Partial<Record<InvestmentType, string>> = {
+  Stock: "ej. YPFD, GGAL",
+  Cedear: "ej. AAPL, MELI",
+  Etf: "ej. SPY, QQQ",
+  Bond: "ej. AL30, GD30",
+  CorporateBond: "ej. YMCXO",
+  TreasuryBill: "ej. S30N6",
+}
+
+function isPerNominal(type: InvestmentType | ""): boolean {
+  return type !== "" && isPricedPerNominal(type)
+}
+
 function quantityLabel(type: InvestmentType | ""): string {
-  return type === "Bond" ? "Cantidad de nominales" : "Cantidad de unidades"
+  return isPerNominal(type) ? "Cantidad de nominales" : "Cantidad de unidades"
 }
 
 function formatMoney(amount: number, currency: Currency): string {
@@ -71,12 +85,12 @@ function formatUnitPrice(amount: number, currency: Currency): string {
 }
 
 function formatQuantity(quantity: number, type: InvestmentType | ""): string {
-  const unit = type === "Bond" ? (quantity === 1 ? "nominal" : "nominales") : quantity === 1 ? "unidad" : "unidades"
+  const unit = isPerNominal(type) ? (quantity === 1 ? "nominal" : "nominales") : quantity === 1 ? "unidad" : "unidades"
   return `${quantity.toLocaleString("es-AR", { maximumFractionDigits: 6 })} ${unit}`
 }
 
 function pricePerLabel(type: InvestmentType | ""): string {
-  return type === "Bond" ? "por nominal" : "por unidad"
+  return isPerNominal(type) ? "por nominal" : "por unidad"
 }
 
 function pricedOnLabel(price: SecurityPriceDto): string {
@@ -292,7 +306,7 @@ export function AddInvestmentForm({
               <Label htmlFor="investment-symbol">Símbolo</Label>
               <Input
                 id="investment-symbol"
-                placeholder="ej. AL30, YPFD, SPY"
+                placeholder={symbolPlaceholders[type] ?? "ej. AL30, YPFD, SPY"}
                 maxLength={SYMBOL_MAX_LENGTH}
                 pattern="[A-Za-z0-9]+"
                 title="Solo letras y números"
