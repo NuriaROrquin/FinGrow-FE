@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
+import { SecurityCombobox, type SecurityOption } from "@/components/investments/security-combobox"
 import {
   ASSET_NAME_MAX_LENGTH,
   FUND_NAME_MAX_LENGTH,
@@ -32,13 +33,13 @@ import type { Currency } from "@/lib/api/transactions"
 
 const QUOTE_DEBOUNCE_MS = 400
 
-const FUND_SEARCH_DEBOUNCE_MS = 300
+const SEARCH_DEBOUNCE_MS = 250
+
+const TICKER_SEARCH_MIN_LENGTH = 2
 
 const FUND_SEARCH_MIN_LENGTH = 3
 
 const SYMBOL_PATTERN = /^[A-Z0-9]+$/
-
-const FUND_OPTIONS_ID = "investment-fund-options"
 
 const currencyLabels: Record<Currency, string> = {
   ARS: "ARS ($)",
@@ -61,6 +62,12 @@ type QuoteResult =
   | { status: "missing" }
   | { status: "unavailable" }
 
+interface SearchState {
+  scope: string
+  key: string
+  options: SecurityPriceDto[] | null
+}
+
 const symbolPlaceholders: Partial<Record<InvestmentType, string>> = {
   Stock: "ej. YPFD, GGAL",
   Cedear: "ej. AAPL, MELI",
@@ -68,33 +75,34 @@ const symbolPlaceholders: Partial<Record<InvestmentType, string>> = {
   Bond: "ej. AL30, GD30",
   CorporateBond: "ej. YMCXO",
   TreasuryBill: "ej. S30N6",
-  MutualFund: "Buscá por nombre, ej. Balanz Money Market",
-  Crypto: "ej. BTC, ETH, USDT",
+  MutualFund: "ej. Balanz Money Market",
+  Crypto: "ej. BTC, Ethereum",
 }
 
 const quoteHelp: Record<QuoteMarket, string> = {
-  Exchange:
-    "Con el símbolo y la cantidad te mostramos el precio de BYMA y calculamos el capital; después la cotizamos todos los días hábiles con el cierre. Usá la variante de la moneda de la inversión: AL30 en pesos, AL30D en dólares.",
-  MutualFund:
-    "Elegí el fondo de la lista y cargá tus cuotapartes: te mostramos el valor de la cuotaparte que publica ArgentinaDatos y calculamos el capital; después lo cotizamos todos los días hábiles.",
-  Crypto:
-    "Con el símbolo y la cantidad te mostramos el precio de CoinGecko y calculamos el capital; después la cotizamos todos los días hábiles.",
+  Exchange: "Buscá el símbolo de BYMA en la moneda de la inversión: AL30 en pesos, AL30D en dólares.",
+  MutualFund: "Buscá el fondo por nombre y cargá tus cuotapartes.",
+  Crypto: "Buscá la cripto por símbolo o por nombre.",
 }
 
 function todayForDateInput(): string {
   return format(new Date(), "yyyy-MM-dd")
 }
 
-function quantityLabel(type: InvestmentType | ""): string {
+function quantityLabel(type: InvestmentType | "", symbol: string): string {
   if (type !== "" && isPricedPerNominal(type)) {
-    return "Cantidad de nominales"
+    return "Nominales"
   }
 
   if (type === "MutualFund") {
-    return "Cantidad de cuotapartes"
+    return "Cuotapartes"
   }
 
-  return type === "Crypto" ? "Cantidad" : "Cantidad de unidades"
+  if (type === "Crypto") {
+    return symbol === "" ? "Cantidad" : `Cantidad de ${symbol}`
+  }
+
+  return "Unidades"
 }
 
 function pricePerLabel(type: InvestmentType | ""): string {
@@ -125,6 +133,10 @@ function pricedOnLabel(price: SecurityPriceDto): string {
     : `${price.source}, al ${format(parseISO(price.pricedOn), "dd/MM")}`
 }
 
+function quotedOnText(price: SecurityPriceDto): string {
+  return price.pricedOn === todayForDateInput() ? "de hoy" : `del ${format(parseISO(price.pricedOn), "dd/MM")}`
+}
+
 function roundToCents(amount: number): number {
   return Math.round(amount * 100) / 100
 }
@@ -145,14 +157,15 @@ export function AddInvestmentForm({
   const isEditing = Boolean(initialInvestment)
   const [type, setType] = useState<InvestmentType | "">(initialInvestment?.type ?? "")
   const [assetName, setAssetName] = useState(initialInvestment?.assetName ?? "")
+  const [assetNameTouched, setAssetNameTouched] = useState(isEditing)
   const [investedAmount, setInvestedAmount] = useState(initialInvestment ? String(initialInvestment.investedAmount) : "")
   const [investedAmountTouched, setInvestedAmountTouched] = useState(isEditing)
   const [currency, setCurrency] = useState<Currency>(initialInvestment?.currency ?? "ARS")
-  const [purchasedOn, setPurchasedOn] = useState(initialInvestment?.purchasedOn ?? "")
+  const [purchasedOn, setPurchasedOn] = useState(initialInvestment?.purchasedOn ?? todayForDateInput())
   const [symbol, setSymbol] = useState(initialInvestment?.symbol ?? "")
   const [quantity, setQuantity] = useState(initialInvestment?.quantity != null ? String(initialInvestment.quantity) : "")
   const [quote, setQuote] = useState<{ key: string; result: QuoteResult } | null>(null)
-  const [fundSearch, setFundSearch] = useState<{ key: string; options: SecurityPriceDto[] | null } | null>(null)
+  const [search, setSearch] = useState<SearchState | null>(null)
   const [trackingError, setTrackingError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -160,13 +173,18 @@ export function AddInvestmentForm({
   const canBeQuoted = market !== null
   const isFund = market === "MutualFund"
   const normalizedSymbol = normalizeSymbol(symbol, market)
-  const hasValidSymbol = isFund
-    ? normalizedSymbol.length >= FUND_SEARCH_MIN_LENGTH && normalizedSymbol.length <= FUND_NAME_MAX_LENGTH
-    : normalizedSymbol.length <= SYMBOL_MAX_LENGTH && SYMBOL_PATTERN.test(normalizedSymbol)
+  const isValidTicker = normalizedSymbol.length <= SYMBOL_MAX_LENGTH && SYMBOL_PATTERN.test(normalizedSymbol)
   const currencyIsQuotable = market !== null && canQuoteIn(market, currency)
-  const quoteKey =
-    canBeQuoted && !isFund && hasValidSymbol && currencyIsQuotable ? `${market}:${normalizedSymbol}:${currency}` : null
-  const fundSearchKey = isFund && hasValidSymbol ? normalizedSymbol.toLowerCase() : null
+
+  const quoteKeyFor = (tickerSymbol: string) => `${market}:${tickerSymbol}:${currency}`
+  const quoteKey = canBeQuoted && !isFund && isValidTicker && currencyIsQuotable ? quoteKeyFor(normalizedSymbol) : null
+
+  const searchScope = canBeQuoted && currencyIsQuotable ? `${market}:${isFund ? "" : currency}` : null
+  const searchMinLength = isFund ? FUND_SEARCH_MIN_LENGTH : TICKER_SEARCH_MIN_LENGTH
+  const searchKey =
+    searchScope !== null && normalizedSymbol.length >= searchMinLength && (isFund || isValidTicker)
+      ? `${searchScope}:${normalizedSymbol.toLowerCase()}`
+      : null
 
   useEffect(() => {
     if (quoteKey === null || type === "") {
@@ -191,32 +209,35 @@ export function AddInvestmentForm({
   }, [quoteKey, normalizedSymbol, currency, type])
 
   useEffect(() => {
-    if (fundSearchKey === null || type === "") {
+    if (searchKey === null || searchScope === null || type === "") {
       return
     }
 
     const controller = new AbortController()
     const timer = window.setTimeout(() => {
-      searchSecurityPrices(type, normalizedSymbol, undefined, controller.signal)
-        .then((options) => setFundSearch({ key: fundSearchKey, options }))
+      searchSecurityPrices(type, normalizedSymbol, isFund ? undefined : currency, controller.signal)
+        .then((options) => setSearch({ scope: searchScope, key: searchKey, options }))
         .catch((error: unknown) => {
           if (isAbort(error)) return
-          setFundSearch({ key: fundSearchKey, options: null })
+          setSearch({ scope: searchScope, key: searchKey, options: null })
         })
-    }, FUND_SEARCH_DEBOUNCE_MS)
+    }, SEARCH_DEBOUNCE_MS)
 
     return () => {
       window.clearTimeout(timer)
       controller.abort()
     }
-  }, [fundSearchKey, normalizedSymbol, type])
+  }, [searchKey, searchScope, normalizedSymbol, currency, isFund, type])
 
-  const fundOptions = isFund ? (fundSearch?.options ?? []) : []
-  const matchedFund = fundOptions.find((option) => option.symbol.toLowerCase() === normalizedSymbol.toLowerCase())
-  const currentFundSearch = fundSearchKey !== null && fundSearch?.key === fundSearchKey ? fundSearch : null
+  const searchOptions = search !== null && search.scope === searchScope ? (search.options ?? []) : []
+  const currentSearch = searchKey !== null && search?.key === searchKey ? search : null
+  const isSearching = searchKey !== null && currentSearch === null
+  const matchedFund = isFund
+    ? searchOptions.find((option) => option.symbol.toLowerCase() === normalizedSymbol.toLowerCase())
+    : undefined
 
   const fundQuoteResult = (): QuoteResult | null => {
-    if (fundSearchKey === null) {
+    if (searchKey === null) {
       return null
     }
 
@@ -224,15 +245,15 @@ export function AddInvestmentForm({
       return { status: "found", price: matchedFund }
     }
 
-    if (currentFundSearch === null) {
+    if (currentSearch === null) {
       return { status: "loading" }
     }
 
-    if (currentFundSearch.options === null) {
+    if (currentSearch.options === null) {
       return { status: "unavailable" }
     }
 
-    return { status: currentFundSearch.options.length === 0 ? "missing" : "choose" }
+    return { status: currentSearch.options.length === 0 ? "missing" : "choose" }
   }
 
   const quoteResult: QuoteResult | null = isFund
@@ -249,7 +270,46 @@ export function AddInvestmentForm({
   const isAmountCalculated = marketValue !== null && !investedAmountTouched
   const effectiveInvestedAmount = isAmountCalculated ? marketValue.toFixed(2) : investedAmount
   const canUseMarketValue = marketValue !== null && investedAmountTouched && Number(investedAmount) !== marketValue
+  const suggestedAssetName = quotedPrice ? (quotedPrice.name ?? quotedPrice.symbol).slice(0, ASSET_NAME_MAX_LENGTH) : null
+  const effectiveAssetName = !assetNameTouched && suggestedAssetName !== null ? suggestedAssetName : assetName
   const fundCurrencyDiffers = isFund && quotedPrice !== null && quotedPrice.currency !== currency
+  const priceCurrency = quotedPrice === null || isFund ? currency : quotedPrice.currency
+  const quantityText =
+    type === ""
+      ? ""
+      : type === "Crypto"
+        ? `${formatQuantity(parsedQuantity, type)} ${normalizedSymbol}`
+        : formatQuantity(parsedQuantity, type)
+
+  const comboboxOptions: SecurityOption[] = searchOptions.map((option) => ({
+    value: option.symbol,
+    label: option.symbol,
+    detail: option.name,
+    trailing: formatUnitPrice(option.unitPrice, option.currency),
+  }))
+
+  const handleSymbolSelect = (option: SecurityOption) => {
+    const selected = searchOptions.find((candidate) => candidate.symbol === option.value)
+    setSymbol(option.value)
+
+    if (selected && !isFund) {
+      setQuote({ key: quoteKeyFor(normalizeSymbol(option.value, market)), result: { status: "found", price: selected } })
+    }
+  }
+
+  const handleTypeChange = (value: InvestmentType) => {
+    if (quoteMarketOf(value) !== market) {
+      setSymbol("")
+      setQuantity("")
+    }
+
+    setType(value)
+  }
+
+  const handleAssetNameChange = (value: string) => {
+    setAssetName(value)
+    setAssetNameTouched(value !== "")
+  }
 
   const handleInvestedAmountChange = (value: string) => {
     setInvestedAmount(value)
@@ -278,7 +338,7 @@ export function AddInvestmentForm({
     if ((trimmedSymbol === "") !== (trimmedQuantity === "")) {
       setTrackingError(
         isFund
-          ? "Para cotizar la inversión completá el fondo y la cantidad de cuotapartes, o dejá los dos vacíos."
+          ? "Para cotizar la inversión completá el fondo y las cuotapartes, o dejá los dos vacíos."
           : "Para cotizar la inversión completá el símbolo y la cantidad, o dejá los dos vacíos.",
       )
       return
@@ -288,7 +348,7 @@ export function AddInvestmentForm({
     setIsSubmitting(true)
     try {
       await onSubmit({
-        assetName: assetName.trim(),
+        assetName: effectiveAssetName.trim(),
         type,
         investedAmount: Number(effectiveInvestedAmount),
         currency,
@@ -306,21 +366,157 @@ export function AddInvestmentForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="investment-type">Tipo de activo</Label>
-        <Select value={type} onValueChange={(value) => setType(value as InvestmentType)} required>
-          <SelectTrigger id="investment-type">
-            <SelectValue placeholder="Seleccioná el tipo" />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.entries(investmentTypeLabels).map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="grid grid-cols-3 gap-2">
+        <div className="col-span-2 space-y-2">
+          <Label htmlFor="investment-type">Tipo de activo</Label>
+          <Select value={type} onValueChange={(value) => handleTypeChange(value as InvestmentType)} required>
+            <SelectTrigger id="investment-type" className="w-full">
+              <SelectValue placeholder="Seleccioná el tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(investmentTypeLabels).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="investment-currency">Moneda</Label>
+          <Select value={currency} onValueChange={(value) => setCurrency(value as Currency)}>
+            <SelectTrigger id="investment-currency" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(currencyLabels).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+
+      {canBeQuoted && (
+        <section aria-labelledby="investment-quote-title" className="space-y-3 rounded-md border p-3">
+          <div>
+            <p id="investment-quote-title" className="text-sm font-medium">
+              Cotización automática
+            </p>
+            <p className="text-xs text-muted-foreground">{quoteHelp[market]}</p>
+          </div>
+
+          <div className={isFund ? "grid grid-cols-1 gap-3" : "grid grid-cols-5 gap-2"}>
+            <div className={isFund ? "space-y-2" : "col-span-3 space-y-2"}>
+              <Label htmlFor="investment-symbol">{isFund ? "Fondo" : "Símbolo"}</Label>
+              <SecurityCombobox
+                id="investment-symbol"
+                value={symbol}
+                options={comboboxOptions}
+                isSearching={isSearching}
+                placeholder={(type === "" ? undefined : symbolPlaceholders[type]) ?? "ej. AL30, YPFD, SPY"}
+                maxLength={isFund ? FUND_NAME_MAX_LENGTH : SYMBOL_MAX_LENGTH}
+                onValueChange={(value) => setSymbol(isFund ? value : value.toUpperCase())}
+                onSelect={handleSymbolSelect}
+              />
+            </div>
+            <div className={isFund ? "space-y-2" : "col-span-2 space-y-2"}>
+              <Label htmlFor="investment-quantity">{quantityLabel(type, isValidTicker ? normalizedSymbol : "")}</Label>
+              <Input
+                id="investment-quantity"
+                type="number"
+                inputMode="decimal"
+                placeholder="0"
+                step="any"
+                min="0"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {!isFund && normalizedSymbol !== "" && !currencyIsQuotable && (
+            <p className="text-sm text-muted-foreground">
+              {market === "Crypto"
+                ? "Las criptomonedas se cotizan en pesos o en dólares: elegí ARS o USD para ver el precio."
+                : "BYMA cotiza en pesos y en dólares: elegí ARS o USD para ver el precio."}
+            </p>
+          )}
+
+          {!isFund && quoteResult?.status === "loading" && (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground" aria-live="polite">
+              <Spinner />
+              Buscando la cotización de {normalizedSymbol}…
+            </p>
+          )}
+
+          {quotedPrice && (
+            <div className="space-y-1 rounded-md bg-muted/50 p-3" aria-live="polite">
+              <div className="flex items-baseline justify-between gap-2 text-sm">
+                <p className="min-w-0 truncate" title={quotedPrice.name ?? quotedPrice.symbol}>
+                  <span className="font-medium">{quotedPrice.symbol}</span>
+                  {quotedPrice.name && <span className="text-muted-foreground"> · {quotedPrice.name}</span>}
+                </p>
+                <p className="shrink-0 text-xs text-muted-foreground">{pricedOnLabel(quotedPrice)}</p>
+              </div>
+              {marketValue !== null ? (
+                <>
+                  <p className="text-2xl font-semibold tabular-nums">{formatMoney(marketValue, currency)}</p>
+                  <p className="text-xs text-muted-foreground tabular-nums">
+                    {quantityText} × {formatUnitPrice(quotedPrice.unitPrice, priceCurrency)} {pricePerLabel(type)}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-2xl font-semibold tabular-nums">
+                    {formatUnitPrice(quotedPrice.unitPrice, priceCurrency)}{" "}
+                    <span className="text-sm font-normal text-muted-foreground">{pricePerLabel(type)}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Cargá {isFund ? "tus cuotapartes" : "la cantidad"} para ver cuánto vale tu inversión.
+                  </p>
+                </>
+              )}
+              {fundCurrencyDiffers && (
+                <p className="text-sm text-amber-700 dark:text-amber-300">
+                  Por el nombre, este fondo parece estar en {currencyNames[quotedPrice.currency]}: revisá la moneda.
+                </p>
+              )}
+            </div>
+          )}
+
+          {quoteResult?.status === "choose" && (
+            <p className="text-sm text-muted-foreground" aria-live="polite">
+              Elegí uno de los fondos de la lista para ver el valor de la cuotaparte.
+            </p>
+          )}
+
+          {quoteResult?.status === "missing" && (
+            <p className="text-sm text-amber-700 dark:text-amber-300" aria-live="polite">
+              {isFund
+                ? "No encontramos fondos con ese nombre. Probá con otra parte del nombre."
+                : market === "Crypto"
+                  ? `No encontramos ${normalizedSymbol} en CoinGecko. Probá con el nombre, por ejemplo Bitcoin.`
+                  : `No encontramos ${normalizedSymbol} en ${currencyNames[currency]} en BYMA. Si es en dólares, probá con la variante D (AL30D).`}
+            </p>
+          )}
+
+          {quoteResult?.status === "unavailable" && (
+            <p className="text-sm text-muted-foreground" aria-live="polite">
+              No pudimos traer la cotización ahora. Podés guardar igual: la cotizamos con el cierre del día.
+            </p>
+          )}
+
+          {trackingError && <p className="text-sm text-destructive">{trackingError}</p>}
+
+          <p className="text-xs text-muted-foreground">
+            Es opcional. Con {isFund ? "el fondo y las cuotapartes" : "el símbolo y la cantidad"} la actualizamos sola cada
+            día hábil; sin eso la inversión queda valuada al costo.
+          </p>
+        </section>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="investment-asset">Nombre del activo</Label>
@@ -328,47 +524,34 @@ export function AddInvestmentForm({
           id="investment-asset"
           placeholder="ej. AL30, Apple, Bitcoin"
           maxLength={ASSET_NAME_MAX_LENGTH}
-          value={assetName}
-          onChange={(e) => setAssetName(e.target.value)}
+          value={effectiveAssetName}
+          onChange={(e) => handleAssetNameChange(e.target.value)}
           required
         />
       </div>
 
       <div className="space-y-2">
-        <div className="grid grid-cols-3 gap-2">
-          <div className="col-span-2 space-y-2">
-            <Label htmlFor="investment-amount">Capital invertido</Label>
-            <Input
-              id="investment-amount"
-              type="number"
-              placeholder="0.00"
-              step="0.01"
-              min="0.01"
-              value={effectiveInvestedAmount}
-              onChange={(e) => handleInvestedAmountChange(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="investment-currency">Moneda</Label>
-            <Select value={currency} onValueChange={(value) => setCurrency(value as Currency)}>
-              <SelectTrigger id="investment-currency">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(currencyLabels).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        <Label htmlFor="investment-amount">Capital invertido</Label>
+        <Input
+          id="investment-amount"
+          type="number"
+          inputMode="decimal"
+          placeholder="0.00"
+          step="0.01"
+          min="0.01"
+          value={effectiveInvestedAmount}
+          onChange={(e) => handleInvestedAmountChange(e.target.value)}
+          required
+        />
         {isAmountCalculated && quotedPrice && (
           <p className="text-xs text-muted-foreground">
-            Calculado con la cotización de {quotedPrice.symbol}. Si pagaste otro precio, escribí lo que pagaste.
+            Calculado con la cotización {quotedOnText(quotedPrice)}. Si pagaste otro precio, escribí lo que pagaste.
           </p>
+        )}
+        {canUseMarketValue && quotedPrice && (
+          <Button type="button" variant="link" className="h-auto p-0 text-xs" onClick={applyMarketValue}>
+            Usar el valor a la cotización {quotedOnText(quotedPrice)} ({formatMoney(marketValue, currency)})
+          </Button>
         )}
       </div>
 
@@ -384,138 +567,7 @@ export function AddInvestmentForm({
         />
       </div>
 
-      {canBeQuoted && (
-        <div className="space-y-3 rounded-md border p-3">
-          <div>
-            <p className="text-sm font-medium">Cotización automática (opcional)</p>
-            <p className="text-xs text-muted-foreground">{quoteHelp[market]}</p>
-          </div>
-          <div className={isFund ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 gap-2"}>
-            <div className="space-y-2">
-              <Label htmlFor="investment-symbol">{isFund ? "Fondo" : "Símbolo"}</Label>
-              {isFund ? (
-                <>
-                  <Input
-                    id="investment-symbol"
-                    placeholder={symbolPlaceholders.MutualFund}
-                    maxLength={FUND_NAME_MAX_LENGTH}
-                    list={FUND_OPTIONS_ID}
-                    autoComplete="off"
-                    value={symbol}
-                    onChange={(e) => setSymbol(e.target.value)}
-                  />
-                  <datalist id={FUND_OPTIONS_ID}>
-                    {fundOptions.map((option) => (
-                      <option key={option.symbol} value={option.symbol} />
-                    ))}
-                  </datalist>
-                </>
-              ) : (
-                <Input
-                  id="investment-symbol"
-                  placeholder={(type === "" ? undefined : symbolPlaceholders[type]) ?? "ej. AL30, YPFD, SPY"}
-                  maxLength={SYMBOL_MAX_LENGTH}
-                  pattern="[A-Za-z0-9]+"
-                  title="Solo letras y números"
-                  autoComplete="off"
-                  value={symbol}
-                  onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-                />
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="investment-quantity">{quantityLabel(type)}</Label>
-              <Input
-                id="investment-quantity"
-                type="number"
-                placeholder="0"
-                step="any"
-                min="0"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {!isFund && hasValidSymbol && !currencyIsQuotable && (
-            <p className="text-sm text-muted-foreground">
-              {market === "Crypto"
-                ? "Las criptomonedas se cotizan en pesos o en dólares: elegí ARS o USD para ver el precio."
-                : "BYMA cotiza en pesos y en dólares: elegí ARS o USD para ver el precio."}
-            </p>
-          )}
-
-          {quoteResult?.status === "loading" && (
-            <p className="flex items-center gap-2 text-sm text-muted-foreground" aria-live="polite">
-              <Spinner />
-              {isFund ? "Buscando fondos…" : `Buscando la cotización de ${normalizedSymbol}…`}
-            </p>
-          )}
-
-          {quotedPrice && (
-            <div className="space-y-1 rounded-md bg-muted/50 px-3 py-2 text-sm" aria-live="polite">
-              <p>
-                <span className="font-medium">{quotedPrice.symbol}</span>
-                {quotedPrice.name && <span className="text-muted-foreground"> ({quotedPrice.name})</span>}{" "}
-                {formatUnitPrice(quotedPrice.unitPrice, isFund ? currency : quotedPrice.currency)} {pricePerLabel(type)}
-                <span className="text-muted-foreground"> · {pricedOnLabel(quotedPrice)}</span>
-              </p>
-              {marketValue !== null && (
-                <p>
-                  A este precio, {type !== "" && formatQuantity(parsedQuantity, type)}
-                  {type === "Crypto" ? ` ${quotedPrice.symbol}` : ""} {parsedQuantity === 1 ? "vale" : "valen"}{" "}
-                  <span className="font-semibold">{formatMoney(marketValue, currency)}</span>
-                  {canUseMarketValue && (
-                    <>
-                      {" · "}
-                      <Button
-                        type="button"
-                        variant="link"
-                        className="h-auto p-0 text-sm"
-                        onClick={applyMarketValue}
-                      >
-                        Usar como capital invertido
-                      </Button>
-                    </>
-                  )}
-                </p>
-              )}
-              {fundCurrencyDiffers && (
-                <p className="text-amber-700 dark:text-amber-300">
-                  Por el nombre, este fondo parece estar en {currencyNames[quotedPrice.currency]}: revisá la moneda de la
-                  inversión.
-                </p>
-              )}
-            </div>
-          )}
-
-          {quoteResult?.status === "choose" && (
-            <p className="text-sm text-muted-foreground" aria-live="polite">
-              Elegí uno de los fondos de la lista para ver el valor de la cuotaparte.
-            </p>
-          )}
-
-          {quoteResult?.status === "missing" && (
-            <p className="text-sm text-amber-700 dark:text-amber-300" aria-live="polite">
-              {isFund
-                ? "No encontramos fondos con ese nombre en ArgentinaDatos. Probá con otra parte del nombre."
-                : market === "Crypto"
-                  ? `No encontramos ${normalizedSymbol} en CoinGecko. Revisá el símbolo: BTC, ETH, USDT.`
-                  : `No encontramos ${normalizedSymbol} en ${currencyNames[currency]} en BYMA. Revisá el símbolo o usá la variante de la moneda: AL30 en pesos, AL30D en dólares.`}
-            </p>
-          )}
-
-          {quoteResult?.status === "unavailable" && (
-            <p className="text-sm text-muted-foreground" aria-live="polite">
-              No pudimos traer la cotización ahora. Podés guardar igual: la cotizamos con el cierre del día.
-            </p>
-          )}
-
-          {trackingError && <p className="text-sm text-destructive">{trackingError}</p>}
-        </div>
-      )}
-
-      <div className="flex gap-2 justify-end pt-4">
+      <div className="flex gap-2 justify-end pt-2">
         <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
           Cancelar
         </Button>

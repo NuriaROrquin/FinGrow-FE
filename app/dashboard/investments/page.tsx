@@ -523,7 +523,7 @@ export default function InvestmentsPage() {
               Agregar Inversión
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingInvestment ? "Editar inversión" : "Agregar Nueva Inversión"}</DialogTitle>
               <DialogDescription>
