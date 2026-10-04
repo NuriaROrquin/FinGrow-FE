@@ -83,11 +83,11 @@ export function ArticlesCatalog() {
             onValueChange={(value) => setMaxReadingTime(value || ALL)}
             aria-label="Filtrar por tiempo de lectura"
           >
-            <ToggleGroupItem value={ALL} className="px-3">
+            <ToggleGroupItem value={ALL} className="flex-none px-3">
               Cualquiera
             </ToggleGroupItem>
             {readingTimeOptions.map((minutes) => (
-              <ToggleGroupItem key={minutes} value={String(minutes)} className="px-3">
+              <ToggleGroupItem key={minutes} value={String(minutes)} className="flex-none px-3">
                 ≤ {minutes} min
               </ToggleGroupItem>
             ))}

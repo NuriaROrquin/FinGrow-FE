@@ -147,11 +147,11 @@ export function CoursesCatalog() {
           onValueChange={(value) => setMaxDuration(value || ALL)}
           aria-label="Filtrar por duración"
         >
-          <ToggleGroupItem value={ALL} className="px-3">
+          <ToggleGroupItem value={ALL} className="flex-none px-3">
             Cualquier duración
           </ToggleGroupItem>
           {durationOptions.map((minutes) => (
-            <ToggleGroupItem key={minutes} value={String(minutes)} className="px-3">
+            <ToggleGroupItem key={minutes} value={String(minutes)} className="flex-none px-3">
               ≤ {minutes} min
             </ToggleGroupItem>
           ))}
