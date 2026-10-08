@@ -87,6 +87,8 @@ import {
 } from "@/lib/api/transactions"
 import { AddTransactionForm } from "@/components/transactions/add-transaction-form"
 import { TransactionActionsMenu } from "@/components/transactions/transaction-actions-menu"
+import { PendingInbox } from "@/components/transactions/pending-inbox"
+import { usePendingTransactions } from "@/components/transactions/use-pending-transactions"
 import { getCategoryIcon, getPaymentMethodIcon } from "@/components/transactions/transaction-icons"
 import { isApiError } from "@/lib/api/errors"
 import {
@@ -96,6 +98,7 @@ import {
 } from "@/components/period-filter"
 import { formatDate, formatMoney } from "@/lib/format"
 import { usePreferences } from "@/lib/preferences-context"
+import { useMessages } from "@/lib/i18n"
 
 const emptyTransactionsResponse: TransactionsResponse = {
   items: [],
@@ -122,16 +125,23 @@ const paymentMethodFilterOptions = (Object.entries(paymentMethodLabels) as [Paym
 
 const transactionStatusFilterOptions: [TransactionListStatus, string][] = [
   ["Confirmed", "Confirmada"],
-  ["Pending", "Pendiente"],
   ["Eliminated", "Eliminada"],
 ]
-const defaultTransactionStatuses: TransactionListStatus[] = ["Confirmed", "Pending"]
+const defaultTransactionStatuses: TransactionListStatus[] = ["Confirmed"]
+
+type TransactionsView = "movements" | "pending"
 
 const transactionTableHeadClassName = "py-3 pr-2 text-left align-middle whitespace-nowrap"
 const transactionTableCellClassName = "py-3 pr-2 align-middle whitespace-nowrap"
 
 export default function TransactionsPage() {
   const searchParams = useSearchParams()
+  const t = useMessages()
+  const pending = usePendingTransactions()
+  const [activeView, setActiveView] = useState<TransactionsView>(
+    searchParams.get("view") === "pending" ? "pending" : "movements",
+  )
+  const [listRefreshKey, setListRefreshKey] = useState(0)
   const [transactionsResponse, setTransactionsResponse] = useState(emptyTransactionsResponse)
   const [transactionSummary, setTransactionSummary] = useState(emptyTransactionSummary)
   const [summaryRefreshKey, setSummaryRefreshKey] = useState(0)
@@ -287,6 +297,7 @@ export default function TransactionsPage() {
     filterStatus,
     filterType,
     isSummaryReady,
+    listRefreshKey,
     pageSize,
     searchQuery,
     toast,
@@ -419,6 +430,11 @@ export default function TransactionsPage() {
     } finally {
       setIsDeleting(false)
     }
+  }
+
+  const handlePendingConfirmed = () => {
+    setSummaryRefreshKey((key) => key + 1)
+    setListRefreshKey((key) => key + 1)
   }
 
   const handleTransactionDialogChange = (nextOpen: boolean) => {
@@ -1073,7 +1089,8 @@ export default function TransactionsPage() {
                 Ingresos, gastos y balance neto solo suman las transacciones con estado{" "}
                 <strong className="text-foreground">Confirmada</strong>. Las transacciones{" "}
                 <strong className="text-foreground">Pendientes</strong> (por ejemplo, las que llegan de
-                integraciones como Mercado Pago) se excluyen de estos cálculos hasta que las confirmes.
+                integraciones como Mercado Pago) se excluyen de estos cálculos hasta que las confirmes
+                desde la pestaña Pendientes.
               </p>
             </PopoverContent>
           </Popover>
@@ -1136,7 +1153,33 @@ export default function TransactionsPage() {
         </Card>
       </div>
 
-      <Card className="order-5">
+      <Tabs
+        value={activeView}
+        onValueChange={(value) => setActiveView(value as TransactionsView)}
+        className="order-5"
+      >
+        <TabsList>
+          <TabsTrigger value="movements">{t.pendingInbox.tabMovements}</TabsTrigger>
+          <TabsTrigger value="pending" className="gap-2">
+            {t.pendingInbox.tabPending}
+            {pending.items.length > 0 && (
+              <Badge
+                variant="secondary"
+                className="rounded-full px-2"
+                aria-label={t.pendingInbox.count(pending.items.length)}
+              >
+                {pending.items.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {activeView === "pending" && (
+        <PendingInbox pending={pending} onConfirmed={handlePendingConfirmed} className="order-5" />
+      )}
+
+      <Card className={activeView === "movements" ? "order-5" : "hidden"}>
         <CardHeader>
           <CardTitle>Historial de Transacciones</CardTitle>
           <CardDescription>Todas tus transacciones financieras en un solo lugar</CardDescription>
