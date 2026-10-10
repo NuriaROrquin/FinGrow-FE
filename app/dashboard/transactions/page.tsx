@@ -9,7 +9,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Textarea } from "@/components/ui/textarea"
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
 import {
   Dialog,
@@ -58,7 +57,6 @@ import {
   ScaleIcon,
   Clock,
   Sparkles,
-  MessageSquare,
   Video,
   ChevronLeft,
   ChevronRight,
@@ -89,6 +87,7 @@ import { AddTransactionForm } from "@/components/transactions/add-transaction-fo
 import { TransactionActionsMenu } from "@/components/transactions/transaction-actions-menu"
 import { PendingInbox } from "@/components/transactions/pending-inbox"
 import { usePendingTransactions } from "@/components/transactions/use-pending-transactions"
+import { TELEGRAM_BOT_USERNAME } from "@/components/integrations/telegram-card"
 import { getCategoryIcon, getPaymentMethodIcon } from "@/components/transactions/transaction-icons"
 import { isApiError } from "@/lib/api/errors"
 import {
@@ -167,7 +166,6 @@ export default function TransactionsPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [isOcrDialogOpen, setIsOcrDialogOpen] = useState(false)
-  const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false)
   const [ocrImage, setOcrImage] = useState<string | null>(null)
   const [ocrProcessing, setOcrProcessing] = useState(false)
   const [ocrResult, setOcrResult] = useState<{
@@ -176,15 +174,6 @@ export default function TransactionsPage() {
     category: string
     date: string
     confidence: number
-  } | null>(null)
-  const [telegramMessage, setTelegramMessage] = useState("")
-  const [telegramProcessing, setTelegramProcessing] = useState(false)
-  const [telegramResult, setTelegramResult] = useState<{
-    type: "income" | "expense"
-    amount: number
-    description: string
-    category: string
-    date: string
   } | null>(null)
   const [useCameraMode, setUseCameraMode] = useState(false)
   const [stream, setStream] = useState<MediaStream | null>(null)
@@ -315,7 +304,7 @@ export default function TransactionsPage() {
   }, [isOcrDialogOpen])
 
   useEffect(() => {
-    if (isAddDialogOpen || isOcrDialogOpen || isTelegramDialogOpen) {
+    if (isAddDialogOpen || isOcrDialogOpen) {
       return
     }
 
@@ -327,7 +316,7 @@ export default function TransactionsPage() {
     return () => {
       window.cancelAnimationFrame(frameId)
     }
-  }, [isAddDialogOpen, isOcrDialogOpen, isTelegramDialogOpen])
+  }, [isAddDialogOpen, isOcrDialogOpen])
 
   const transactions = transactionsResponse.items
   const filteredTransactions = transactions
@@ -605,50 +594,6 @@ export default function TransactionsPage() {
     }, 2000)
   }
 
-  const processTelegramMessage = () => {
-    setTelegramProcessing(true)
-    // Simular procesamiento de mensaje en lenguaje natural
-    setTimeout(() => {
-      // Detectar si es ingreso o gasto
-      const isIncome = telegramMessage.toLowerCase().includes("ingreso") ||
-                       telegramMessage.toLowerCase().includes("cobré") ||
-                       telegramMessage.toLowerCase().includes("cobro")
-
-      // Extraer monto (buscar números con $ o sin)
-      const amountMatch = telegramMessage.match(/\$?\s*(\d+(?:[.,]\d+)?)/);
-      const amount = amountMatch ? parseFloat(amountMatch[1].replace(",", ".")) : 0
-
-      // Detectar categoría básica
-      let category = "Otros"
-      if (telegramMessage.toLowerCase().includes("comida") ||
-          telegramMessage.toLowerCase().includes("almuerzo") ||
-          telegramMessage.toLowerCase().includes("cena") ||
-          telegramMessage.toLowerCase().includes("supermercado")) {
-        category = "Comida"
-      } else if (telegramMessage.toLowerCase().includes("transporte") ||
-                 telegramMessage.toLowerCase().includes("uber") ||
-                 telegramMessage.toLowerCase().includes("taxi")) {
-        category = "Transporte"
-      } else if (telegramMessage.toLowerCase().includes("freelance") ||
-                 telegramMessage.toLowerCase().includes("proyecto")) {
-        category = "Freelance"
-      }
-
-      setTelegramResult({
-        type: isIncome ? "income" : "expense",
-        amount: amount,
-        description: telegramMessage,
-        category: category,
-        date: new Date().toISOString().split("T")[0],
-      })
-      setTelegramProcessing(false)
-      toast({
-        title: "¡Mensaje procesado!",
-        description: "Transacción detectada correctamente",
-      })
-    }, 1500)
-  }
-
   const saveOcrTransaction = () => {
     toast({
       title: "Transacción guardada",
@@ -657,16 +602,6 @@ export default function TransactionsPage() {
     setIsOcrDialogOpen(false)
     setOcrImage(null)
     setOcrResult(null)
-  }
-
-  const saveTelegramTransaction = () => {
-    toast({
-      title: "Transacción guardada",
-      description: "La transacción ha sido agregada exitosamente",
-    })
-    setIsTelegramDialogOpen(false)
-    setTelegramMessage("")
-    setTelegramResult(null)
   }
 
   return (
@@ -843,139 +778,14 @@ export default function TransactionsPage() {
               </DialogContent>
             </Dialog>
 
-            <Dialog open={isTelegramDialogOpen} onOpenChange={setIsTelegramDialogOpen}>
-              <DialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    window.open('https://t.me/fingrowapp_bot', '_blank')
-                  }}
-                >
+            {TELEGRAM_BOT_USERNAME && (
+              <Button variant="outline" className="w-full" asChild>
+                <a href={`https://t.me/${TELEGRAM_BOT_USERNAME}`} target="_blank" rel="noopener noreferrer">
                   <Send className="size-4" />
                   Mensaje Telegram
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Procesar Mensaje de Telegram</DialogTitle>
-                  <DialogDescription>
-                    Escribe un mensaje en lenguaje natural para registrar una transacción
-                  </DialogDescription>
-                </DialogHeader>
-
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="telegram-message">Mensaje</Label>
-                    <Textarea
-                      id="telegram-message"
-                      placeholder="Ej: Gasté $1500 en el almuerzo con el equipo"
-                      value={telegramMessage}
-                      onChange={(e) => setTelegramMessage(e.target.value)}
-                      rows={4}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Ejemplos: &quot;Pagué $500 en supermercado&quot;, &quot;Ingreso de $10000 por freelance&quot;
-                    </p>
-                  </div>
-
-                  {!telegramResult && !telegramProcessing && (
-                    <Button
-                      onClick={processTelegramMessage}
-                      className="w-full"
-                      disabled={!telegramMessage.trim()}
-                    >
-                      <MessageSquare className="size-4 mr-2" />
-                      Procesar Mensaje
-                    </Button>
-                  )}
-
-                  {telegramProcessing && (
-                    <Alert>
-                      <Sparkles className="h-4 w-4 animate-pulse" />
-                      <AlertDescription>
-                        Analizando mensaje con IA...
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
-                  {telegramResult && (
-                    <div className="space-y-4">
-                      <Alert>
-                        <CheckCircle2 className="h-4 w-4" />
-                        <AlertDescription>
-                          {telegramResult.type === "income" ? "Ingreso" : "Gasto"} detectado correctamente
-                        </AlertDescription>
-                      </Alert>
-
-                      <div className="grid gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="tg-type">Tipo</Label>
-                          <Select defaultValue={telegramResult.type}>
-                            <SelectTrigger id="tg-type">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="income">Ingreso</SelectItem>
-                              <SelectItem value="expense">Gasto</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="tg-amount">Monto</Label>
-                          <Input
-                            id="tg-amount"
-                            type="number"
-                            defaultValue={telegramResult.amount}
-                            step="0.01"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="tg-description">Descripción</Label>
-                          <Input
-                            id="tg-description"
-                            defaultValue={telegramResult.description}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="tg-category">Categoría</Label>
-                          <Select defaultValue={telegramResult.category}>
-                            <SelectTrigger id="tg-category">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Comida">Comida</SelectItem>
-                              <SelectItem value="Transporte">Transporte</SelectItem>
-                              <SelectItem value="Servicios">Servicios</SelectItem>
-                              <SelectItem value="Entretenimiento">Entretenimiento</SelectItem>
-                              <SelectItem value="Freelance">Freelance</SelectItem>
-                              <SelectItem value="Salario">Salario</SelectItem>
-                              <SelectItem value="Otros">Otros</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Button onClick={saveTelegramTransaction} className="flex-1">
-                          Guardar Transacción
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setTelegramMessage("")
-                            setTelegramResult(null)
-                          }}
-                        >
-                          Nuevo Mensaje
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
+                </a>
+              </Button>
+            )}
 
             <Dialog open={isAddDialogOpen} onOpenChange={handleTransactionDialogChange}>
               <Button className="w-full" onClick={openCreateTransactionDialog}>
@@ -1386,6 +1196,7 @@ export default function TransactionsPage() {
                   <TableHead className={transactionTableHeadClassName}>Descripción</TableHead>
                   <TableHead className={transactionTableHeadClassName}>Categoría</TableHead>
                   <TableHead className={transactionTableHeadClassName}>Método de Pago</TableHead>
+                  <TableHead className={transactionTableHeadClassName}>{t.pendingInbox.columnSource}</TableHead>
                   <TableHead className={transactionTableHeadClassName}>Estado</TableHead>
                   <TableHead className={transactionTableHeadClassName}>Monto</TableHead>
                   <TableHead className={transactionTableHeadClassName}>Acción</TableHead>
@@ -1394,13 +1205,13 @@ export default function TransactionsPage() {
               <TableBody>
                 {isLoadingTransactions ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-4 text-center text-muted-foreground">
+                    <TableCell colSpan={8} className="py-4 text-center text-muted-foreground">
                       Cargando movimientos...
                     </TableCell>
                   </TableRow>
                 ) : filteredTransactions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-4 text-center text-muted-foreground">
+                    <TableCell colSpan={8} className="py-4 text-center text-muted-foreground">
                       <div className="flex flex-col items-center gap-2 py-4">
                         <span>
                           {hasActiveFilters
@@ -1441,6 +1252,9 @@ export default function TransactionsPage() {
                             <PaymentMethodIcon className="size-4 shrink-0" aria-hidden="true" />
                             <span className="truncate text-sm">{transaction.paymentMethod}</span>
                           </div>
+                        </TableCell>
+                        <TableCell className={`${transactionTableCellClassName} text-sm text-muted-foreground`}>
+                          {t.pendingInbox.sources[transaction.source] ?? transaction.source}
                         </TableCell>
                         <TableCell className={transactionTableCellClassName}>
                           <Badge
