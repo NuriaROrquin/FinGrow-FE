@@ -214,3 +214,47 @@ export function updateTransaction(
 export function deleteTransaction(id: string, signal?: AbortSignal): Promise<void> {
   return api.delete(`/api/transactions/${encodeURIComponent(id)}`, { signal })
 }
+
+export type ConfidenceLevel = "Low" | "Medium" | "High"
+
+export type TransactionSource = "Manual" | "ReceiptScan" | "Gmail" | "Telegram" | "WhatsApp" | "MercadoPago"
+
+export interface PendingTransactionDto {
+  id: string
+  type: TransactionType
+  amount: number
+  currency: Currency
+  category: string
+  description: string
+  occurredOn: string
+  paymentMethod: PaymentMethod
+  source: TransactionSource
+  status: "Pending"
+  createdAt: string
+  updatedAt: string
+  aiConfidence: number | null
+  aiConfidenceLevel: ConfidenceLevel | null
+}
+
+export interface PendingTransactionsResponse {
+  items: PendingTransactionDto[]
+  totalCount: number
+}
+
+export type ConfirmTransactionPayload = Omit<CreateTransactionPayload, "status">
+
+export function listPendingTransactions(signal?: AbortSignal): Promise<PendingTransactionsResponse> {
+  return api.get<PendingTransactionsResponse>("/api/transactions/pending", { signal })
+}
+
+export function confirmTransaction(
+  id: string,
+  payload: ConfirmTransactionPayload,
+  signal?: AbortSignal,
+): Promise<PendingTransactionDto> {
+  return api.post<PendingTransactionDto>(`/api/transactions/${encodeURIComponent(id)}/confirm`, payload, { signal })
+}
+
+export function discardTransaction(id: string, signal?: AbortSignal): Promise<void> {
+  return api.post<void>(`/api/transactions/${encodeURIComponent(id)}/discard`, undefined, { signal })
+}

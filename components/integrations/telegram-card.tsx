@@ -10,7 +10,7 @@ import { useMessages } from "@/lib/i18n"
 
 import { formatLinkedDate, LinkCodeIntegrationCard } from "./link-code-integration-card"
 
-const TELEGRAM_BOT_USERNAME = (process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? "").replace(/^@/, "")
+export const TELEGRAM_BOT_USERNAME = (process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? "").replace(/^@/, "")
 
 export function TelegramCard() {
   const t = useMessages()
