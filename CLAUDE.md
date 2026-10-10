@@ -51,7 +51,10 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   `POST .../link-code`, sondeo hasta que el chat quede vinculado, desvincular con `DELETE`), y
   `whatsapp-card.tsx` / `telegram-card.tsx` solo aportan textos, ícono y el paso de "abrir el
   chat". El bot de Telegram se configura con `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` y el link
-  `https://t.me/<bot>?start=<código>` hace que Telegram mande el código solo.
+  `https://t.me/<bot>?start=<código>` hace que Telegram mande el código solo. Con el chat
+  vinculado, los movimientos se registran escribiéndole al bot (HU-13): todo pasa entre
+  Telegram, FinGrow-BE y FinGrow-AI, y en el front solo se ven como pendientes o, ya
+  confirmados, con origen "Telegram" en la tabla de Transacciones.
 
 ## Contratos compartidos con los otros repos
 

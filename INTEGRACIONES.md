@@ -14,7 +14,7 @@ pide el código de un solo uso y lo detecta apenas el bot lo valida.
 #### Características:
 - ✅ Vinculación de cuenta mediante código único (vence a los 10 minutos)
 - ✅ Estado real y desvinculación desde la misma card
-- ⏳ Registro de transacciones mediante lenguaje natural (HU-13)
+- ✅ Registro de transacciones mediante lenguaje natural (HU-13)
 - ⏳ Procesamiento de tickets con OCR desde Telegram
 - ⏳ Recepción de notificaciones y consulta de balance
 
@@ -33,11 +33,18 @@ pide el código de un solo uso y lo detecta apenas el bot lo valida.
 "Cobré $50000 por proyecto de diseño web"
 ```
 
-El bot automáticamente:
+El bot (con FinGrow-AI detrás):
 - Detecta si es un ingreso o gasto
-- Extrae el monto
-- Identifica la categoría
+- Extrae el monto y la moneda (pesos salvo que diga dólares, euros o reales)
+- Identifica la categoría y, si lo dice, el medio de pago
 - Registra la fecha actual
+- Contesta con lo que entendió y botones para confirmar o descartar. Si el mensaje no dice
+  cómo se pagó, los botones son los medios de pago y tocar uno confirma con ese medio
+- Si no encuentra el monto, repregunta en lugar de registrar algo incorrecto
+
+Lo que se registra por el bot nace pendiente: si el empleado no toca ningún botón, queda en
+**Transacciones > Pendientes** para revisarlo desde la web. En la tabla de Transacciones la
+columna **Origen** muestra "Telegram".
 
 ---
 
@@ -97,7 +104,9 @@ El bot automáticamente:
 
 ### 4. Procesamiento de Lenguaje Natural
 
-**Ubicación**: Transacciones > Mensaje Telegram
+**Ubicación**: el bot de Telegram (ver sección 1). El botón **Transacciones > Mensaje Telegram**
+abre el chat con el bot; la interpretación la hace FinGrow-AI, no el frontend. Las palabras clave
+de abajo son orientativas: el modelo entiende el mensaje completo.
 
 #### Características:
 - ✅ Análisis de mensajes en español
