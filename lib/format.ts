@@ -47,6 +47,29 @@ export function formatDateText(value: Date | string, options: Intl.DateTimeForma
   return toDate(value).toLocaleDateString(locale, options)
 }
 
+const relativeUnits: [Intl.RelativeTimeFormatUnit, number][] = [
+  ["year", 365 * 24 * 60 * 60],
+  ["month", 30 * 24 * 60 * 60],
+  ["week", 7 * 24 * 60 * 60],
+  ["day", 24 * 60 * 60],
+  ["hour", 60 * 60],
+  ["minute", 60],
+]
+
+/** Cuánto pasó desde un instante, en el idioma elegido: `hace 5 minutos`, `ayer`, `hace 2 semanas`. */
+export function formatRelativeTime(value: Date | string, now: Date = new Date()): string {
+  const elapsedSeconds = Math.round((toDate(value).getTime() - now.getTime()) / 1000)
+  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: "auto" })
+
+  for (const [unit, seconds] of relativeUnits) {
+    if (Math.abs(elapsedSeconds) >= seconds) {
+      return formatter.format(Math.trunc(elapsedSeconds / seconds), unit)
+    }
+  }
+
+  return formatter.format(0, "minute")
+}
+
 // `new Date("2026-10-04")` interpreta la fecha en UTC y en Argentina la corre al día anterior;
 // parseISO toma una fecha sin hora como local.
 function toDate(value: Date | string): Date {

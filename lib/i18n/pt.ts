@@ -34,6 +34,16 @@ export const pt: Messages = {
     logout: "Sair",
   },
 
+  notifications: {
+    title: "Notificações",
+    open: "Abrir notificações",
+    unreadCount: (count: number) => `${count} não lidas`,
+    markAllRead: "Marcar todas como lidas",
+    empty: "Você ainda não tem notificações.",
+    loadError: "Não foi possível carregar suas notificações.",
+    retry: "Tentar novamente",
+  },
+
   settings: {
     title: "Configurações",
     subtitleEmployee: "Gerencie sua conta e preferências",

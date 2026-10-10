@@ -181,3 +181,12 @@ export {
   type IncomeExpenseMonthDto,
   type MonthlyExpenseDto,
 } from "./dashboard"
+export {
+  getUnreadNotificationCount,
+  listNotifications,
+  markAllNotificationsAsRead,
+  markNotificationAsRead,
+  NOTIFICATIONS_PAGE_SIZE,
+  type NotificationDto,
+  type NotificationType,
+} from "./notifications"

@@ -32,6 +32,16 @@ export const es = {
     logout: "Cerrar Sesión",
   },
 
+  notifications: {
+    title: "Notificaciones",
+    open: "Abrir notificaciones",
+    unreadCount: (count: number) => `${count} sin leer`,
+    markAllRead: "Marcar todas como leídas",
+    empty: "No tenés notificaciones por ahora.",
+    loadError: "No pudimos cargar tus notificaciones.",
+    retry: "Reintentar",
+  },
+
   settings: {
     title: "Configuración",
     subtitleEmployee: "Administra tu cuenta y preferencias",

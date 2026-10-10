@@ -34,6 +34,16 @@ export const en: Messages = {
     logout: "Log Out",
   },
 
+  notifications: {
+    title: "Notifications",
+    open: "Open notifications",
+    unreadCount: (count: number) => `${count} unread`,
+    markAllRead: "Mark all as read",
+    empty: "You have no notifications yet.",
+    loadError: "We could not load your notifications.",
+    retry: "Retry",
+  },
+
   settings: {
     title: "Settings",
     subtitleEmployee: "Manage your account and preferences",
