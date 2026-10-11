@@ -31,25 +31,15 @@ import {
   type Integration,
   type MercadoPagoLinkResult,
 } from "@/lib/api"
+import { useMessages } from "@/lib/i18n"
 
 import { formatLinkedDate } from "./link-code-integration-card"
 
 const PROVIDER = "mercadopago"
 const RESULT_PARAM = "mercadopago"
 
-const LINK_ERRORS: Record<string, string> = {
-  "Integrations.MercadoPago.Denied": "No autorizaste la conexión en Mercado Pago. Podés volver a intentar cuando quieras.",
-  "Integrations.MercadoPago.InvalidState": "La vinculación venció o no se inició desde FinGrow. Volvé a intentar.",
-  "Integrations.MercadoPago.ExchangeFailed": "Mercado Pago no entregó las credenciales. Volvé a intentar en unos minutos.",
-}
-
-const FEATURES = [
-  "Tus compras, pagos y transferencias entran solos cada hora",
-  "Cada movimiento llega como pendiente para que lo revises antes de que cuente",
-  "Los cobros que recibís se registran como ingresos",
-]
-
 export function MercadoPagoCard() {
+  const t = useMessages()
   const [integration, setIntegration] = useState<Integration | null>(null)
   const [starting, setStarting] = useState(false)
   const [syncing, setSyncing] = useState(false)
@@ -63,12 +53,12 @@ export function MercadoPagoCard() {
       .then(setIntegration)
       .catch((error) => {
         if (controller.signal.aborted) return
-        toastApiError(error, "No pudimos consultar el estado de Mercado Pago.")
+        toastApiError(error, t.mercadoPago.statusFailed)
         setIntegration(NOT_LINKED)
       })
 
     return () => controller.abort()
-  }, [])
+  }, [t])
 
   useEffect(() => {
     const url = new URL(window.location.href)
@@ -76,20 +66,20 @@ export function MercadoPagoCard() {
     if (result === null) return
 
     if (result === "linked") {
-      toast.success("Mercado Pago vinculado", {
-        description: "Tus movimientos de los últimos 90 días van a aparecer en unos minutos como pendientes.",
+      toast.success(t.mercadoPago.linkedToast, {
+        description: t.mercadoPago.linkedToastDescription,
       })
     } else {
       const reason = url.searchParams.get("reason") ?? ""
-      toast.error("No pudimos vincular Mercado Pago", {
-        description: LINK_ERRORS[reason] ?? "Volvé a intentar en unos minutos.",
+      toast.error(t.mercadoPago.linkFailedToast, {
+        description: t.mercadoPago.linkErrors[reason] ?? t.mercadoPago.retryLater,
       })
     }
 
     url.searchParams.delete(RESULT_PARAM)
     url.searchParams.delete("reason")
     window.history.replaceState(window.history.state, "", url.toString())
-  }, [])
+  }, [t])
 
   const start = async () => {
     setStarting(true)
@@ -97,7 +87,7 @@ export function MercadoPagoCard() {
       const { authorizationUrl } = await startMercadoPagoLink()
       window.location.assign(authorizationUrl)
     } catch (error) {
-      toastApiError(error, "No pudimos iniciar la vinculación. Intentá de nuevo.")
+      toastApiError(error, t.mercadoPago.startFailed)
       setStarting(false)
     }
   }
@@ -107,12 +97,10 @@ export function MercadoPagoCard() {
     try {
       const summary = await syncMercadoPago()
       toast.success(
-        summary.imported === 0
-          ? "No hay movimientos nuevos"
-          : `${summary.imported} ${summary.imported === 1 ? "movimiento nuevo" : "movimientos nuevos"} para revisar`,
+        summary.imported === 0 ? t.mercadoPago.noNewMovements : t.mercadoPago.newMovements(summary.imported),
       )
     } catch (error) {
-      toastApiError(error, "No pudimos sincronizar Mercado Pago. Intentá de nuevo.")
+      toastApiError(error, t.mercadoPago.syncFailed)
     } finally {
       setSyncing(false)
     }
@@ -123,9 +111,9 @@ export function MercadoPagoCard() {
     try {
       await unlinkIntegration(PROVIDER)
       setIntegration(NOT_LINKED)
-      toast.success("Mercado Pago desvinculado")
+      toast.success(t.mercadoPago.unlinkedToast)
     } catch (error) {
-      toastApiError(error, "No pudimos desvincular Mercado Pago. Intentá de nuevo.")
+      toastApiError(error, t.mercadoPago.unlinkFailed)
     } finally {
       setUnlinking(false)
     }
@@ -141,13 +129,13 @@ export function MercadoPagoCard() {
             <Wallet className="size-5 text-cyan-500" />
             <div>
               <CardTitle>Mercado Pago</CardTitle>
-              <CardDescription>Tus movimientos de Mercado Pago se sincronizan solos</CardDescription>
+              <CardDescription>{t.mercadoPago.description}</CardDescription>
             </div>
           </div>
           {linked && (
             <Badge variant="default" className="gap-1">
               <CheckCircle2 className="size-3" />
-              Vinculado
+              {t.common.linked}
             </Badge>
           )}
         </div>
@@ -155,45 +143,44 @@ export function MercadoPagoCard() {
       <CardContent className="space-y-4">
         {integration === null ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Spinner /> Consultando el estado de Mercado Pago...
+            <Spinner /> {t.mercadoPago.checking}
           </div>
         ) : linked ? (
           <div className="space-y-4">
             <Alert>
               <CheckCircle2 className="h-4 w-4" />
               <AlertDescription>
-                Cuenta de Mercado Pago <span className="font-mono">{integration.externalAccountId}</span> vinculada
-                {integration.linkedAt && ` el ${formatLinkedDate(integration.linkedAt)}`}. Los movimientos nuevos se
-                traen cada hora y aparecen como pendientes en Transacciones.
+                {t.mercadoPago.linkedPrefix}
+                <span className="font-mono">{integration.externalAccountId}</span>
+                {t.mercadoPago.linkedMiddle}
+                {integration.linkedAt && t.mercadoPago.linkedOn(formatLinkedDate(integration.linkedAt))}
+                {t.mercadoPago.linkedSuffix}
               </AlertDescription>
             </Alert>
             <div className="flex flex-wrap gap-2">
               <Button onClick={sync} disabled={busy} variant="outline">
                 {syncing ? <Spinner className="mr-2" /> : <RefreshCw className="size-4 mr-2" />}
-                Sincronizar ahora
+                {t.mercadoPago.syncNow}
               </Button>
               <Button onClick={start} disabled={busy} variant="outline">
                 {starting && <Spinner className="mr-2" />}
-                Volver a autorizar
+                {t.mercadoPago.reauthorize}
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="ghost" disabled={busy} className="text-destructive">
                     {unlinking ? <Spinner className="mr-2" /> : <Unlink className="size-4 mr-2" />}
-                    Desvincular
+                    {t.common.unlink}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>¿Desvincular Mercado Pago?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      FinGrow deja de leer tu cuenta de Mercado Pago y borra la autorización. Los movimientos que ya
-                      se importaron no se pierden.
-                    </AlertDialogDescription>
+                    <AlertDialogTitle>{t.mercadoPago.unlinkTitle}</AlertDialogTitle>
+                    <AlertDialogDescription>{t.mercadoPago.unlinkWarning}</AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={unlink}>Desvincular</AlertDialogAction>
+                    <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+                    <AlertDialogAction onClick={unlink}>{t.common.unlink}</AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
@@ -203,14 +190,11 @@ export function MercadoPagoCard() {
           <>
             <Alert>
               <Info className="h-4 w-4" />
-              <AlertDescription>
-                Te llevamos a Mercado Pago para que autorices a FinGrow a leer tus movimientos. No vemos tu contraseña
-                y podés revocar el permiso cuando quieras, desde acá o desde Mercado Pago.
-              </AlertDescription>
+              <AlertDescription>{t.mercadoPago.intro}</AlertDescription>
             </Alert>
             <Button onClick={start} disabled={busy} className="w-full sm:w-auto gap-2">
               {starting ? <Spinner /> : <ExternalLink className="size-4" />}
-              Conectar Mercado Pago
+              {t.mercadoPago.connect}
             </Button>
           </>
         )}
@@ -218,9 +202,9 @@ export function MercadoPagoCard() {
         <Separator />
 
         <div className="space-y-2">
-          <h4 className="text-sm font-medium">¿Qué hace la vinculación?</h4>
+          <h4 className="text-sm font-medium">{t.mercadoPago.whatItDoes}</h4>
           <ul className="space-y-1 text-sm text-muted-foreground">
-            {FEATURES.map((feature) => (
+            {t.mercadoPago.features.map((feature) => (
               <li key={feature} className="flex items-center gap-2">
                 <CheckCircle2 className="size-3" /> {feature}
               </li>

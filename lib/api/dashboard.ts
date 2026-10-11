@@ -11,6 +11,19 @@ export interface DashboardDateRangeQuery extends DashboardPeriodQuery {
   dateTo?: string
 }
 
+export interface DashboardSummaryDto {
+  fromDate: string
+  toDate: string
+  currency: "ARS" | "USD"
+  hasMovements: boolean
+  balance: number | null
+  income: number | null
+  expenses: number | null
+  savings: number | null
+  savingsRate: number | null
+  previousPeriodSavingsRate: number | null
+}
+
 export interface MonthlyExpenseDto {
   month: string
   totalExpense: number
@@ -32,6 +45,19 @@ export interface ExpenseCategoryTotalDto {
 
 interface DashboardCollectionResponse<TItem> {
   items: TItem[]
+}
+
+export function getDashboardSummary(
+  query: DashboardDateRangeQuery = {},
+): Promise<DashboardSummaryDto> {
+  return api.get<DashboardSummaryDto>("/api/dashboard", {
+    query: {
+      currency: query.currency ?? "ARS",
+      dateFrom: query.dateFrom,
+      dateTo: query.dateTo,
+    },
+    signal: query.signal,
+  })
 }
 
 export function getMonthlyExpenses(

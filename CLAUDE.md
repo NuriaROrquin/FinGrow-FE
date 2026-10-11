@@ -38,6 +38,12 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   el error. Las rutas se pasan completas (`/api/integrations/...`); `NEXT_PUBLIC_API_URL` no
   incluye `/api`. Como la cookie es `SameSite=None; Secure`, el front en `localhost:3000` puede
   hablar con la API en dev o en local sin configuración extra.
+- **Bandeja de pendientes (HU-15)**: es la pestaña "Pendientes" de Transacciones
+  (`components/transactions/pending-inbox.tsx`, también `/dashboard/transactions?view=pending`).
+  Lista lo que propuso un canal automático (`GET /api/transactions/pending`), y cada movimiento
+  se confirma con correcciones o se descarta. Los pendientes no aparecen en la tabla general. El
+  nivel de confianza (`aiConfidenceLevel`) lo calcula el backend: el front solo lo muestra. Sus
+  textos ya están en `lib/i18n` en los tres idiomas.
 - `INTEGRACIONES.md` describe Gmail, Mercado Pago y OCR **en modo demo, con datos simulados**:
   no hay credenciales reales conectadas todavía. Las excepciones son WhatsApp (HU-09) y Telegram
   (HU-08): `components/integrations/link-code-integration-card.tsx` es la card genérica de
@@ -45,7 +51,10 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   `POST .../link-code`, sondeo hasta que el chat quede vinculado, desvincular con `DELETE`), y
   `whatsapp-card.tsx` / `telegram-card.tsx` solo aportan textos, ícono y el paso de "abrir el
   chat". El bot de Telegram se configura con `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` y el link
-  `https://t.me/<bot>?start=<código>` hace que Telegram mande el código solo.
+  `https://t.me/<bot>?start=<código>` hace que Telegram mande el código solo. Con el chat
+  vinculado, los movimientos se registran escribiéndole al bot (HU-13): todo pasa entre
+  Telegram, FinGrow-BE y FinGrow-AI, y en el front solo se ven como pendientes o, ya
+  confirmados, con origen "Telegram" en la tabla de Transacciones.
 
 ## Contratos compartidos con los otros repos
 

@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ReceiptField } from "@/components/transactions/receipt-field"
 import { useToast } from "@/hooks/use-toast"
 import {
   expenseCategoryLabels,
@@ -22,6 +23,7 @@ import {
   type TransactionDto,
 } from "@/lib/api/transactions"
 import { isApiError } from "@/lib/api/errors"
+import { usePreferences } from "@/lib/preferences-context"
 
 const paymentMethodLabels: Record<PaymentMethod, string> = {
   Cash: "Efectivo",
@@ -58,11 +60,11 @@ function getCategoryValueFromLabel(type: "Income" | "Expense", label: string): s
   return incomeCategoryValueByLabel[label] ?? label
 }
 
-function getInitialFormValues(transaction?: TransactionDto | null) {
+function getInitialFormValues(transaction: TransactionDto | null | undefined, defaultCurrency: Currency) {
   if (!transaction) {
     return {
       transactionType: "Expense" as const,
-      currency: "ARS" as Currency,
+      currency: defaultCurrency,
       amount: "",
       description: "",
       category: "",
@@ -97,17 +99,18 @@ export function AddTransactionForm({
 }: {
   mode?: "create" | "edit"
   initialTransaction?: TransactionDto | null
-  onSubmit: (payload: CreateTransactionPayload) => Promise<void>
+  onSubmit: (payload: CreateTransactionPayload, options: { removeReceipt: boolean }) => Promise<void>
   onClose: () => void
 }) {
   const [transactionType, setTransactionType] = useState<"Income" | "Expense">(
     initialTransaction?.type ?? "Expense",
   )
-  const [currency, setCurrency] = useState<Currency>(initialTransaction?.currency ?? "ARS")
+  const { preferences } = usePreferences()
+  const [currency, setCurrency] = useState<Currency>(initialTransaction?.currency ?? preferences.currency)
   const [amount, setAmount] = useState(initialTransaction ? String(initialTransaction.amount) : "")
   const [description, setDescription] = useState(initialTransaction?.description ?? "")
   const [category, setCategory] = useState(
-    initialTransaction ? getInitialFormValues(initialTransaction).category : "",
+    initialTransaction ? getInitialFormValues(initialTransaction, preferences.currency).category : "",
   )
   const [date, setDate] = useState(initialTransaction ? String(initialTransaction.occurredOn).slice(0, 10) : "")
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">
@@ -117,6 +120,9 @@ export function AddTransactionForm({
     initialTransaction?.status === "Confirmed" ? "Confirmed" : null,
   )
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [receiptId, setReceiptId] = useState<string | null>(null)
+  const [isUploadingReceipt, setIsUploadingReceipt] = useState(false)
+  const [removesExistingReceipt, setRemovesExistingReceipt] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [generalError, setGeneralError] = useState<string | null>(null)
   const { toast } = useToast()
@@ -124,7 +130,7 @@ export function AddTransactionForm({
   const categoryLabels = transactionType === "Expense" ? expenseCategoryLabels : incomeCategoryLabels
 
   useEffect(() => {
-    const nextValues = getInitialFormValues(initialTransaction)
+    const nextValues = getInitialFormValues(initialTransaction, preferences.currency)
     setTransactionType(nextValues.transactionType)
     setCurrency(nextValues.currency)
     setAmount(nextValues.amount)
@@ -136,7 +142,10 @@ export function AddTransactionForm({
     setLockedStatus(initialTransaction?.status === "Confirmed" ? "Confirmed" : null)
     setFieldErrors({})
     setGeneralError(null)
-  }, [initialTransaction])
+    setReceiptId(null)
+    setIsUploadingReceipt(false)
+    setRemovesExistingReceipt(false)
+  }, [initialTransaction, preferences.currency])
 
   const handleCategoryChange = (nextCategory: string) => {
     setCategory(nextCategory)
@@ -171,7 +180,8 @@ export function AddTransactionForm({
         occurredOn: date,
         paymentMethod,
         status: mode === "edit" ? status : "Confirmed",
-      })
+        ...(receiptId ? { receiptId } : {}),
+      }, { removeReceipt: removesExistingReceipt && !receiptId })
 
       onClose()
     } catch (error) {
@@ -351,6 +361,15 @@ export function AddTransactionForm({
         {fieldErrors.paymentMethod && <p className="text-xs text-destructive">{fieldErrors.paymentMethod}</p>}
       </div>
 
+      <ReceiptField
+        key={initialTransaction?.id ?? "new"}
+        existingReceiptId={mode === "edit" ? initialTransaction?.receiptId ?? null : null}
+        onChange={setReceiptId}
+        onRemoveExisting={() => setRemovesExistingReceipt(true)}
+        onUploadingChange={setIsUploadingReceipt}
+        disabled={isSubmitting}
+      />
+
       {mode === "edit" && (
         <div className="space-y-2 rounded-md border border-border/70 bg-muted/30 p-3">
           <Label htmlFor="transaction-status">Estado</Label>
@@ -387,8 +406,14 @@ export function AddTransactionForm({
         <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
           Cancelar
         </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Guardando..." : mode === "edit" ? "Guardar cambios" : "Agregar Transacción"}
+        <Button type="submit" disabled={isSubmitting || isUploadingReceipt}>
+          {isSubmitting
+            ? "Guardando..."
+            : isUploadingReceipt
+              ? "Subiendo comprobante..."
+              : mode === "edit"
+                ? "Guardar cambios"
+                : "Agregar Transacción"}
         </Button>
       </div>
     </form>

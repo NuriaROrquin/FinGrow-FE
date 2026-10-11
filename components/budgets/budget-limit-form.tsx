@@ -12,12 +12,6 @@ import { isApiError, setBudgetLimit, toastApiError, type BudgetDto } from "@/lib
 import { expenseCategoryLabels, type ExpenseCategory } from "@/lib/api/transactions"
 import { expenseCategoryIcons, type YearMonth } from "./budget-month"
 
-/**
- * Devuelve el mensaje de error del monto, o `null` si es válido.
- *
- * Es la misma regla que aplica el backend; se repite acá para avisar antes de mandar la
- * request. Si el backend igual rechaza el valor, se muestra su mensaje en el mismo lugar.
- */
 function validateAmount(raw: string): string | null {
   if (raw.trim() === "") {
     return "Ingresá el límite de la categoría."
@@ -48,13 +42,10 @@ export function BudgetLimitForm({
 }: {
   period: YearMonth
   currency: string | null
-  /** Categoría que se edita. Sin ella, el formulario agrega una categoría nueva. */
   category?: ExpenseCategory
   initialAmount?: number
-  /** Categorías que todavía no tienen límite; solo se usan al agregar. */
   availableCategories?: ExpenseCategory[]
   onSaved: (budget: BudgetDto) => void
-  /** El presupuesto ya no existe (por ejemplo, se borró desde otra pestaña). */
   onBudgetMissing: () => void
   onClose: () => void
 }) {

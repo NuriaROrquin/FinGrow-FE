@@ -1,8 +1,8 @@
-import type { ExpenseCategory } from "@/lib/api/transactions"
+import type { Currency, ExpenseCategory } from "@/lib/api/transactions"
+import { formatDateText, formatMoney, formatNumber } from "@/lib/format"
 
 export interface YearMonth {
   year: number
-  /** 1 a 12. */
   month: number
 }
 
@@ -16,13 +16,12 @@ export function shiftMonth({ year, month }: YearMonth, delta: number): YearMonth
   return { year: date.getFullYear(), month: date.getMonth() + 1 }
 }
 
-/** "septiembre de 2026" */
 export function formatYearMonth({ year, month }: YearMonth): string {
-  return new Date(year, month - 1, 1).toLocaleDateString("es-AR", { month: "long", year: "numeric" })
+  return formatDateText(new Date(year, month - 1, 1), { month: "long", year: "numeric" })
 }
 
-export function formatAmount(amount: number, currency: string | null): string {
-  return `$${amount.toLocaleString("es-AR")}${currency ? ` ${currency}` : ""}`
+export function formatAmount(amount: number, currency: Currency | null): string {
+  return currency ? formatMoney(amount, currency) : formatNumber(amount)
 }
 
 export const expenseCategoryIcons: Record<ExpenseCategory, string> = {
@@ -36,4 +35,11 @@ export const expenseCategoryIcons: Record<ExpenseCategory, string> = {
   Indumentaria: "👕",
   AhorroInversion: "🐷",
   Otros: "📦",
+}
+
+export const currencyLabels: Record<Currency, string> = {
+  ARS: "ARS ($)",
+  USD: "USD ($)",
+  EUR: "EUR (€)",
+  BRL: "BRL (R$)",
 }

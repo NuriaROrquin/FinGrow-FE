@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 import { AuthProvider } from "@/lib/auth-context"
+import { PreferencesProvider } from "@/lib/preferences-context"
 
 import { Geist, Geist_Mono } from 'next/font/google'
 
@@ -35,7 +36,9 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`} suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <PreferencesProvider>{children}</PreferencesProvider>
+          </AuthProvider>
           <SonnerToaster  richColors closeButton />
         </ThemeProvider>
         <Analytics />

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { format, parseISO } from "date-fns"
 import { toast } from "sonner"
 import { Card, CardAction, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -53,6 +52,7 @@ import {
   deleteInvestment,
   getMepQuote,
   getPortfolioSummary,
+  formatQuantity,
   investmentTypeLabels,
   listInvestments,
   toastApiError,
@@ -67,6 +67,7 @@ import {
   type PortfolioSummaryDto,
 } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
+import { formatDate, formatDateTime, formatMoney, formatNumber } from "@/lib/format"
 
 const educationalTips = [
   {
@@ -94,9 +95,15 @@ const educationalTips = [
 
 const investmentTypeColors: Record<InvestmentType, string> = {
   Stock: "#3b5998",
+  Cedear: "#0ea5e9",
   Etf: "#10b981",
   Bond: "#f59e0b",
+  CorporateBond: "#f97316",
+  TreasuryBill: "#84cc16",
   MutualFund: "#8b5cf6",
+  FixedTermDeposit: "#64748b",
+  Repo: "#14b8a6",
+  RemuneratedAccount: "#ec4899",
   Crypto: "#ef4444",
 }
 
@@ -125,30 +132,13 @@ interface ConsolidatedTotal {
 
 type MepStatus = "loading" | "ready" | "unavailable"
 
-function formatMoney(amount: number, currency: Currency): string {
-  return new Intl.NumberFormat("es-AR", { style: "currency", currency }).format(amount)
-}
-
 function formatSignedMoney(amount: number, currency: Currency): string {
   return `${amount < 0 ? "-" : "+"}${formatMoney(Math.abs(amount), currency)}`
 }
 
 function formatPercentage(value: number): string {
-  const formatted = value.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const formatted = formatNumber(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   return `${value < 0 ? "" : "+"}${formatted}%`
-}
-
-function formatQuantity(quantity: number, type: InvestmentType): string {
-  const unit = type === "Bond" ? (quantity === 1 ? "nominal" : "nominales") : quantity === 1 ? "unidad" : "unidades"
-  return `${quantity.toLocaleString("es-AR", { maximumFractionDigits: 6 })} ${unit}`
-}
-
-function formatDate(isoDate: string): string {
-  return format(parseISO(isoDate), "dd/MM/yyyy")
-}
-
-function formatDateTime(isoDateTime: string): string {
-  return format(parseISO(isoDateTime), "dd/MM/yyyy HH:mm")
 }
 
 function listCurrencies(currencies: Currency[]): string {
@@ -521,7 +511,7 @@ export default function InvestmentsPage() {
               Agregar Inversión
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingInvestment ? "Editar inversión" : "Agregar Nueva Inversión"}</DialogTitle>
               <DialogDescription>
@@ -672,8 +662,8 @@ export default function InvestmentsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-4">
-          <Card>
+        <div className="lg:col-span-2">
+          <Card className="h-full">
             <CardHeader>
               <CardTitle>Distribución por Tipo de Activo</CardTitle>
               <CardDescription>Cómo se reparte tu portafolio según el valor actual de cada activo</CardDescription>
@@ -685,7 +675,7 @@ export default function InvestmentsPage() {
                 />
               )}
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex flex-1 flex-col justify-center">
               {allocation.slices.length === 0 || !selectedAllocationCurrency ? (
                 <p className="text-sm text-muted-foreground">{emptyHint}</p>
               ) : (
@@ -739,8 +729,8 @@ export default function InvestmentsPage() {
           </Card>
         </div>
 
-        <div className="space-y-4">
-          <Card className="bg-primary/5 border-primary/20">
+        <div>
+          <Card className="h-full bg-primary/5 border-primary/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <LightbulbIcon className="size-5 text-primary" />

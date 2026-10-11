@@ -3,13 +3,13 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts"
-import { DownloadIcon, TrendingUpIcon, TrendingDownIcon, CalendarIcon, DollarSignIcon } from "lucide-react"
+import { DownloadIcon, TrendingUpIcon, TrendingDownIcon, DollarSignIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useState } from "react"
 import { SavingsVsGoalsReport } from "@/components/reports/savings-vs-goals-report"
+import { PeriodFilter, getCurrentMonthStart, getInclusiveMonthCount, getToday } from "@/components/period-filter"
 
 const monthlyIncomeExpense = [
 	{ month: "Ene", income: 500000, expense: 240000, savings: 260000 },
@@ -28,16 +28,6 @@ const categoryBreakdown = [
 	{ category: "Compras", amount: 50000, percentage: 10 },
 	{ category: "Otros", amount: 50000, percentage: 10 },
 ]
-
-type Period = "1month" | "3months" | "6months" | "1year" | "all"
-
-const periodMonths: Record<Period, number | null> = {
-	"1month": 1,
-	"3months": 3,
-	"6months": 6,
-	"1year": 12,
-	all: null,
-}
 
 const chartConfig = {
 	income: {
@@ -65,7 +55,8 @@ export default function ReportsPage() {
 	const avgMonthlySavings = totalSavings / monthlyIncomeExpense.length
 
 	const [isExporting, setIsExporting] = useState(false)
-	const [period, setPeriod] = useState<Period>("6months")
+	const [dateFrom, setDateFrom] = useState(() => getCurrentMonthStart())
+	const [dateTo, setDateTo] = useState(() => getToday())
 
 	const handleExportPDF = () => {
 		setIsExporting(true)
@@ -114,19 +105,14 @@ export default function ReportsPage() {
 					<p className="text-muted-foreground mt-1">Análisis completo de tus datos financieros</p>
 				</div>
 				<div className="flex items-center gap-2 no-print">
-					<Select value={period} onValueChange={(value) => setPeriod(value as Period)}>
-						<SelectTrigger className="w-[180px]">
-							<CalendarIcon className="size-4 mr-2" />
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="1month">Último Mes</SelectItem>
-							<SelectItem value="3months">Últimos 3 Meses</SelectItem>
-							<SelectItem value="6months">Últimos 6 Meses</SelectItem>
-							<SelectItem value="1year">Último Año</SelectItem>
-							<SelectItem value="all">Todo el Tiempo</SelectItem>
-						</SelectContent>
-					</Select>
+					<PeriodFilter
+						dateFrom={dateFrom}
+						dateTo={dateTo}
+						onChange={({ dateFrom: nextDateFrom, dateTo: nextDateTo }) => {
+							setDateFrom(nextDateFrom)
+							setDateTo(nextDateTo)
+						}}
+					/>
 					<Button onClick={handleExportPDF} disabled={isExporting}>
 						<DownloadIcon className="size-4" />
 						{isExporting ? "Preparando..." : "Exportar PDF"}
@@ -407,7 +393,7 @@ export default function ReportsPage() {
 
 					{/* Savings Report Tab */}
 					<TabsContent value="savings" className="space-y-4">
-						<SavingsVsGoalsReport months={periodMonths[period]} />
+						<SavingsVsGoalsReport months={getInclusiveMonthCount(dateFrom, dateTo)} />
 					</TabsContent>
 				</Tabs>
 			</div>

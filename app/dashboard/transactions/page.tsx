@@ -9,7 +9,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Textarea } from "@/components/ui/textarea"
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
 import {
   Dialog,
@@ -58,14 +57,13 @@ import {
   ScaleIcon,
   Clock,
   Sparkles,
-  MessageSquare,
   Video,
   ChevronLeft,
   ChevronRight,
-  MoreHorizontal,
   Trash2,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import {
   createTransaction,
@@ -77,17 +75,30 @@ import {
   listTransactions,
   paymentMethodLabels,
   transactionStatusLabels,
+  type Currency,
   type PaymentMethod,
   type TransactionDto,
   type TransactionListStatus,
   type TransactionSummaryResponse,
   type TransactionsResponse,
+  removeTransactionReceipt,
   updateTransaction,
 } from "@/lib/api/transactions"
 import { AddTransactionForm } from "@/components/transactions/add-transaction-form"
 import { TransactionActionsMenu } from "@/components/transactions/transaction-actions-menu"
+import { PendingInbox } from "@/components/transactions/pending-inbox"
+import { usePendingTransactions } from "@/components/transactions/use-pending-transactions"
+import { TELEGRAM_BOT_USERNAME } from "@/components/integrations/telegram-card"
 import { getCategoryIcon, getPaymentMethodIcon } from "@/components/transactions/transaction-icons"
 import { isApiError } from "@/lib/api/errors"
+import {
+  PeriodFilter,
+  getCurrentMonthStart,
+  getToday,
+} from "@/components/period-filter"
+import { formatDate, formatMoney } from "@/lib/format"
+import { usePreferences } from "@/lib/preferences-context"
+import { useMessages } from "@/lib/i18n"
 
 const emptyTransactionsResponse: TransactionsResponse = {
   items: [],
@@ -114,41 +125,23 @@ const paymentMethodFilterOptions = (Object.entries(paymentMethodLabels) as [Paym
 
 const transactionStatusFilterOptions: [TransactionListStatus, string][] = [
   ["Confirmed", "Confirmada"],
-  ["Pending", "Pendiente"],
   ["Eliminated", "Eliminada"],
 ]
-const defaultTransactionStatuses: TransactionListStatus[] = ["Confirmed", "Pending"]
+const defaultTransactionStatuses: TransactionListStatus[] = ["Confirmed"]
+
+type TransactionsView = "movements" | "pending"
 
 const transactionTableHeadClassName = "py-3 pr-2 text-left align-middle whitespace-nowrap"
 const transactionTableCellClassName = "py-3 pr-2 align-middle whitespace-nowrap"
 
-function formatDateInput(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, "0")
-  const day = String(date.getDate()).padStart(2, "0")
-  return `${year}-${month}-${day}`
-}
-
-function parseDateInput(value: string): Date {
-  const [year, month, day] = value.split("-").map(Number)
-  return new Date(year, month - 1, day)
-}
-
-function getCurrentMonthStart(): string {
-  const now = new Date()
-  return formatDateInput(new Date(now.getFullYear(), now.getMonth(), 1))
-}
-
-function getToday(): string {
-  return formatDateInput(new Date())
-}
-
-function getMonthEnd(date: Date): string {
-  return formatDateInput(new Date(date.getFullYear(), date.getMonth() + 1, 0))
-}
-
 export default function TransactionsPage() {
   const searchParams = useSearchParams()
+  const t = useMessages()
+  const pending = usePendingTransactions()
+  const [activeView, setActiveView] = useState<TransactionsView>(
+    searchParams.get("view") === "pending" ? "pending" : "movements",
+  )
+  const [listRefreshKey, setListRefreshKey] = useState(0)
   const [transactionsResponse, setTransactionsResponse] = useState(emptyTransactionsResponse)
   const [transactionSummary, setTransactionSummary] = useState(emptyTransactionSummary)
   const [summaryRefreshKey, setSummaryRefreshKey] = useState(0)
@@ -163,9 +156,8 @@ export default function TransactionsPage() {
   const [isStatusPickerOpen, setIsStatusPickerOpen] = useState(false)
   const [dateFrom, setDateFrom] = useState(() => getCurrentMonthStart())
   const [dateTo, setDateTo] = useState(() => getToday())
-  const [customDateFrom, setCustomDateFrom] = useState(() => getCurrentMonthStart())
-  const [customDateTo, setCustomDateTo] = useState(() => getToday())
-  const [isCustomPeriodOpen, setIsCustomPeriodOpen] = useState(false)
+  const { preferences } = usePreferences()
+  const [summaryCurrency, setSummaryCurrency] = useState<"ARS" | "USD">(preferences.currency === "USD" ? "USD" : "ARS")
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
@@ -175,7 +167,6 @@ export default function TransactionsPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [isOcrDialogOpen, setIsOcrDialogOpen] = useState(false)
-  const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false)
   const [ocrImage, setOcrImage] = useState<string | null>(null)
   const [ocrProcessing, setOcrProcessing] = useState(false)
   const [ocrResult, setOcrResult] = useState<{
@@ -184,15 +175,6 @@ export default function TransactionsPage() {
     category: string
     date: string
     confidence: number
-  } | null>(null)
-  const [telegramMessage, setTelegramMessage] = useState("")
-  const [telegramProcessing, setTelegramProcessing] = useState(false)
-  const [telegramResult, setTelegramResult] = useState<{
-    type: "income" | "expense"
-    amount: number
-    description: string
-    category: string
-    date: string
   } | null>(null)
   const [useCameraMode, setUseCameraMode] = useState(false)
   const [stream, setStream] = useState<MediaStream | null>(null)
@@ -305,6 +287,7 @@ export default function TransactionsPage() {
     filterStatus,
     filterType,
     isSummaryReady,
+    listRefreshKey,
     pageSize,
     searchQuery,
     toast,
@@ -322,7 +305,7 @@ export default function TransactionsPage() {
   }, [isOcrDialogOpen])
 
   useEffect(() => {
-    if (isAddDialogOpen || isOcrDialogOpen || isTelegramDialogOpen) {
+    if (isAddDialogOpen || isOcrDialogOpen) {
       return
     }
 
@@ -334,7 +317,7 @@ export default function TransactionsPage() {
     return () => {
       window.cancelAnimationFrame(frameId)
     }
-  }, [isAddDialogOpen, isOcrDialogOpen, isTelegramDialogOpen])
+  }, [isAddDialogOpen, isOcrDialogOpen])
 
   const transactions = transactionsResponse.items
   const filteredTransactions = transactions
@@ -346,10 +329,6 @@ export default function TransactionsPage() {
 
   const defaultDateFrom = getCurrentMonthStart()
   const defaultDateTo = getToday()
-  const periodLabel = parseDateInput(dateFrom).toLocaleDateString("es-AR", {
-    month: "long",
-    year: "numeric",
-  })
   const shouldShowPagination = transactionsResponse.totalPages > 1
   const visibleResultsStart = transactionsResponse.totalCount === 0 ? 0 : (transactionsResponse.pageNumber - 1) * pageSize + 1
   const visibleResultsEnd = transactionsResponse.totalCount === 0 ? 0 : Math.min(transactionsResponse.pageNumber * pageSize, transactionsResponse.totalCount)
@@ -443,30 +422,22 @@ export default function TransactionsPage() {
     }
   }
 
+  const handlePendingConfirmed = () => {
+    setSummaryRefreshKey((key) => key + 1)
+    setListRefreshKey((key) => key + 1)
+  }
+
   const handleTransactionDialogChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       closeTransactionDialog()
     }
   }
 
-  const changePeriod = (offset: number) => {
-    const currentPeriod = parseDateInput(dateFrom)
-    const nextPeriod = new Date(currentPeriod.getFullYear(), currentPeriod.getMonth() + offset, 1)
-
-    setDateFrom(formatDateInput(nextPeriod))
-    setDateTo(getMonthEnd(nextPeriod))
+  const changePeriod = (nextDateFrom: string, nextDateTo: string) => {
+    setDateFrom(nextDateFrom)
+    setDateTo(nextDateTo)
     setCurrentPage(1)
     setSummaryRefreshKey((key) => key + 1)
-  }
-
-  const applyCustomPeriod = () => {
-    if (!customDateFrom || !customDateTo || customDateFrom > customDateTo) return
-
-    setDateFrom(customDateFrom)
-    setDateTo(customDateTo)
-    setCurrentPage(1)
-    setSummaryRefreshKey((key) => key + 1)
-    setIsCustomPeriodOpen(false)
   }
 
   const totalIncome = {
@@ -481,18 +452,7 @@ export default function TransactionsPage() {
     ARS: totalIncome.ARS - totalExpense.ARS,
     USD: totalIncome.USD - totalExpense.USD,
   }
-  const isNetPositive = balanceByCurrency.ARS >= 0 && balanceByCurrency.USD >= 0
-
-  // Función de formateo consistente
-  const formatCurrency = (amount: number, currency: string) =>
-    `${currency === "USD" ? "US$" : "$"}${amount.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`
-
-  const renderCurrencyTotals = (totals: Record<string, number>) => (
-    <div className="space-y-1">
-      <div>{formatCurrency(totals.ARS ?? 0, "ARS")}</div>
-      <div className="text-base text-muted-foreground">{formatCurrency(totals.USD ?? 0, "USD")}</div>
-    </div>
-  )
+  const formatCurrency = (amount: number, currency: Currency) => formatMoney(amount, currency)
 
   const handleExport = async () => {
     if (isExporting) return
@@ -635,50 +595,6 @@ export default function TransactionsPage() {
     }, 2000)
   }
 
-  const processTelegramMessage = () => {
-    setTelegramProcessing(true)
-    // Simular procesamiento de mensaje en lenguaje natural
-    setTimeout(() => {
-      // Detectar si es ingreso o gasto
-      const isIncome = telegramMessage.toLowerCase().includes("ingreso") ||
-                       telegramMessage.toLowerCase().includes("cobré") ||
-                       telegramMessage.toLowerCase().includes("cobro")
-
-      // Extraer monto (buscar números con $ o sin)
-      const amountMatch = telegramMessage.match(/\$?\s*(\d+(?:[.,]\d+)?)/);
-      const amount = amountMatch ? parseFloat(amountMatch[1].replace(",", ".")) : 0
-
-      // Detectar categoría básica
-      let category = "Otros"
-      if (telegramMessage.toLowerCase().includes("comida") ||
-          telegramMessage.toLowerCase().includes("almuerzo") ||
-          telegramMessage.toLowerCase().includes("cena") ||
-          telegramMessage.toLowerCase().includes("supermercado")) {
-        category = "Comida"
-      } else if (telegramMessage.toLowerCase().includes("transporte") ||
-                 telegramMessage.toLowerCase().includes("uber") ||
-                 telegramMessage.toLowerCase().includes("taxi")) {
-        category = "Transporte"
-      } else if (telegramMessage.toLowerCase().includes("freelance") ||
-                 telegramMessage.toLowerCase().includes("proyecto")) {
-        category = "Freelance"
-      }
-
-      setTelegramResult({
-        type: isIncome ? "income" : "expense",
-        amount: amount,
-        description: telegramMessage,
-        category: category,
-        date: new Date().toISOString().split("T")[0],
-      })
-      setTelegramProcessing(false)
-      toast({
-        title: "¡Mensaje procesado!",
-        description: "Transacción detectada correctamente",
-      })
-    }, 1500)
-  }
-
   const saveOcrTransaction = () => {
     toast({
       title: "Transacción guardada",
@@ -689,26 +605,15 @@ export default function TransactionsPage() {
     setOcrResult(null)
   }
 
-  const saveTelegramTransaction = () => {
-    toast({
-      title: "Transacción guardada",
-      description: "La transacción ha sido agregada exitosamente",
-    })
-    setIsTelegramDialogOpen(false)
-    setTelegramMessage("")
-    setTelegramResult(null)
-  }
-
   return (
-    <div className="w-full max-w-full space-y-6 overflow-x-hidden pr-1 sm:pr-2">
-      <div className="w-full max-w-full space-y-4">
-        <div>
+    <div className="flex w-full max-w-full flex-col space-y-6 overflow-x-hidden pr-1 sm:pr-2">
+      <div className="contents">
+        <div className="order-0">
           <h1 className="text-3xl font-bold text-balance">Transacciones</h1>
           <p className="text-muted-foreground mt-1">Rastrea y gestiona tus ingresos y gastos</p>
+        </div>
 
-          <Card className="mt-4 w-full border-border/70 bg-card shadow-sm">
-            <CardContent className="p-4">
-              <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="order-4 grid w-full grid-cols-1 gap-2 py-3 sm:grid-cols-2 lg:grid-cols-3">
             <Dialog open={isOcrDialogOpen} onOpenChange={setIsOcrDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="w-full">
@@ -874,139 +779,14 @@ export default function TransactionsPage() {
               </DialogContent>
             </Dialog>
 
-            <Dialog open={isTelegramDialogOpen} onOpenChange={setIsTelegramDialogOpen}>
-              <DialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    window.open('https://t.me/fingrowapp_bot', '_blank')
-                  }}
-                >
+            {TELEGRAM_BOT_USERNAME && (
+              <Button variant="outline" className="w-full" asChild>
+                <a href={`https://t.me/${TELEGRAM_BOT_USERNAME}`} target="_blank" rel="noopener noreferrer">
                   <Send className="size-4" />
                   Mensaje Telegram
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Procesar Mensaje de Telegram</DialogTitle>
-                  <DialogDescription>
-                    Escribe un mensaje en lenguaje natural para registrar una transacción
-                  </DialogDescription>
-                </DialogHeader>
-
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="telegram-message">Mensaje</Label>
-                    <Textarea
-                      id="telegram-message"
-                      placeholder="Ej: Gasté $1500 en el almuerzo con el equipo"
-                      value={telegramMessage}
-                      onChange={(e) => setTelegramMessage(e.target.value)}
-                      rows={4}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Ejemplos: &quot;Pagué $500 en supermercado&quot;, &quot;Ingreso de $10000 por freelance&quot;
-                    </p>
-                  </div>
-
-                  {!telegramResult && !telegramProcessing && (
-                    <Button
-                      onClick={processTelegramMessage}
-                      className="w-full"
-                      disabled={!telegramMessage.trim()}
-                    >
-                      <MessageSquare className="size-4 mr-2" />
-                      Procesar Mensaje
-                    </Button>
-                  )}
-
-                  {telegramProcessing && (
-                    <Alert>
-                      <Sparkles className="h-4 w-4 animate-pulse" />
-                      <AlertDescription>
-                        Analizando mensaje con IA...
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
-                  {telegramResult && (
-                    <div className="space-y-4">
-                      <Alert>
-                        <CheckCircle2 className="h-4 w-4" />
-                        <AlertDescription>
-                          {telegramResult.type === "income" ? "Ingreso" : "Gasto"} detectado correctamente
-                        </AlertDescription>
-                      </Alert>
-
-                      <div className="grid gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="tg-type">Tipo</Label>
-                          <Select defaultValue={telegramResult.type}>
-                            <SelectTrigger id="tg-type">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="income">Ingreso</SelectItem>
-                              <SelectItem value="expense">Gasto</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="tg-amount">Monto</Label>
-                          <Input
-                            id="tg-amount"
-                            type="number"
-                            defaultValue={telegramResult.amount}
-                            step="0.01"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="tg-description">Descripción</Label>
-                          <Input
-                            id="tg-description"
-                            defaultValue={telegramResult.description}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="tg-category">Categoría</Label>
-                          <Select defaultValue={telegramResult.category}>
-                            <SelectTrigger id="tg-category">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Comida">Comida</SelectItem>
-                              <SelectItem value="Transporte">Transporte</SelectItem>
-                              <SelectItem value="Servicios">Servicios</SelectItem>
-                              <SelectItem value="Entretenimiento">Entretenimiento</SelectItem>
-                              <SelectItem value="Freelance">Freelance</SelectItem>
-                              <SelectItem value="Salario">Salario</SelectItem>
-                              <SelectItem value="Otros">Otros</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Button onClick={saveTelegramTransaction} className="flex-1">
-                          Guardar Transacción
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setTelegramMessage("")
-                            setTelegramResult(null)
-                          }}
-                        >
-                          Nuevo Mensaje
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
+                </a>
+              </Button>
+            )}
 
             <Dialog open={isAddDialogOpen} onOpenChange={handleTransactionDialogChange}>
               <Button className="w-full" onClick={openCreateTransactionDialog}>
@@ -1023,9 +803,15 @@ export default function TransactionsPage() {
                 <AddTransactionForm
                   mode={editingTransaction ? "edit" : "create"}
                   initialTransaction={editingTransaction}
-                  onSubmit={async (payload) => {
+                  onSubmit={async (payload, { removeReceipt }) => {
                     if (editingTransaction) {
-                      const updated = await updateTransaction(editingTransaction.id, payload)
+                      let updated = await updateTransaction(editingTransaction.id, payload)
+
+                      if (removeReceipt) {
+                        await removeTransactionReceipt(editingTransaction.id)
+                        updated = { ...updated, receiptId: null }
+                      }
+
                       setTransactionsResponse((previous) => ({
                         ...previous,
                         items: previous.items.map((item) => (item.id === updated.id ? updated : item)),
@@ -1068,10 +854,7 @@ export default function TransactionsPage() {
                   <AlertDialogTitle>¿Eliminar transacción?</AlertDialogTitle>
                   <AlertDialogDescription>
                     Vas a eliminar la transacción de {transactionToDelete?.description ?? ""} por {transactionToDelete
-                      ? `${transactionToDelete.currency === "USD" ? "US$" : "$"}${transactionToDelete.amount.toLocaleString("es-AR", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })} ${transactionToDelete.currency}`
+                      ? formatMoney(transactionToDelete.amount, transactionToDelete.currency)
                       : ""}. Esta acción no se puede deshacer.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
@@ -1091,87 +874,19 @@ export default function TransactionsPage() {
               </AlertDialogContent>
             </AlertDialog>
               </div>
-            </CardContent>
-          </Card>
-
-        </div>
       </div>
 
-      <div className="w-full max-w-3xl space-y-3">
-        <Label className="text-xs text-muted-foreground">Período</Label>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Período anterior"
-            title="Período anterior"
-            onClick={() => changePeriod(-1)}
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
-          <div className="min-w-48 rounded-md border border-border/60 bg-card px-3 py-2 text-center text-sm font-medium capitalize">
-            {periodLabel}
-          </div>
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Período siguiente"
-            title="Período siguiente"
-            onClick={() => changePeriod(1)}
-          >
-            <ChevronRight className="size-4" />
-          </Button>
-          <Popover
-            open={isCustomPeriodOpen}
-            onOpenChange={(open) => {
-              if (open) {
-                setCustomDateFrom(dateFrom)
-                setCustomDateTo(dateTo)
-              }
-              setIsCustomPeriodOpen(open)
-            }}
-          >
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="icon" aria-label="Personalizar período" title="Personalizar período">
-                <MoreHorizontal className="size-4" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="start" className="w-72 space-y-4">
-              <div>
-                <p className="font-medium">Personalizar período</p>
-                <p className="text-sm text-muted-foreground">Elegí el rango de fechas de las transacciones.</p>
-              </div>
-              <div className="grid gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="custom-date-from">Desde</Label>
-                  <Input
-                    id="custom-date-from"
-                    type="date"
-                    value={customDateFrom}
-                    max={customDateTo || undefined}
-                    onChange={(event) => setCustomDateFrom(event.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="custom-date-to">Hasta</Label>
-                  <Input
-                    id="custom-date-to"
-                    type="date"
-                    value={customDateTo}
-                    min={customDateFrom || undefined}
-                    onChange={(event) => setCustomDateTo(event.target.value)}
-                  />
-                </div>
-              </div>
-              <Button className="w-full" onClick={applyCustomPeriod} disabled={!customDateFrom || !customDateTo || customDateFrom > customDateTo}>
-                Aplicar período
-              </Button>
-            </PopoverContent>
-          </Popover>
-        </div>
+      <div className="order-1 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <PeriodFilter dateFrom={dateFrom} dateTo={dateTo} onChange={({ dateFrom: nextDateFrom, dateTo: nextDateTo }) => changePeriod(nextDateFrom, nextDateTo)} />
+        <Tabs value={summaryCurrency} onValueChange={(value) => setSummaryCurrency(value as "ARS" | "USD")} className="w-fit">
+          <TabsList>
+            <TabsTrigger value="ARS">Pesos (ARS)</TabsTrigger>
+            <TabsTrigger value="USD">Dólares (USD)</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
-      <Alert className="border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-800/70 dark:bg-sky-950/40 dark:text-sky-100">
+      <Alert className="order-2 border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-800/70 dark:bg-sky-950/40 dark:text-sky-100">
         <AlertDescription className="flex flex-wrap items-center gap-1.5 text-sky-900 dark:text-sky-100">
           <span>Los movimientos pendientes no se incluyen en los totales hasta que sean confirmados.</span>
           <Popover>
@@ -1191,26 +906,27 @@ export default function TransactionsPage() {
                 Ingresos, gastos y balance neto solo suman las transacciones con estado{" "}
                 <strong className="text-foreground">Confirmada</strong>. Las transacciones{" "}
                 <strong className="text-foreground">Pendientes</strong> (por ejemplo, las que llegan de
-                integraciones como Mercado Pago) se excluyen de estos cálculos hasta que las confirmes.
+                integraciones como Mercado Pago) se excluyen de estos cálculos hasta que las confirmes
+                desde la pestaña Pendientes.
               </p>
             </PopoverContent>
           </Popover>
         </AlertDescription>
       </Alert>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="order-3 grid gap-4 md:grid-cols-3">
         <Card className="border border-border bg-card shadow-sm">
           <CardContent className="p-6">
             <div className="flex items-start gap-3">
-              <ArrowUpIcon className="size-5 shrink-0 text-emerald-500 dark:text-emerald-300" />
+              <ArrowUpIcon className="size-5 shrink-0 text-muted-foreground" />
               <div>
                 <CardDescription className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
                   Ingresos
                 </CardDescription>
-                <CardTitle className="mt-1 space-y-1 text-2xl text-emerald-500 dark:text-emerald-300">{renderCurrencyTotals(totalIncome)}</CardTitle>
+                <CardTitle className="mt-1 text-2xl text-foreground">{formatCurrency(totalIncome[summaryCurrency], summaryCurrency)}</CardTitle>
               </div>
             </div>
-            <div className="mt-4 flex items-center gap-1 text-xs font-medium text-emerald-500 dark:text-emerald-300">
+            <div className="mt-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
               <ArrowUpIcon className="size-3.5" />
               <span>{transactionSummary.totalIncomeTransactions} ingresos</span>
             </div>
@@ -1225,17 +941,17 @@ export default function TransactionsPage() {
                 <CardDescription className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
                   Gastos
                 </CardDescription>
-                <CardTitle className="mt-1 space-y-1 text-2xl text-rose-500 dark:text-rose-300">{renderCurrencyTotals(totalExpense)}</CardTitle>
+                <CardTitle className="mt-1 text-2xl text-foreground">{formatCurrency(totalExpense[summaryCurrency], summaryCurrency)}</CardTitle>
               </div>
             </div>
-            <div className="mt-4 flex items-center gap-1 text-xs font-medium text-rose-500 dark:text-rose-300">
+            <div className="mt-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
               <ArrowDownIcon className="size-3.5" />
               <span>{transactionSummary.totalExpenseTransactions} gastos</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border border-primary/20 bg-card shadow-sm">
+        <Card className="border border-border bg-card shadow-sm">
           <CardContent className="p-6">
             <div className="flex items-start gap-3">
               <ScaleIcon className="size-5 shrink-0 text-muted-foreground" />
@@ -1243,20 +959,44 @@ export default function TransactionsPage() {
                 <CardDescription className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
                   Balance Neto
                 </CardDescription>
-                <CardTitle className={`mt-1 space-y-1 text-2xl ${isNetPositive ? "text-emerald-500 dark:text-emerald-300" : "text-rose-500 dark:text-rose-300"}`}>
-                  {renderCurrencyTotals(balanceByCurrency)}
-                </CardTitle>
+                <CardTitle className="mt-1 text-2xl text-foreground">{formatCurrency(balanceByCurrency[summaryCurrency], summaryCurrency)}</CardTitle>
               </div>
             </div>
-            <div className={`mt-4 flex items-center gap-1 text-xs font-medium ${isNetPositive ? "text-emerald-500 dark:text-emerald-300" : "text-rose-500 dark:text-rose-300"}`}>
-              {isNetPositive ? <ArrowUpIcon className="size-3.5" /> : <ArrowDownIcon className="size-3.5" />}
+            <div className="mt-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
+              {balanceByCurrency[summaryCurrency] >= 0 ? <ArrowUpIcon className="size-3.5" /> : <ArrowDownIcon className="size-3.5" />}
               <span>{transactionSummary.totalTransactions} transacciones totales</span>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
+      <Tabs
+        value={activeView}
+        onValueChange={(value) => setActiveView(value as TransactionsView)}
+        className="order-5"
+      >
+        <TabsList>
+          <TabsTrigger value="movements">{t.pendingInbox.tabMovements}</TabsTrigger>
+          <TabsTrigger value="pending" className="gap-2">
+            {t.pendingInbox.tabPending}
+            {pending.items.length > 0 && (
+              <Badge
+                variant="secondary"
+                className="rounded-full px-2"
+                aria-label={t.pendingInbox.count(pending.items.length)}
+              >
+                {pending.items.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {activeView === "pending" && (
+        <PendingInbox pending={pending} onConfirmed={handlePendingConfirmed} className="order-5" />
+      )}
+
+      <Card className={activeView === "movements" ? "order-5" : "hidden"}>
         <CardHeader>
           <CardTitle>Historial de Transacciones</CardTitle>
           <CardDescription>Todas tus transacciones financieras en un solo lugar</CardDescription>
@@ -1463,6 +1203,7 @@ export default function TransactionsPage() {
                   <TableHead className={transactionTableHeadClassName}>Descripción</TableHead>
                   <TableHead className={transactionTableHeadClassName}>Categoría</TableHead>
                   <TableHead className={transactionTableHeadClassName}>Método de Pago</TableHead>
+                  <TableHead className={transactionTableHeadClassName}>{t.pendingInbox.columnSource}</TableHead>
                   <TableHead className={transactionTableHeadClassName}>Estado</TableHead>
                   <TableHead className={transactionTableHeadClassName}>Monto</TableHead>
                   <TableHead className={transactionTableHeadClassName}>Acción</TableHead>
@@ -1471,13 +1212,13 @@ export default function TransactionsPage() {
               <TableBody>
                 {isLoadingTransactions ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-4 text-center text-muted-foreground">
+                    <TableCell colSpan={8} className="py-4 text-center text-muted-foreground">
                       Cargando movimientos...
                     </TableCell>
                   </TableRow>
                 ) : filteredTransactions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-4 text-center text-muted-foreground">
+                    <TableCell colSpan={8} className="py-4 text-center text-muted-foreground">
                       <div className="flex flex-col items-center gap-2 py-4">
                         <span>
                           {hasActiveFilters
@@ -1500,11 +1241,7 @@ export default function TransactionsPage() {
                     return (
                       <TableRow key={transaction.id}>
                         <TableCell className={`${transactionTableCellClassName} font-medium`}>
-                          {new Date(transaction.occurredOn).toLocaleDateString("es-ES", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
+                          {formatDate(transaction.occurredOn)}
                         </TableCell>
                         <TableCell className={`${transactionTableCellClassName} max-w-[240px]`}>
                           <span className="block truncate" title={transaction.description}>
@@ -1522,6 +1259,9 @@ export default function TransactionsPage() {
                             <PaymentMethodIcon className="size-4 shrink-0" aria-hidden="true" />
                             <span className="truncate text-sm">{transaction.paymentMethod}</span>
                           </div>
+                        </TableCell>
+                        <TableCell className={`${transactionTableCellClassName} text-sm text-muted-foreground`}>
+                          {t.pendingInbox.sources[transaction.source] ?? transaction.source}
                         </TableCell>
                         <TableCell className={transactionTableCellClassName}>
                           <Badge
@@ -1545,11 +1285,7 @@ export default function TransactionsPage() {
                             className={`font-semibold ${transaction.type === "Income" ? "text-emerald-500 dark:text-emerald-300" : "text-rose-500 dark:text-rose-300"}`}
                           >
                             {transaction.type === "Income" ? "+" : "-"}
-                            {transaction.currency === "USD" ? "US$" : "$"}
-                            {Math.abs(transaction.amount).toLocaleString("es-AR", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })} {transaction.currency}
+                            {formatMoney(Math.abs(transaction.amount), transaction.currency)}
                           </span>
                         </TableCell>
                         <TableCell className={transactionTableCellClassName}>

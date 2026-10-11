@@ -1,16 +1,8 @@
 import { api } from "./client"
+import type { EducationCategory } from "./education"
+import type { InvestmentType } from "./investments"
 
-export type EducationCategory =
-  | "Basics"
-  | "Savings"
-  | "Budgeting"
-  | "Investments"
-  | "Credit"
-  | "Retirement"
-  | "Taxes"
-
-/** Etiqueta en castellano de cada categoría, en el orden en que se muestran en los filtros. */
-export const EDUCATION_CATEGORY_LABELS: Record<EducationCategory, string> = {
+export const educationCategoryLabels: Record<EducationCategory, string> = {
   Basics: "Básico",
   Savings: "Ahorro",
   Budgeting: "Presupuesto",
@@ -27,18 +19,16 @@ export interface ArticleSummaryDto {
   summary: string
   category: EducationCategory
   readingTimeMinutes: number
-  relatedInvestmentType: string | null
+  relatedInvestmentType: InvestmentType | null
   publishedAt: string
 }
 
 export interface ArticleDto extends ArticleSummaryDto {
-  /** Cuerpo del artículo en Markdown. */
   content: string
 }
 
 export interface ArticleFilters {
   category?: EducationCategory
-  /** Solo los artículos que se leen en esta cantidad de minutos o menos. */
   maxReadingTime?: number
 }
 

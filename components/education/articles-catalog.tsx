@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { BookOpenIcon, ClockIcon } from "lucide-react"
+import { AlertCircleIcon, BookOpenIcon, ClockIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,28 +11,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
-  EDUCATION_CATEGORY_LABELS,
+  educationCategoryLabels,
   listArticles,
   toastApiError,
   type ArticleSummaryDto,
   type EducationCategory,
 } from "@/lib/api"
+import { formatDateText } from "@/lib/format"
 
 const ALL = "all"
 
-/** Topes de tiempo de lectura que se ofrecen como filtro rápido, en minutos. */
-const READING_TIME_OPTIONS = [3, 5, 10]
+const readingTimeOptions = [3, 5, 10]
 
 export function ArticlesCatalog() {
   const router = useRouter()
   const [category, setCategory] = useState<EducationCategory | typeof ALL>(ALL)
   const [maxReadingTime, setMaxReadingTime] = useState<string>(ALL)
-  const [articles, setArticles] = useState<ArticleSummaryDto[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [articles, setArticles] = useState<ArticleSummaryDto[] | null>(null)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     const controller = new AbortController()
-    setIsLoading(true)
+    setArticles(null)
+    setLoadFailed(false)
 
     listArticles(
       {
@@ -45,13 +47,11 @@ export function ArticlesCatalog() {
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return
         toastApiError(error, "No se pudieron cargar los artículos.")
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setIsLoading(false)
+        setLoadFailed(true)
       })
 
     return () => controller.abort()
-  }, [category, maxReadingTime])
+  }, [category, maxReadingTime, retryCount])
 
   const hasFilters = category !== ALL || maxReadingTime !== ALL
 
@@ -69,7 +69,7 @@ export function ArticlesCatalog() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>Todas las categorías</SelectItem>
-              {Object.entries(EDUCATION_CATEGORY_LABELS).map(([value, label]) => (
+              {Object.entries(educationCategoryLabels).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
                 </SelectItem>
@@ -81,15 +81,14 @@ export function ArticlesCatalog() {
             type="single"
             variant="outline"
             value={maxReadingTime}
-            // Radix deja deseleccionar el ítem activo; en ese caso se vuelve a "Cualquiera".
             onValueChange={(value) => setMaxReadingTime(value || ALL)}
             aria-label="Filtrar por tiempo de lectura"
           >
-            <ToggleGroupItem value={ALL} className="px-3">
+            <ToggleGroupItem value={ALL} className="flex-none px-3">
               Cualquiera
             </ToggleGroupItem>
-            {READING_TIME_OPTIONS.map((minutes) => (
-              <ToggleGroupItem key={minutes} value={String(minutes)} className="px-3">
+            {readingTimeOptions.map((minutes) => (
+              <ToggleGroupItem key={minutes} value={String(minutes)} className="flex-none px-3">
                 ≤ {minutes} min
               </ToggleGroupItem>
             ))}
@@ -97,7 +96,20 @@ export function ArticlesCatalog() {
         </div>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
+        {loadFailed ? (
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <AlertCircleIcon />
+              </EmptyMedia>
+              <EmptyTitle>No se pudieron cargar los artículos</EmptyTitle>
+              <EmptyDescription>Probá de nuevo en un momento.</EmptyDescription>
+            </EmptyHeader>
+            <Button variant="outline" onClick={() => setRetryCount((count) => count + 1)}>
+              Reintentar
+            </Button>
+          </Empty>
+        ) : articles === null ? (
           <div className="space-y-4">
             <Skeleton className="h-20 w-full" />
             <Skeleton className="h-20 w-full" />
@@ -145,17 +157,14 @@ export function ArticlesCatalog() {
                     <p className="text-sm text-muted-foreground line-clamp-1">{article.summary}</p>
                     <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mt-1">
                       <Badge variant="outline" className="text-xs">
-                        {EDUCATION_CATEGORY_LABELS[article.category]}
+                        {educationCategoryLabels[article.category]}
                       </Badge>
                       <span className="flex items-center gap-1">
                         <ClockIcon className="size-3" />
                         {article.readingTimeMinutes} min de lectura
                       </span>
                       <span>
-                        {new Date(article.publishedAt).toLocaleDateString("es-AR", {
-                          month: "short",
-                          day: "numeric",
-                        })}
+                        {formatDateText(article.publishedAt, { month: "short", day: "numeric" })}
                       </span>
                     </div>
                   </div>

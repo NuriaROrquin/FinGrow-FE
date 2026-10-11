@@ -1,13 +1,13 @@
-import ReactMarkdown, { type Components } from "react-markdown"
+import ReactMarkdown, { type Components, type ExtraProps } from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { cn } from "@/lib/utils"
 
-// react-markdown le pasa a cada componente el nodo del AST en `node`; no hay que mandarlo al DOM.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const omitNode = <P extends { node?: unknown }>({ node, ...rest }: P) => rest
+function omitNode<P extends ExtraProps>(props: P): Omit<P, "node"> {
+  const rest: Omit<P, "node"> & ExtraProps = { ...props }
+  delete rest.node
+  return rest
+}
 
-// El proyecto no tiene @tailwindcss/typography, así que las clases `prose` no aplican:
-// cada elemento del Markdown se estiliza acá.
 const components: Components = {
   h1: (props) => <h1 {...omitNode(props)} className="mt-8 mb-4 text-3xl font-bold first:mt-0" />,
   h2: (props) => <h2 {...omitNode(props)} className="mt-8 mb-3 text-2xl font-bold first:mt-0" />,
@@ -30,7 +30,6 @@ const components: Components = {
     <blockquote {...omitNode(props)} className="my-4 border-l-4 border-primary/40 pl-4 italic text-muted-foreground" />
   ),
   hr: (props) => <hr {...omitNode(props)} className="my-8 border-border" />,
-  // Los bloques de código traen `language-*` en className; se conserva.
   code: ({ className, ...props }) => (
     <code {...omitNode(props)} className={cn("rounded bg-muted px-1.5 py-0.5 font-mono text-sm", className)} />
   ),

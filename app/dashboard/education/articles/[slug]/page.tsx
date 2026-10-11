@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { EDUCATION_CATEGORY_LABELS, getArticle, isApiError, toastApiError, type ArticleDto } from "@/lib/api"
+import { educationCategoryLabels, getArticle, isApiError, toastApiError, type ArticleDto } from "@/lib/api"
+import { formatDateText } from "@/lib/format"
 
 const BACK_TO_ARTICLES = "/dashboard/education?tab=articles"
 
@@ -76,29 +77,23 @@ export default function ArticlePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header with Back Button */}
       <div className="flex items-center gap-4">
         {backButton}
         <div className="flex-1">
           <h1 className="text-3xl font-bold">{article.title}</h1>
           <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-muted-foreground">
-            <Badge variant="outline">{EDUCATION_CATEGORY_LABELS[article.category]}</Badge>
+            <Badge variant="outline">{educationCategoryLabels[article.category]}</Badge>
             <span className="flex items-center gap-1">
               <ClockIcon className="size-3" />
               {article.readingTimeMinutes} min de lectura
             </span>
             <span>
-              {new Date(article.publishedAt).toLocaleDateString("es-AR", {
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-              })}
+              {formatDateText(article.publishedAt, { month: "long", day: "numeric", year: "numeric" })}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Article Content */}
       <Card>
         <CardContent className="pt-6">
           <p className="mb-6 text-lg text-muted-foreground">{article.summary}</p>
@@ -106,7 +101,6 @@ export default function ArticlePage() {
         </CardContent>
       </Card>
 
-      {/* Back Button at Bottom */}
       <div className="flex justify-start">
         <Button variant="outline" onClick={() => router.push(BACK_TO_ARTICLES)}>
           <ArrowLeftIcon className="size-4" />

@@ -6,22 +6,26 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
+import { useMessages } from "@/lib/i18n"
+
 import { formatLinkedDate, LinkCodeIntegrationCard } from "./link-code-integration-card"
 
 const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? ""
 
 export function WhatsAppCard() {
+  const t = useMessages()
+
   return (
     <LinkCodeIntegrationCard
       provider="whatsapp"
       name="WhatsApp"
       icon={<MessageCircle className="size-5 text-green-500" />}
-      description="Registrá gastos escribiendo o mandando un audio por WhatsApp"
-      intro="Vinculá tu número para que FinGrow reconozca tus mensajes. Generá un código, mandalo por WhatsApp y listo: vence a los 10 minutos y sirve una sola vez."
-      codeStepLabel="Paso 1: Mandá este código al número de FinGrow"
+      description={t.whatsapp.description}
+      intro={t.whatsapp.intro}
+      codeStepLabel={t.whatsapp.codeStep}
       openStep={(linkCode, expired, copy) => (
         <div className="space-y-2">
-          <Label>Paso 2: Abrí el chat con FinGrow</Label>
+          <Label>{t.whatsapp.openStep}</Label>
           <div className="flex gap-2">
             <Input value={WHATSAPP_NUMBER} readOnly />
             <Button variant="outline" size="icon" onClick={() => copy(WHATSAPP_NUMBER)}>
@@ -30,31 +34,25 @@ export function WhatsAppCard() {
             <Button variant="outline" asChild disabled={expired}>
               <a href={whatsAppLink(linkCode.code)} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="size-4 mr-2" />
-                Abrir
+                {t.common.open}
               </a>
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Te contestamos por el mismo chat cuando el número quede vinculado.
-          </p>
+          <p className="text-xs text-muted-foreground">{t.whatsapp.openHint}</p>
         </div>
       )}
       linkedDescription={(integration) => (
         <>
-          Tu número <span className="font-medium">{integration.externalAccountId}</span> está vinculado
-          {integration.linkedAt && ` desde el ${formatLinkedDate(integration.linkedAt)}`}. Escribile a FinGrow por
-          WhatsApp y tus gastos quedan registrados.
+          {t.whatsapp.linkedPrefix}
+          <span className="font-medium">{integration.externalAccountId}</span>
+          {t.whatsapp.linkedMiddle}
+          {integration.linkedAt && t.linkCode.since(formatLinkedDate(integration.linkedAt))}
+          {t.whatsapp.linkedSuffix}
         </>
       )}
-      relinkLabel="Vincular otro número"
-      unlinkWarning={(integration) =>
-        `FinGrow va a dejar de reconocer los mensajes de ${integration.externalAccountId}. Los gastos que ya registraste no se borran. Podés volver a vincular el número cuando quieras.`
-      }
-      features={[
-        'Registrar gastos: "Gasté $500 en el súper"',
-        "Mandar un audio en lugar de escribir",
-        "Revisar cada movimiento propuesto antes de que cuente",
-      ]}
+      relinkLabel={t.whatsapp.relink}
+      unlinkWarning={(integration) => t.whatsapp.unlinkWarning(integration.externalAccountId ?? "")}
+      features={[t.linkCode.expenseExample, t.whatsapp.audioFeature, t.linkCode.reviewFeature]}
     />
   )
 }
