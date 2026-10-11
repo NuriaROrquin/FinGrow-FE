@@ -102,3 +102,20 @@ export function changeEmployeeAccess(employeeId: string, isActive: boolean): Pro
 export function deleteEmployee(employeeId: string): Promise<void> {
   return api.delete(`/api/company/employees/${employeeId}`)
 }
+
+export interface CompanyParticipationDto {
+  periodStart: string
+  periodEnd: string
+  totalEmployees: number
+  activeEmployees: number
+  /** `null` cuando el grupo es demasiado chico para mostrarlo sin identificar a nadie. */
+  participatingEmployees: number | null
+  /** Porcentaje (0 a 100). `null` si no hay empleados activos o si está oculto. */
+  participationRate: number | null
+  isParticipationHidden: boolean
+  minimumGroupSize: number
+}
+
+export function getCompanyParticipation(signal?: AbortSignal): Promise<CompanyParticipationDto> {
+  return api.get<CompanyParticipationDto>("/api/company/metrics/participation", { signal })
+}
