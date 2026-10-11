@@ -17,6 +17,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Building2, Search, Edit, Trash2, Plus, Users } from "lucide-react"
 import { useCompany } from "@/lib/company-context"
+import { formatDate } from "@/lib/format"
 
 export default function DepartamentosPage() {
   const {
@@ -245,7 +246,7 @@ export default function DepartamentosPage() {
                           <span>{departamento.cantidadEmpleados}</span>
                         </div>
                       </TableCell>
-                      <TableCell>{new Date(departamento.fechaCreacion).toLocaleDateString("es-AR")}</TableCell>
+                      <TableCell>{formatDate(departamento.fechaCreacion)}</TableCell>
                       <TableCell>
                         <Badge
                           variant={departamento.estado === "activo" ? "default" : "secondary"}

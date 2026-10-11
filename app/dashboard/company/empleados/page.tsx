@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { UserPlus, Search, Edit, Trash2, Mail, User, Phone } from "lucide-react"
 import { useCompany } from "@/lib/company-context"
+import { formatDate } from "@/lib/format"
 
 export default function EmpleadosPage() {
   const {
@@ -272,7 +273,7 @@ export default function EmpleadosPage() {
                       <TableCell>{empleado.email}</TableCell>
                       <TableCell>{empleado.telefono}</TableCell>
                       <TableCell>{empleado.departamento}</TableCell>
-                      <TableCell>{new Date(empleado.fechaAlta).toLocaleDateString("es-AR")}</TableCell>
+                      <TableCell>{formatDate(empleado.fechaAlta)}</TableCell>
                       <TableCell>
                         <Badge
                           variant={empleado.estado === "activo" ? "default" : "secondary"}

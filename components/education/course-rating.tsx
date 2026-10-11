@@ -5,6 +5,7 @@ import { StarIcon } from "lucide-react"
 import { toast } from "sonner"
 import { rateCourse, toastApiError, type CourseDetailDto } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import { formatNumber } from "@/lib/format"
 
 const scores = [1, 2, 3, 4, 5]
 
@@ -18,7 +19,7 @@ interface CourseRatingProps {
 }
 
 function formatAverage(average: number): string {
-  return average.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+  return formatNumber(average, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 }
 
 export function CourseRating({ slug, averageRating, ratingCount, myRating, canRate, onRated }: CourseRatingProps) {

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { createBudget, isApiError, toastApiError, type BudgetDto } from "@/lib/api"
 import { expenseCategoryLabels, type Currency, type ExpenseCategory } from "@/lib/api/transactions"
 import { expenseCategoryIcons, formatYearMonth, type YearMonth } from "./budget-month"
+import { usePreferences } from "@/lib/preferences-context"
 
 const currencyLabels: Record<Currency, string> = {
   ARS: "ARS ($)",
@@ -39,7 +40,8 @@ export function CreateBudgetForm({
   onConflict: () => void
   onClose: () => void
 }) {
-  const [currency, setCurrency] = useState<Currency>("ARS")
+  const { preferences } = usePreferences()
+  const [currency, setCurrency] = useState<Currency>(preferences.currency)
   const [rows, setRows] = useState<LimitRow[]>([{ key: 0, category: "", amount: "" }])
   const [nextKey, setNextKey] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)

@@ -6,18 +6,14 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import type { GoalDto } from "@/lib/api"
-
-const dateFormat: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", year: "numeric" }
+import { formatDate, formatMoney } from "@/lib/format"
 
 function formatDeadline(deadline: string): string {
-  return new Date(`${deadline}T00:00:00`).toLocaleDateString("es-AR", dateFormat)
+  return formatDate(deadline)
 }
 
 function formatAchievedAt(achievedAt: string): string {
-  return new Date(achievedAt).toLocaleDateString("es-AR", {
-    ...dateFormat,
-    timeZone: "America/Argentina/Buenos_Aires",
-  })
+  return formatDate(achievedAt)
 }
 
 function describeTimeLeft(goal: GoalDto, deadlineLabel: string): string {
@@ -51,14 +47,14 @@ export function InProgressGoalCard({ goal, onOpenContributions }: { goal: GoalDt
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-baseline justify-between">
-          <span className="text-2xl font-bold text-success">${goal.currentAmount.toLocaleString()}</span>
+          <span className="text-2xl font-bold text-success">{formatMoney(goal.currentAmount, goal.currency)}</span>
           <span className="text-sm text-muted-foreground">
-            de ${goal.targetAmount.toLocaleString()} {goal.currency}
+            de {formatMoney(goal.targetAmount, goal.currency)}
           </span>
         </div>
         <Progress value={goal.progressPercentage} className="h-2" />
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">${goal.remainingAmount.toLocaleString()} pendiente</span>
+          <span className="text-muted-foreground">{formatMoney(goal.remainingAmount, goal.currency)} pendiente</span>
           <span className="font-medium">{goal.progressPercentage.toFixed(1)}% alcanzado</span>
         </div>
         <Button variant="outline" className="w-full" onClick={onOpenContributions}>
@@ -91,9 +87,9 @@ export function AchievedGoalCard({ goal, onOpenContributions }: { goal: GoalDto;
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-baseline justify-between">
-          <span className="text-2xl font-bold text-success">${goal.currentAmount.toLocaleString()}</span>
+          <span className="text-2xl font-bold text-success">{formatMoney(goal.currentAmount, goal.currency)}</span>
           <span className="text-sm text-muted-foreground">
-            objetivo ${goal.targetAmount.toLocaleString()} {goal.currency}
+            objetivo {formatMoney(goal.targetAmount, goal.currency)}
           </span>
         </div>
         <Progress value={100} className="h-2" />

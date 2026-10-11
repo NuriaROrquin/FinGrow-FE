@@ -22,6 +22,7 @@ import {
   type TransactionDto,
 } from "@/lib/api/transactions"
 import { isApiError } from "@/lib/api/errors"
+import { usePreferences } from "@/lib/preferences-context"
 
 const paymentMethodLabels: Record<PaymentMethod, string> = {
   Cash: "Efectivo",
@@ -58,11 +59,11 @@ function getCategoryValueFromLabel(type: "Income" | "Expense", label: string): s
   return incomeCategoryValueByLabel[label] ?? label
 }
 
-function getInitialFormValues(transaction?: TransactionDto | null) {
+function getInitialFormValues(transaction: TransactionDto | null | undefined, defaultCurrency: Currency) {
   if (!transaction) {
     return {
       transactionType: "Expense" as const,
-      currency: "ARS" as Currency,
+      currency: defaultCurrency,
       amount: "",
       description: "",
       category: "",
@@ -103,11 +104,12 @@ export function AddTransactionForm({
   const [transactionType, setTransactionType] = useState<"Income" | "Expense">(
     initialTransaction?.type ?? "Expense",
   )
-  const [currency, setCurrency] = useState<Currency>(initialTransaction?.currency ?? "ARS")
+  const { preferences } = usePreferences()
+  const [currency, setCurrency] = useState<Currency>(initialTransaction?.currency ?? preferences.currency)
   const [amount, setAmount] = useState(initialTransaction ? String(initialTransaction.amount) : "")
   const [description, setDescription] = useState(initialTransaction?.description ?? "")
   const [category, setCategory] = useState(
-    initialTransaction ? getInitialFormValues(initialTransaction).category : "",
+    initialTransaction ? getInitialFormValues(initialTransaction, preferences.currency).category : "",
   )
   const [date, setDate] = useState(initialTransaction ? String(initialTransaction.occurredOn).slice(0, 10) : "")
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">
@@ -124,7 +126,7 @@ export function AddTransactionForm({
   const categoryLabels = transactionType === "Expense" ? expenseCategoryLabels : incomeCategoryLabels
 
   useEffect(() => {
-    const nextValues = getInitialFormValues(initialTransaction)
+    const nextValues = getInitialFormValues(initialTransaction, preferences.currency)
     setTransactionType(nextValues.transactionType)
     setCurrency(nextValues.currency)
     setAmount(nextValues.amount)
@@ -136,7 +138,7 @@ export function AddTransactionForm({
     setLockedStatus(initialTransaction?.status === "Confirmed" ? "Confirmed" : null)
     setFieldErrors({})
     setGeneralError(null)
-  }, [initialTransaction])
+  }, [initialTransaction, preferences.currency])
 
   const handleCategoryChange = (nextCategory: string) => {
     setCategory(nextCategory)
