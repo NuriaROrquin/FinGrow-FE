@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Card, CardAction, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -11,7 +10,6 @@ import {
   TrendingUpIcon,
   TrendingDownIcon,
   PlusIcon,
-  LightbulbIcon,
   InfoIcon,
   ChevronLeft,
   ChevronRight,
@@ -39,6 +37,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { AddInvestmentForm } from "@/components/investments/add-investment-form"
 import { InvestmentRowActions } from "@/components/investments/investment-row-actions"
+import { LearnByAssetTypeCard } from "@/components/investments/learn-by-asset-type-card"
+import { RelatedEducationDialog } from "@/components/investments/related-education-dialog"
 import {
   InvestmentFiltersBar,
   defaultInvestmentFilters,
@@ -68,30 +68,6 @@ import {
 } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
 import { formatDate, formatDateTime, formatMoney, formatNumber } from "@/lib/format"
-
-const educationalTips = [
-  {
-    id: 1,
-    titulo: "Cómo diversificar tu cartera",
-    descripcion:
-      "No pongas todos los huevos en la misma canasta. Distribuí tus inversiones entre diferentes tipos de activos para reducir el riesgo.",
-    icon: LightbulbIcon,
-  },
-  {
-    id: 2,
-    titulo: "Qué es un fondo común de inversión",
-    descripcion:
-      "Los fondos comunes agrupan el dinero de muchos inversores para comprar una cartera diversificada de activos, gestionada por profesionales.",
-    icon: LightbulbIcon,
-  },
-  {
-    id: 3,
-    titulo: "Inversión a largo plazo",
-    descripcion:
-      "El tiempo es tu aliado. Las inversiones a largo plazo tienden a generar mejores rendimientos y reducir el impacto de la volatilidad del mercado.",
-    icon: LightbulbIcon,
-  },
-]
 
 const investmentTypeColors: Record<InvestmentType, string> = {
   Stock: "#3b5998",
@@ -131,6 +107,11 @@ interface ConsolidatedTotal {
 }
 
 type MepStatus = "loading" | "ready" | "unavailable"
+
+interface LearningState {
+  type: InvestmentType
+  open: boolean
+}
 
 function formatSignedMoney(amount: number, currency: Currency): string {
   return `${amount < 0 ? "-" : "+"}${formatMoney(Math.abs(amount), currency)}`
@@ -195,6 +176,13 @@ function valuationStatus(summary: PortfolioSummaryDto): string {
   }
 
   return `Valuado al ${oldest}`
+}
+
+function heldTypesOf(groups: AllocationGroupDto[], slices: AllocationSlice[]): InvestmentType[] {
+  const byValue = slices.map((slice) => slice.type)
+  const rest = groups.map((group) => group.type).filter((type) => !byValue.includes(type))
+
+  return Array.from(new Set([...byValue, ...rest]))
 }
 
 function allocationByType(groups: AllocationGroupDto[], currency: Currency, quote: MepQuoteDto | null): Allocation {
@@ -351,7 +339,7 @@ export default function InvestmentsPage() {
   const [allocationCurrency, setAllocationCurrency] = useState<Currency | "">("")
   const [mepQuote, setMepQuote] = useState<MepQuoteDto | null>(null)
   const [mepStatus, setMepStatus] = useState<MepStatus>("loading")
-  const router = useRouter()
+  const [learning, setLearning] = useState<LearningState | null>(null)
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => setAppliedFilters(filterValues), 300)
@@ -408,6 +396,8 @@ export default function InvestmentsPage() {
   }, [])
 
   const refreshSummary = () => setSummaryVersion((version) => version + 1)
+
+  const openLearning = (type: InvestmentType) => setLearning({ type, open: true })
 
   const refreshList = () => setListVersion((version) => version + 1)
 
@@ -496,6 +486,7 @@ export default function InvestmentsPage() {
   const allocationChartConfig: ChartConfig = Object.fromEntries(
     allocation.slices.map((slice) => [slice.label, { label: slice.label, color: slice.color }]),
   )
+  const heldTypes = summary ? heldTypesOf(summary.allocation, allocation.slices) : null
 
   return (
     <div className="space-y-6">
@@ -730,36 +721,15 @@ export default function InvestmentsPage() {
         </div>
 
         <div>
-          <Card className="h-full bg-primary/5 border-primary/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <LightbulbIcon className="size-5 text-primary" />
-                Tips Educativos
-              </CardTitle>
-              <CardDescription>Aprendé más sobre inversiones</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {educationalTips.map((tip) => (
-                <div key={tip.id} className="p-3 rounded-lg bg-background border">
-                  <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                    <tip.icon className="size-4 text-primary" />
-                    {tip.titulo}
-                  </h4>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{tip.descripcion}</p>
-                </div>
-              ))}
-              <Button
-                variant="outline"
-                className="w-full bg-transparent"
-                size="sm"
-                onClick={() => router.push("/dashboard/education")}
-              >
-                Ver más recursos educativos
-              </Button>
-            </CardContent>
-          </Card>
+          <LearnByAssetTypeCard heldTypes={heldTypes} onOpen={openLearning} />
         </div>
       </div>
+
+      <RelatedEducationDialog
+        type={learning?.type ?? null}
+        open={learning?.open ?? false}
+        onOpenChange={(open) => setLearning((current) => (current ? { ...current, open } : null))}
+      />
 
       <Card>
         <CardHeader>
