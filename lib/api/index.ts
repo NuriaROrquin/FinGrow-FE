@@ -58,6 +58,8 @@ export {
 } from "./account"
 export { getApiBaseUrl } from "./config"
 export {
+  changeEmployeeAccess,
+  changeEmployeeDepartment,
   createDepartment,
   createEmployee,
   deleteDepartment,
