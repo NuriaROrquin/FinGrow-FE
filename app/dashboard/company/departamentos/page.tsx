@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Edit, Plus, Trash2, Users } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DeactivateDepartmentDialog } from "@/components/company/deactivate-department-dialog"
 import { DeleteDepartmentDialog } from "@/components/company/delete-department-dialog"
 import { DepartmentFiltersBar } from "@/components/company/department-filters-bar"
 import {
@@ -25,7 +27,14 @@ import {
 import { DepartmentFormDialog } from "@/components/company/department-form-dialog"
 import { FilterStatCard } from "@/components/company/filter-stat-card"
 import { SortableTableHead } from "@/components/company/sortable-table-head"
-import { listDepartments, toastApiError, type DepartmentDto } from "@/lib/api"
+import {
+  changeDepartmentStatus,
+  listDepartments,
+  listEmployees,
+  toastApiError,
+  type CompanyEmployeeDto,
+  type DepartmentDto,
+} from "@/lib/api"
 import { formatDate } from "@/lib/format"
 import { plural } from "@/lib/utils"
 
@@ -35,16 +44,21 @@ function Placeholder() {
 
 export default function DepartamentosPage() {
   const [departments, setDepartments] = useState<DepartmentDto[] | null>(null)
+  const [employees, setEmployees] = useState<CompanyEmployeeDto[]>([])
   const [loadFailed, setLoadFailed] = useState(false)
   const [filters, setFilters] = useState<DepartmentFilterValues>(defaultDepartmentFilters)
   const [sort, setSort] = useState<DepartmentSort>(defaultDepartmentSort)
   const [formState, setFormState] = useState<{ open: boolean; department?: DepartmentDto }>({ open: false })
   const [departmentToDelete, setDepartmentToDelete] = useState<DepartmentDto | null>(null)
+  const [departmentToDeactivate, setDepartmentToDeactivate] = useState<DepartmentDto | null>(null)
+  const [reactivatingId, setReactivatingId] = useState<string | null>(null)
 
   const loadDepartments = useCallback(async (signal?: AbortSignal) => {
     setLoadFailed(false)
     try {
-      setDepartments(await listDepartments(signal))
+      const [loadedDepartments, loadedEmployees] = await Promise.all([listDepartments(signal), listEmployees(signal)])
+      setDepartments(loadedDepartments)
+      setEmployees(loadedEmployees)
     } catch (error) {
       if (signal?.aborted) {
         return
@@ -69,6 +83,18 @@ export default function DepartamentosPage() {
     setDepartments((current) => [...(current ?? []).filter((department) => department.id !== saved.id), saved])
   }
 
+  const reactivate = async (department: DepartmentDto) => {
+    setReactivatingId(department.id)
+    try {
+      handleSaved(await changeDepartmentStatus(department.id, true))
+      toast.success(`Se reactivó "${department.name}": ya se le pueden asignar empleados`)
+    } catch (error) {
+      toastApiError(error, "No se pudo reactivar el departamento.")
+    } finally {
+      setReactivatingId(null)
+    }
+  }
+
   const handleDeleted = (departmentId: string) => {
     setDepartments((current) => (current ?? []).filter((department) => department.id !== departmentId))
   }
@@ -86,8 +112,15 @@ export default function DepartamentosPage() {
   const isLoading = departments === null && !loadFailed
   const totalDepartments = departments?.length ?? 0
   const emptyDepartments = departments?.filter((department) => department.employeeCount === 0).length ?? 0
-  const departmentsWithoutManager = departments?.filter((department) => department.managerName === null).length ?? 0
+  const departmentsWithoutManager = departments?.filter((department) => department.manager === null).length ?? 0
   const assignedEmployees = departments?.reduce((sum, department) => sum + department.employeeCount, 0) ?? 0
+  const inactiveDepartments = departments?.filter((department) => !department.isActive).length ?? 0
+  const totalHint = [
+    `${assignedEmployees} ${plural(assignedEmployees, "empleado asignado", "empleados asignados")}`,
+    inactiveDepartments > 0 ? `${inactiveDepartments} ${plural(inactiveDepartments, "inactivo", "inactivos")}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ")
   const isFiltered = hasActiveDepartmentFilters(filters)
 
   const listDescription = isLoading
@@ -113,7 +146,7 @@ export default function DepartamentosPage() {
         <FilterStatCard
           label="Total Departamentos"
           value={totalDepartments}
-          hint={`${assignedEmployees} ${plural(assignedEmployees, "empleado asignado", "empleados asignados")}`}
+          hint={totalHint}
           isLoading={isLoading}
           isSelected={filters.staff === "all" && filters.manager === "all"}
           onSelect={() => setFilters((current) => ({ ...current, staff: "all", manager: "all" }))}
@@ -162,7 +195,7 @@ export default function DepartamentosPage() {
                   <TableHead>Descripción</TableHead>
                   <SortableTableHead
                     label="Responsable"
-                    field="managerName"
+                    field="manager"
                     sortField={sort.field}
                     sortDirection={sort.direction}
                     onSort={handleSort}
@@ -225,7 +258,16 @@ export default function DepartamentosPage() {
                       <TableCell className="max-w-xs truncate" title={department.description ?? undefined}>
                         {department.description ?? <Placeholder />}
                       </TableCell>
-                      <TableCell>{department.managerName ?? <Placeholder />}</TableCell>
+                      <TableCell>
+                        {department.manager ? (
+                          <span className={department.manager.isActive ? undefined : "text-muted-foreground"}>
+                            {department.manager.fullName}
+                            {!department.manager.isActive && " (sin acceso)"}
+                          </span>
+                        ) : (
+                          <Placeholder />
+                        )}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Users className="h-4 w-4 text-muted-foreground" />
@@ -234,9 +276,19 @@ export default function DepartamentosPage() {
                       </TableCell>
                       <TableCell>{formatDate(department.createdAt)}</TableCell>
                       <TableCell>
-                        <Badge variant={department.isActive ? "default" : "secondary"}>
-                          {department.isActive ? "Activo" : "Inactivo"}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={department.isActive}
+                            disabled={reactivatingId === department.id}
+                            onCheckedChange={(checked) =>
+                              checked ? void reactivate(department) : setDepartmentToDeactivate(department)
+                            }
+                            aria-label={`${department.isActive ? "Desactivar" : "Reactivar"} ${department.name}`}
+                          />
+                          <span className={department.isActive ? "text-sm" : "text-sm text-muted-foreground"}>
+                            {department.isActive ? "Activo" : "Inactivo"}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
@@ -271,6 +323,7 @@ export default function DepartamentosPage() {
 
       <DepartmentFormDialog
         department={formState.department}
+        employees={employees}
         open={formState.open}
         onOpenChange={(open) => setFormState((current) => ({ ...current, open }))}
         onSaved={handleSaved}
@@ -283,6 +336,20 @@ export default function DepartamentosPage() {
           onOpenChange={(open) => !open && setDepartmentToDelete(null)}
           onDeleted={handleDeleted}
           onRejected={() => void loadDepartments()}
+          onDeactivateInstead={() => {
+            setDepartmentToDeactivate(departmentToDelete)
+            setDepartmentToDelete(null)
+          }}
+        />
+      )}
+
+      {departmentToDeactivate && (
+        <DeactivateDepartmentDialog
+          department={departmentToDeactivate}
+          departments={departments ?? []}
+          open
+          onOpenChange={(open) => !open && setDepartmentToDeactivate(null)}
+          onDeactivated={() => void loadDepartments()}
         />
       )}
     </div>

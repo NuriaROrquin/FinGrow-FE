@@ -26,6 +26,7 @@ export interface CourseSummaryDto {
   level: CourseLevel
   category: EducationCategory
   relatedInvestmentType: InvestmentType | null
+  isInvestmentContent: boolean
   durationMinutes: number
   lessonCount: number
   completedLessons: number
@@ -54,11 +55,17 @@ export interface CourseFilters {
   level?: CourseLevel
   maxDuration?: number
   status?: CourseProgressStatus
+  investmentType?: InvestmentType
 }
 
 export function listCourses(filters: CourseFilters = {}, signal?: AbortSignal): Promise<CourseSummaryDto[]> {
   return api.get<CourseSummaryDto[]>("/api/courses", {
-    query: { level: filters.level, maxDuration: filters.maxDuration, status: filters.status },
+    query: {
+      level: filters.level,
+      maxDuration: filters.maxDuration,
+      status: filters.status,
+      investmentType: filters.investmentType,
+    },
     signal,
   })
 }
