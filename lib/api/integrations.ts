@@ -1,6 +1,8 @@
 import { api } from "./client"
 
-export type IntegrationProvider = "whatsapp" | "telegram" | "mercadopago"
+export type IntegrationProvider = "whatsapp" | "telegram" | "mercadopago" | "gmail"
+
+export type IntegrationStatus = "Active" | "Failed"
 
 export interface LinkCode {
   code: string
@@ -11,9 +13,10 @@ export interface Integration {
   linked: boolean
   externalAccountId: string | null
   linkedAt: string | null
+  status: IntegrationStatus | null
 }
 
-export const NOT_LINKED: Integration = { linked: false, externalAccountId: null, linkedAt: null }
+export const NOT_LINKED: Integration = { linked: false, externalAccountId: null, linkedAt: null, status: null }
 
 export function getIntegration(provider: IntegrationProvider, signal?: AbortSignal): Promise<Integration> {
   return api.get<Integration>(`/api/integrations/${provider}`, { signal })
@@ -47,4 +50,15 @@ export function startMercadoPagoLink(signal?: AbortSignal): Promise<MercadoPagoA
 
 export function syncMercadoPago(signal?: AbortSignal): Promise<MercadoPagoSyncSummary> {
   return api.post<MercadoPagoSyncSummary>("/api/integrations/mercadopago/sync", undefined, { signal })
+}
+
+export interface GmailAuthorization {
+  authorizationUrl: string
+  expiresAt: string
+}
+
+export type GmailLinkResult = "linked" | "error"
+
+export function startGmailLink(signal?: AbortSignal): Promise<GmailAuthorization> {
+  return api.post<GmailAuthorization>("/api/integrations/gmail/oauth/start", undefined, { signal })
 }

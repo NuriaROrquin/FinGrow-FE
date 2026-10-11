@@ -126,32 +126,6 @@ export const en: Messages = {
       emailHint: "Get notifications by email",
       save: "Save Preferences",
     },
-    gmail: {
-      description: "Automatically process utility bills",
-      linkedToastTitle: "Gmail linked!",
-      linkedToastDescription: "Your bills will be processed automatically",
-      unlinkedToastTitle: "Gmail unlinked",
-      unlinkedToastDescription: "Bills will no longer be processed automatically",
-      intro:
-        "Connect your Gmail account to automatically import electricity, gas, water, internet and other utility bills.",
-      detectedTitle: "Services we'll detect:",
-      detected: [
-        "Electricity bills (Edenor, Edesur, EPE)",
-        "Gas bills (MetroGAS, Camuzzi)",
-        "Water bills (AySA, ABSA)",
-        "Internet and phone (Fibertel, Movistar, Personal)",
-        "Other recurring services",
-      ],
-      connect: "Connect with Gmail",
-      syncActive: "Sync active",
-      syncInfo: "Your bills will be processed automatically. Last sync: 5 minutes ago.",
-      processedTitle: "Bills processed this month:",
-      processed: {
-        electricity: "Edenor - Electricity",
-        gas: "MetroGAS - Natural Gas",
-        internet: "Fibertel - Internet",
-      },
-    },
     ocr: {
       title: "OCR Processing",
       description: "Scan receipts and bills with your camera",
@@ -331,6 +305,48 @@ export const en: Messages = {
     syncFailed: "We couldn't sync Mercado Pago. Please try again.",
     unlinkedToast: "Mercado Pago unlinked",
     unlinkFailed: "We couldn't unlink Mercado Pago. Please try again.",
+  },
+
+  gmail: {
+    description: "Bills and receipts that reach your inbox are recorded automatically",
+    checking: "Checking Gmail status...",
+    linkedPrefix: "Account ",
+    linkedMiddle: " linked",
+    linkedOn: (date: string) => ` on ${date}`,
+    linkedSuffix: ". Bills from recognized services will show up as pending in Transactions.",
+    failedBadge: "Error",
+    failed:
+      "We lost access to your Gmail, probably because you removed the permission from your Google account. Authorize again to keep recording your bills.",
+    reauthorize: "Authorize again",
+    unlinkTitle: "Unlink Gmail?",
+    unlinkWarning:
+      "FinGrow stops reading your email and asks Google to delete the authorization. Movements already recorded are kept.",
+    intro:
+      "We'll take you to Google so you can authorize FinGrow to read your email. We only look for bills and receipts from recognized services, we never see your password and you can revoke access at any time, from here or from your Google account.",
+    connect: "Connect with Gmail",
+    detectedTitle: "Services we detect:",
+    detected: [
+      "Electricity bills (Edenor, Edesur, EPE)",
+      "Gas bills (MetroGAS, Camuzzi)",
+      "Water bills (AySA, ABSA)",
+      "Internet and phone (Fibertel, Movistar, Personal)",
+      "Other recurring services",
+    ],
+    linkErrors: {
+      "Integrations.Gmail.Denied": "You didn't authorize the connection in Google. You can try again whenever you want.",
+      "Integrations.Gmail.MailAccessNotGranted":
+        "Without permission to read your email we can't record your bills. Try again and tick that option in Google.",
+      "Integrations.Gmail.InvalidState": "The link expired or wasn't started from FinGrow. Please try again.",
+      "Integrations.Gmail.ExchangeFailed": "Google didn't return the credentials. Try again in a few minutes.",
+    } as Record<string, string>,
+    linkedToast: "Gmail linked",
+    linkedToastDescription: "Bills you receive will show up as pending in Transactions.",
+    linkFailedToast: "We couldn't link Gmail",
+    retryLater: "Try again in a few minutes.",
+    statusFailed: "We couldn't check the Gmail status.",
+    startFailed: "We couldn't start linking. Please try again.",
+    unlinkedToast: "Gmail unlinked",
+    unlinkFailed: "We couldn't unlink Gmail. Please try again.",
   },
 
   pendingInbox: {
