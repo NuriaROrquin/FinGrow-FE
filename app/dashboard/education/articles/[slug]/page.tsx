@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { ArrowLeftIcon, ClockIcon } from "lucide-react"
 import { ArticleMarkdown } from "@/components/education/article-markdown"
+import { InvestmentDisclaimer } from "@/components/education/investment-disclaimer"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -93,6 +94,8 @@ export default function ArticlePage() {
           </div>
         </div>
       </div>
+
+      {article.isInvestmentContent && <InvestmentDisclaimer />}
 
       <Card>
         <CardContent className="pt-6">

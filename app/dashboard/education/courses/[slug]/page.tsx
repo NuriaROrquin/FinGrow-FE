@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner"
 import { CourseRating } from "@/components/education/course-rating"
 import { formatDuration } from "@/components/education/format-duration"
+import { InvestmentDisclaimer } from "@/components/education/investment-disclaimer"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -158,6 +159,8 @@ export default function CoursePage() {
           </div>
         </div>
       </div>
+
+      {course.isInvestmentContent && <InvestmentDisclaimer />}
 
       <Card>
         <CardContent className="space-y-2 pt-6">
