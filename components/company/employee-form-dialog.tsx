@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
+  changeEmployeeDepartment,
   createEmployee,
   EMPLOYEE_EMAIL_MAX_LENGTH,
   FULL_NAME_MAX_LENGTH,
@@ -104,7 +105,9 @@ export function EmployeeFormDialog({
   const [draft, setDraft] = useState<Draft>(() => toDraft(employee))
   const [errors, setErrors] = useState<FieldErrors>({})
   const [isSaving, setIsSaving] = useState(false)
-  const activeDepartments = departments.filter((department) => department.isActive)
+  const selectableDepartments = departments.filter(
+    (department) => department.isActive || department.id === employee?.departmentId,
+  )
 
   useEffect(() => {
     if (open) {
@@ -128,14 +131,18 @@ export function EmployeeFormDialog({
       return
     }
 
+    const departmentId = draft.departmentId === NO_DEPARTMENT ? null : draft.departmentId
+
     setIsSaving(true)
     try {
       if (isEditing) {
-        const saved = await updateEmployee(employee.id, payload)
+        let saved = await updateEmployee(employee.id, payload)
+        if (departmentId !== employee.departmentId) {
+          saved = await changeEmployeeDepartment(employee.id, departmentId)
+        }
         onUpdated(saved)
         toast.success(`Datos de ${saved.fullName} actualizados`)
       } else {
-        const departmentId = draft.departmentId === NO_DEPARTMENT ? null : draft.departmentId
         onCreated(await createEmployee({ ...payload, departmentId }))
       }
       onOpenChange(false)
@@ -159,7 +166,7 @@ export function EmployeeFormDialog({
             <DialogTitle>{isEditing ? "Editar empleado" : "Agregar empleado"}</DialogTitle>
             <DialogDescription>
               {isEditing
-                ? "Corregí los datos de contacto. El email es con el que inicia sesión."
+                ? "Corregí sus datos o cambialo de departamento. El email es con el que inicia sesión."
                 : "Al confirmar se crea su usuario con una contraseña temporal para que pueda ingresar."}
             </DialogDescription>
           </DialogHeader>
@@ -218,24 +225,27 @@ export function EmployeeFormDialog({
               {errors.phoneNumber && <p className="text-sm text-destructive">{errors.phoneNumber}</p>}
             </div>
 
-            {!isEditing && (
-              <div className="space-y-2">
-                <Label htmlFor="employee-department">Departamento</Label>
-                <Select value={draft.departmentId} onValueChange={(value) => update("departmentId", value)}>
-                  <SelectTrigger id="employee-department" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NO_DEPARTMENT}>Sin departamento</SelectItem>
-                    {activeDepartments.map((department) => (
-                      <SelectItem key={department.id} value={department.id}>
-                        {department.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="employee-department">Departamento</Label>
+              <Select value={draft.departmentId} onValueChange={(value) => update("departmentId", value)}>
+                <SelectTrigger id="employee-department" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_DEPARTMENT}>Sin departamento</SelectItem>
+                  {selectableDepartments.map((department) => (
+                    <SelectItem key={department.id} value={department.id}>
+                      {department.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isEditing && (
+                <p className="text-xs text-muted-foreground">
+                  Las métricas de los meses ya cerrados no cambian: cuentan en el departamento donde estaba.
+                </p>
+              )}
+            </div>
           </div>
 
           <DialogFooter>
