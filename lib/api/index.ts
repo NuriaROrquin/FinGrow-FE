@@ -58,6 +58,17 @@ export {
 } from "./account"
 export { getApiBaseUrl } from "./config"
 export {
+  createDepartment,
+  deleteDepartment,
+  DEPARTMENT_DESCRIPTION_MAX_LENGTH,
+  DEPARTMENT_MANAGER_NAME_MAX_LENGTH,
+  DEPARTMENT_NAME_MAX_LENGTH,
+  listDepartments,
+  updateDepartment,
+  type DepartmentDto,
+  type DepartmentPayload,
+} from "./company"
+export {
   defaultPreferences,
   getPreferences,
   updatePreferences,
