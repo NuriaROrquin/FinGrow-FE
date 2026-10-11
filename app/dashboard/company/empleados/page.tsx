@@ -304,6 +304,7 @@ export default function EmpleadosPage() {
           open
           onOpenChange={(open) => !open && setEmployeeToDelete(null)}
           onDeleted={handleDeleted}
+          onDeactivated={replaceEmployee}
         />
       )}
     </div>
