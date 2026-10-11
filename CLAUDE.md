@@ -41,6 +41,12 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   el error. Las rutas se pasan completas (`/api/integrations/...`); `NEXT_PUBLIC_API_URL` no
   incluye `/api`. Como la cookie es `SameSite=None; Secure`, el front en `localhost:3000` puede
   hablar con la API en dev o en local sin configuración extra.
+- **La campanita de notificaciones** (`components/notifications/notification-bell.tsx`) usa la
+  bandeja real (`/api/notifications`) y no consulta el contador cada tanto: escucha el hub de
+  SignalR `/hubs/notifications` (`lib/api/notifications-hub.ts`), que viaja con la misma cookie
+  de sesión. Cada notificación nueva llega con el evento `NotificationReceived`. Al conectarse,
+  al perder la conexión y al volver a la pestaña se vuelve a pedir el contador: ese pedido pasa
+  por `api`, así que de paso renueva la sesión vencida antes de reconectar.
 - **Bandeja de pendientes (HU-15)**: es la pestaña "Pendientes" de Transacciones
   (`components/transactions/pending-inbox.tsx`, también `/dashboard/transactions?view=pending`).
   Lista lo que propuso un canal automático (`GET /api/transactions/pending`), y cada movimiento
