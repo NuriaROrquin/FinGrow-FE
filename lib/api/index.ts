@@ -66,7 +66,6 @@ export {
   deleteDepartment,
   deleteEmployee,
   DEPARTMENT_DESCRIPTION_MAX_LENGTH,
-  DEPARTMENT_MANAGER_NAME_MAX_LENGTH,
   DEPARTMENT_NAME_MAX_LENGTH,
   EMPLOYEE_EMAIL_MAX_LENGTH,
   listDepartments,
@@ -77,6 +76,7 @@ export {
   type CreatedEmployeeDto,
   type CreateEmployeePayload,
   type DepartmentDto,
+  type DepartmentManagerDto,
   type DepartmentPayload,
   type EmployeeDetailsPayload,
 } from "./company"
