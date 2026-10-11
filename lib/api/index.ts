@@ -58,6 +58,7 @@ export {
 } from "./account"
 export { getApiBaseUrl } from "./config"
 export {
+  changeDepartmentStatus,
   changeEmployeeAccess,
   changeEmployeeDepartment,
   createDepartment,

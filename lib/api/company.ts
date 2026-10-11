@@ -38,6 +38,14 @@ export function deleteDepartment(departmentId: string): Promise<void> {
   return api.delete(`/api/company/departments/${departmentId}`)
 }
 
+export function changeDepartmentStatus(
+  departmentId: string,
+  isActive: boolean,
+  moveEmployeesTo: string | null = null,
+): Promise<DepartmentDto> {
+  return api.put<DepartmentDto>(`/api/company/departments/${departmentId}/status`, { isActive, moveEmployeesTo })
+}
+
 export const EMPLOYEE_EMAIL_MAX_LENGTH = 256
 
 export interface CompanyEmployeeDto {
