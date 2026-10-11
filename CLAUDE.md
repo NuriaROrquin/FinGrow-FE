@@ -29,10 +29,11 @@ responde con la cookie **HttpOnly** `fingrow-session` (que lleva el JWT) y un `S
 con `userId`, `companyId`, `fullName`, `role` y `expiresAt`. Al cargar la página se rehidrata
 con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve el token: en
 `localStorage` solo queda `fingrow-role`, para saber a qué login volver ante un 401.
-- **`lib/company-context.tsx`** guarda departamentos y empleados en memoria. El empleado se
-  relaciona con su departamento **por nombre** (`departamento: string`), no por id. En
-  FinGrow-BE esa misma relación es por id — cuando se conecte a la API real, renombrar un
-  departamento ya no puede romper la relación como rompe acá.
+- **Departamentos y empleados del panel de empresa** (HU-51, HU-54) usan la API real
+  (`lib/api/company.ts`, `/api/company/departments` y `/api/company/employees`). El empleado se
+  relaciona con su departamento por id. El alta devuelve una contraseña temporal que se muestra
+  una sola vez (`components/company/temporary-password-dialog.tsx`): no hay forma de volver a
+  pedirla. El panel principal de la empresa (`/dashboard/company`) sigue con métricas mock.
 - La capa de acceso HTTP tipada es `lib/api/` (**T-04, SCRUM-22**): `api.get/post/...` manda
   siempre `credentials: "include"` para que viaje la cookie de sesión, y `toastApiError` muestra
   el error. Las rutas se pasan completas (`/api/integrations/...`); `NEXT_PUBLIC_API_URL` no
@@ -71,7 +72,7 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
 ```
 app/            Rutas (App Router): dashboard, login/empleado, login/empresa
 components/ui/  Componentes shadcn — generados, no reescribir el estilo base a mano
-lib/            Contexts (auth, company) y utils; todavía sin capa de acceso HTTP
+lib/            Contexts (auth, preferencias), utils y la capa de acceso HTTP (lib/api)
 hooks/          Hooks compartidos (use-mobile, use-toast)
 ```
 

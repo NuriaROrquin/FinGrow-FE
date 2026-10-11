@@ -42,7 +42,6 @@ import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { NotificationBell } from "@/components/notifications/notification-bell"
-import { CompanyProvider } from "@/lib/company-context"
 import { usePreferences } from "@/lib/preferences-context"
 import { useMessages, type Messages } from "@/lib/i18n"
 import { useEffect } from "react"
@@ -112,150 +111,148 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <CompanyProvider>
-      <SidebarProvider defaultOpen={true}>
-        <Sidebar>
-          <SidebarHeader className="border-b border-sidebar-border">
-            <div className="flex items-center gap-2 px-2 py-2">
-              <div className="flex items-center justify-center gap-3 mb-4">
-                <Link
-                    href={role === "empresa" ? "/dashboard/company" : "/dashboard"}
-                    className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-                >
-                  <Image
-                      src="/9.png"
-                      alt="FinGrow Logo"
-                      width={60}
-                      height={40}
-                      className="object-contain"
-                      priority
-                  />
-                  <h1 className="text-3xl font-bold text-secondary-foreground">FinGrow</h1>
-                </Link>
-
-              </div>
-            </div>
-          </SidebarHeader>
-
-          <SidebarContent>
-            {role === "empleado" && (
-                <div className="px-2 py-2">
-                  <p className="px-2 text-xs font-medium text-muted-foreground mb-2">{t.nav.personal}</p>
-                  <SidebarMenu>
-                    {empleadoNavigation.map((item) => (
-                        <SidebarMenuItem key={item.key}>
-                      <SidebarMenuButton asChild isActive={pathname === item.href}>
-                        <Link href={item.href}>
-                          <item.icon className="size-4" />
-                          <span>{t.nav[item.key]}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </div>
-            )}
-
-            {role === "empresa" && (
-              <div className="px-2 py-2">
-                <p className="px-2 text-xs font-medium text-muted-foreground mb-2">{t.nav.company}</p>
-                <SidebarMenu>
-                  {empresaNavigation.map((item) => (
-                    <SidebarMenuItem key={item.key}>
-                      <SidebarMenuButton asChild isActive={pathname === item.href}>
-                        <Link href={item.href}>
-                          <item.icon className="size-4" />
-                          <span>{t.nav[item.key]}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </div>
-            )}
-          </SidebarContent>
-
-          <SidebarFooter className="border-t border-sidebar-border">
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/dashboard/settings">
-                    <SettingsIcon className="size-4" />
-                    <span>{t.nav.settings}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarFooter>
-        </Sidebar>
-
-        <SidebarInset className="min-w-0 flex-1">
-          <header className="grid grid-cols-3 h-14 items-center border-b bg-background px-6">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger />
-            </div>
-
-            <div className="justify-center flex">
+    <SidebarProvider defaultOpen={true}>
+      <Sidebar>
+        <SidebarHeader className="border-b border-sidebar-border">
+          <div className="flex items-center gap-2 px-2 py-2">
+            <div className="flex items-center justify-center gap-3 mb-4">
               <Link
                   href={role === "empresa" ? "/dashboard/company" : "/dashboard"}
-                  className="flex items-center gap-2 hover:opacity-80 transition-opacity md:hidden"
+                  className="flex items-center gap-2 hover:opacity-80 transition-opacity"
               >
                 <Image
                     src="/9.png"
                     alt="FinGrow Logo"
-                    width={20}
-                    height={10}
-                    className="object-contain cursor-pointer"
+                    width={60}
+                    height={40}
+                    className="object-contain"
                     priority
                 />
-                <h1 className="text-xl font-bold text-secondary-foreground">FinGrow</h1>
+                <h1 className="text-3xl font-bold text-secondary-foreground">FinGrow</h1>
               </Link>
-            </div>
 
-            <div className="flex items-center justify-end gap-2">
-              <NotificationBell />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center gap-2">
-                    <Avatar className="size-8">
-                      <AvatarImage src="/placeholder-user.jpg" alt={userName} />
-                      <AvatarFallback>{getInitials(userName)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col items-start">
-                      <span className="text-sm font-medium">{userName}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {role === "empleado" ? t.header.roleEmployee : t.header.roleCompany}
-                      </span>
-                    </div>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>{t.header.myAccount}</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard/settings" className="cursor-pointer">
-                      <UserIcon className="size-4 mr-2" />
-                      {t.header.profile}
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard/settings" className="cursor-pointer">
-                      <SettingsIcon className="size-4 mr-2" />
-                      {t.header.settings}
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => logout()} className="cursor-pointer text-destructive">
-                    <LogOutIcon className="size-4 mr-2" />
-                    {t.header.logout}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
-          </header>
-          <main className="w-full min-w-0 overflow-x-hidden p-6">{children}</main>
-        </SidebarInset>
-      </SidebarProvider>
-    </CompanyProvider>
+          </div>
+        </SidebarHeader>
+
+        <SidebarContent>
+          {role === "empleado" && (
+              <div className="px-2 py-2">
+                <p className="px-2 text-xs font-medium text-muted-foreground mb-2">{t.nav.personal}</p>
+                <SidebarMenu>
+                  {empleadoNavigation.map((item) => (
+                      <SidebarMenuItem key={item.key}>
+                    <SidebarMenuButton asChild isActive={pathname === item.href}>
+                      <Link href={item.href}>
+                        <item.icon className="size-4" />
+                        <span>{t.nav[item.key]}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </div>
+          )}
+
+          {role === "empresa" && (
+            <div className="px-2 py-2">
+              <p className="px-2 text-xs font-medium text-muted-foreground mb-2">{t.nav.company}</p>
+              <SidebarMenu>
+                {empresaNavigation.map((item) => (
+                  <SidebarMenuItem key={item.key}>
+                    <SidebarMenuButton asChild isActive={pathname === item.href}>
+                      <Link href={item.href}>
+                        <item.icon className="size-4" />
+                        <span>{t.nav[item.key]}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </div>
+          )}
+        </SidebarContent>
+
+        <SidebarFooter className="border-t border-sidebar-border">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link href="/dashboard/settings">
+                  <SettingsIcon className="size-4" />
+                  <span>{t.nav.settings}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+      </Sidebar>
+
+      <SidebarInset className="min-w-0 flex-1">
+        <header className="grid grid-cols-3 h-14 items-center border-b bg-background px-6">
+          <div className="flex items-center gap-4">
+            <SidebarTrigger />
+          </div>
+
+          <div className="justify-center flex">
+            <Link
+                href={role === "empresa" ? "/dashboard/company" : "/dashboard"}
+                className="flex items-center gap-2 hover:opacity-80 transition-opacity md:hidden"
+            >
+              <Image
+                  src="/9.png"
+                  alt="FinGrow Logo"
+                  width={20}
+                  height={10}
+                  className="object-contain cursor-pointer"
+                  priority
+              />
+              <h1 className="text-xl font-bold text-secondary-foreground">FinGrow</h1>
+            </Link>
+          </div>
+
+          <div className="flex items-center justify-end gap-2">
+            <NotificationBell />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="flex items-center gap-2">
+                  <Avatar className="size-8">
+                    <AvatarImage src="/placeholder-user.jpg" alt={userName} />
+                    <AvatarFallback>{getInitials(userName)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col items-start">
+                    <span className="text-sm font-medium">{userName}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {role === "empleado" ? t.header.roleEmployee : t.header.roleCompany}
+                    </span>
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>{t.header.myAccount}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/settings" className="cursor-pointer">
+                    <UserIcon className="size-4 mr-2" />
+                    {t.header.profile}
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/settings" className="cursor-pointer">
+                    <SettingsIcon className="size-4 mr-2" />
+                    {t.header.settings}
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => logout()} className="cursor-pointer text-destructive">
+                  <LogOutIcon className="size-4 mr-2" />
+                  {t.header.logout}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </header>
+        <main className="w-full min-w-0 overflow-x-hidden p-6">{children}</main>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }
