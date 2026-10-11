@@ -33,7 +33,9 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   (`lib/api/company.ts`, `/api/company/departments` y `/api/company/employees`). El empleado se
   relaciona con su departamento por id. El alta devuelve una contraseña temporal que se muestra
   una sola vez (`components/company/temporary-password-dialog.tsx`): no hay forma de volver a
-  pedirla. El panel principal de la empresa (`/dashboard/company`) sigue con métricas mock.
+  pedirla. El switch de estado activa o desactiva el acceso (HU-55): desactivar conserva los
+  datos, eliminar los borra. El panel principal de la empresa (`/dashboard/company`) sigue con
+  métricas mock.
 - La capa de acceso HTTP tipada es `lib/api/` (**T-04, SCRUM-22**): `api.get/post/...` manda
   siempre `credentials: "include"` para que viaje la cookie de sesión, y `toastApiError` muestra
   el error. Las rutas se pasan completas (`/api/integrations/...`); `NEXT_PUBLIC_API_URL` no
