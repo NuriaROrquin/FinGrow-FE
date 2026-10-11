@@ -214,14 +214,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <NotificationBell />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2">
+                <Button variant="ghost" className="flex min-w-0 shrink items-center gap-2 px-1.5 sm:px-3">
                   <Avatar className="size-8">
                     <AvatarImage src="/placeholder-user.jpg" alt={userName} />
                     <AvatarFallback>{getInitials(userName)}</AvatarFallback>
                   </Avatar>
-                  <div className="flex flex-col items-start">
-                    <span className="text-sm font-medium">{userName}</span>
-                    <span className="text-xs text-muted-foreground">
+                  <div className="hidden min-w-0 flex-col items-start sm:flex">
+                    <span className="max-w-full truncate text-sm font-medium" title={userName}>{userName}</span>
+                    <span className="max-w-full truncate text-xs text-muted-foreground">
                       {role === "empleado" ? t.header.roleEmployee : t.header.roleCompany}
                     </span>
                   </div>
