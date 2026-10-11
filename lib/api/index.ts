@@ -58,6 +58,28 @@ export {
 } from "./account"
 export { getApiBaseUrl } from "./config"
 export {
+  changeEmployeeAccess,
+  changeEmployeeDepartment,
+  createDepartment,
+  createEmployee,
+  deleteDepartment,
+  deleteEmployee,
+  DEPARTMENT_DESCRIPTION_MAX_LENGTH,
+  DEPARTMENT_MANAGER_NAME_MAX_LENGTH,
+  DEPARTMENT_NAME_MAX_LENGTH,
+  EMPLOYEE_EMAIL_MAX_LENGTH,
+  listDepartments,
+  listEmployees,
+  updateDepartment,
+  updateEmployee,
+  type CompanyEmployeeDto,
+  type CreatedEmployeeDto,
+  type CreateEmployeePayload,
+  type DepartmentDto,
+  type DepartmentPayload,
+  type EmployeeDetailsPayload,
+} from "./company"
+export {
   defaultPreferences,
   getPreferences,
   updatePreferences,
@@ -190,3 +212,4 @@ export {
   type NotificationDto,
   type NotificationType,
 } from "./notifications"
+export { connectToNotifications, type NotificationsHubHandlers } from "./notifications-hub"

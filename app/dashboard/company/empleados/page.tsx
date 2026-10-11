@@ -1,298 +1,326 @@
 "use client"
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { Edit, Trash2, UserPlus } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DeactivateEmployeeDialog } from "@/components/company/deactivate-employee-dialog"
+import { DeleteEmployeeDialog } from "@/components/company/delete-employee-dialog"
+import { EmployeeFiltersBar, type DepartmentFilterOption } from "@/components/company/employee-filters-bar"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { UserPlus, Search, Edit, Trash2, Mail, User, Phone } from "lucide-react"
-import { useCompany } from "@/lib/company-context"
-import { formatDate } from "@/lib/format"
+  defaultEmployeeFilters,
+  defaultEmployeeSort,
+  filterEmployees,
+  filtersError,
+  hasActiveFilters,
+  nextSort,
+  NO_DEPARTMENT_FILTER,
+  sortEmployees,
+  type EmployeeFilterValues,
+  type EmployeeSort,
+  type EmployeeSortField,
+  type EmployeeStatusFilter,
+} from "@/components/company/employee-filters"
+import { EmployeeFormDialog } from "@/components/company/employee-form-dialog"
+import { FilterStatCard } from "@/components/company/filter-stat-card"
+import { SortableTableHead } from "@/components/company/sortable-table-head"
+import { TemporaryPasswordDialog } from "@/components/company/temporary-password-dialog"
+import {
+  changeEmployeeAccess,
+  listDepartments,
+  listEmployees,
+  toastApiError,
+  type CompanyEmployeeDto,
+  type CreatedEmployeeDto,
+  type DepartmentDto,
+} from "@/lib/api"
+import { formatDate, formatRelativeTime } from "@/lib/format"
+import { plural } from "@/lib/utils"
+
+function Placeholder() {
+  return <span className="text-muted-foreground">—</span>
+}
 
 export default function EmpleadosPage() {
-  const {
-    empleados,
-    addEmpleado,
-    updateEmpleado,
-    deleteEmpleado,
-    toggleEmpleadoEstado,
-    departamentos,
-  } = useCompany()
+  const [employees, setEmployees] = useState<CompanyEmployeeDto[] | null>(null)
+  const [departments, setDepartments] = useState<DepartmentDto[]>([])
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [filters, setFilters] = useState<EmployeeFilterValues>(defaultEmployeeFilters)
+  const [sort, setSort] = useState<EmployeeSort>(defaultEmployeeSort)
+  const [formState, setFormState] = useState<{ open: boolean; employee?: CompanyEmployeeDto }>({ open: false })
+  const [created, setCreated] = useState<CreatedEmployeeDto | null>(null)
+  const [employeeToDelete, setEmployeeToDelete] = useState<CompanyEmployeeDto | null>(null)
+  const [employeeToDeactivate, setEmployeeToDeactivate] = useState<CompanyEmployeeDto | null>(null)
+  const [reactivatingId, setReactivatingId] = useState<string | null>(null)
 
-  const [searchTerm, setSearchTerm] = useState("")
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [selectedEmpleadoId, setSelectedEmpleadoId] = useState<string | null>(null)
-  const [formData, setFormData] = useState({
-    nombre: "",
-    email: "",
-    telefono: "",
-    departamento: "",
-  })
+  const loadStaff = useCallback(async (signal?: AbortSignal) => {
+    setLoadFailed(false)
+    try {
+      const [loadedEmployees, loadedDepartments] = await Promise.all([listEmployees(signal), listDepartments(signal)])
+      setEmployees(loadedEmployees)
+      setDepartments(loadedDepartments)
+    } catch (error) {
+      if (signal?.aborted) {
+        return
+      }
+      setLoadFailed(true)
+      toastApiError(error, "No se pudieron cargar los empleados.")
+    }
+  }, [])
 
-  // Obtener solo departamentos activos para el select
-  const departamentosActivos = departamentos.filter((d) => d.estado === "activo")
+  useEffect(() => {
+    const controller = new AbortController()
+    void loadStaff(controller.signal)
+    return () => controller.abort()
+  }, [loadStaff])
 
-  const filteredEmpleados = empleados.filter(
-    (emp) =>
-      emp.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.departamento.toLowerCase().includes(searchTerm.toLowerCase()),
+  const visibleEmployees = useMemo(
+    () => sortEmployees(filterEmployees(employees ?? [], filters), sort),
+    [employees, filters, sort],
   )
 
-  const handleAddEmpleado = () => {
-    if (!formData.nombre || !formData.email || !formData.departamento) {
-      alert("Por favor completa todos los campos obligatorios")
-      return
-    }
-    addEmpleado({
-      nombre: formData.nombre,
-      email: formData.email,
-      telefono: formData.telefono,
-      departamento: formData.departamento,
-      estado: "activo",
-    })
-    setFormData({ nombre: "", email: "", telefono: "", departamento: "" })
-    setIsAddDialogOpen(false)
+  const departmentOptions = useMemo<DepartmentFilterOption[]>(() => {
+    const countFor = (departmentId: string | null) =>
+      (employees ?? []).filter((employee) => employee.departmentId === departmentId).length
+
+    return [
+      { id: NO_DEPARTMENT_FILTER, name: "Sin departamento", employees: countFor(null), isActive: true },
+      ...[...departments]
+        .sort((a, b) => a.name.localeCompare(b.name, "es", { sensitivity: "base" }))
+        .map((department) => ({
+          id: department.id,
+          name: department.name,
+          employees: countFor(department.id),
+          isActive: department.isActive,
+        })),
+    ]
+  }, [departments, employees])
+
+  const replaceEmployee = (saved: CompanyEmployeeDto) => {
+    setEmployees((current) => [...(current ?? []).filter((employee) => employee.id !== saved.id), saved])
   }
 
-  const handleEditEmpleado = () => {
-    if (!selectedEmpleadoId) return
-    if (!formData.nombre || !formData.email || !formData.departamento) {
-      alert("Por favor completa todos los campos obligatorios")
-      return
-    }
-    updateEmpleado(selectedEmpleadoId, {
-      nombre: formData.nombre,
-      email: formData.email,
-      telefono: formData.telefono,
-      departamento: formData.departamento,
-    })
-    setFormData({ nombre: "", email: "", telefono: "", departamento: "" })
-    setSelectedEmpleadoId(null)
-    setIsEditDialogOpen(false)
+  const handleCreated = (result: CreatedEmployeeDto) => {
+    replaceEmployee(result.employee)
+    setCreated(result)
   }
 
-  const handleDeleteEmpleado = (id: string) => {
-    if (confirm("¿Estás seguro de que deseas eliminar este empleado?")) {
-      deleteEmpleado(id)
+  const reactivate = async (employee: CompanyEmployeeDto) => {
+    setReactivatingId(employee.id)
+    try {
+      replaceEmployee(await changeEmployeeAccess(employee.id, true))
+      toast.success(`Se reactivó el acceso de ${employee.fullName}`)
+    } catch (error) {
+      toastApiError(error, "No se pudo reactivar el acceso.")
+    } finally {
+      setReactivatingId(null)
     }
   }
 
-  const openEditDialog = (empleadoId: string) => {
-    const empleado = empleados.find((e) => e.id === empleadoId)
-    if (!empleado) return
-    setSelectedEmpleadoId(empleadoId)
-    setFormData({
-      nombre: empleado.nombre,
-      email: empleado.email,
-      telefono: empleado.telefono,
-      departamento: empleado.departamento,
-    })
-    setIsEditDialogOpen(true)
+  const handleDeleted = (employeeId: string) => {
+    setEmployees((current) => (current ?? []).filter((employee) => employee.id !== employeeId))
   }
+
+  const selectStatus = (status: EmployeeStatusFilter) =>
+    setFilters((current) => ({ ...current, status: current.status === status ? "all" : status }))
+
+  const clearFilters = () => setFilters(defaultEmployeeFilters)
+
+  const handleSort = (field: EmployeeSortField) => setSort((current) => nextSort(current, field))
+
+  const isLoading = employees === null && !loadFailed
+  const totalEmployees = employees?.length ?? 0
+  const activeEmployees = employees?.filter((employee) => employee.isActive).length ?? 0
+  const inactiveEmployees = totalEmployees - activeEmployees
+  const isFiltered = hasActiveFilters(filters)
+
+  const listDescription = isLoading
+    ? "Cargando empleados..."
+    : isFiltered
+      ? `${visibleEmployees.length} de ${totalEmployees} ${plural(totalEmployees, "empleado", "empleados")}`
+      : `${totalEmployees} ${plural(totalEmployees, "empleado", "empleados")}`
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Gestión de Empleados</h1>
-        <p className="text-muted-foreground mt-1">
-          Administra los empleados que tienen acceso al beneficio de bienestar financiero
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Gestión de Empleados</h1>
+          <p className="text-muted-foreground mt-1">
+            Administrá los empleados que tienen acceso al beneficio de bienestar financiero
+          </p>
+        </div>
+        <Button className="gap-2 self-start sm:self-auto" onClick={() => setFormState({ open: true })} disabled={loadFailed}>
+          <UserPlus className="h-4 w-4" />
+          Agregar Empleado
+        </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Total Empleados</CardDescription>
-            <CardTitle className="text-3xl">{empleados.length}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Empleados Activos</CardDescription>
-            <CardTitle className="text-3xl text-green-600">
-              {empleados.filter((e) => e.estado === "activo").length}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Empleados Inactivos</CardDescription>
-            <CardTitle className="text-3xl text-orange-600">
-              {empleados.filter((e) => e.estado === "inactivo").length}
-            </CardTitle>
-          </CardHeader>
-        </Card>
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <FilterStatCard
+          label="Total Empleados"
+          value={totalEmployees}
+          isLoading={isLoading}
+          isSelected={filters.status === "all"}
+          onSelect={() => setFilters((current) => ({ ...current, status: "all" }))}
+        />
+        <FilterStatCard
+          label="Empleados Activos"
+          value={activeEmployees}
+          valueClassName="text-green-600"
+          isLoading={isLoading}
+          isSelected={filters.status === "active"}
+          onSelect={() => selectStatus("active")}
+        />
+        <FilterStatCard
+          label="Empleados Inactivos"
+          value={inactiveEmployees}
+          valueClassName="text-orange-600"
+          isLoading={isLoading}
+          isSelected={filters.status === "inactive"}
+          onSelect={() => selectStatus("inactive")}
+        />
       </div>
 
-      {/* Actions Bar */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nombre, email o departamento..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="gap-2">
-                  <UserPlus className="h-4 w-4" />
-                  Agregar Empleado
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Agregar Nuevo Empleado</DialogTitle>
-                  <DialogDescription>Completa los datos del empleado para darle acceso al beneficio</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="add-nombre">Nombre Completo</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="add-nombre"
-                        placeholder="Juan Pérez"
-                        value={formData.nombre}
-                        onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="add-email">Correo Electrónico</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="add-email"
-                        type="email"
-                        placeholder="juan.perez@empresa.com"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="add-telefono">Teléfono</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="add-telefono"
-                        placeholder="+54 9 11 1234-5678"
-                        value={formData.telefono}
-                        onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="add-departamento">Departamento</Label>
-                    <Select
-                      value={formData.departamento}
-                      onValueChange={(value) => setFormData({ ...formData, departamento: value })}
-                    >
-                      <SelectTrigger id="add-departamento">
-                        <SelectValue placeholder="Selecciona un departamento" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {departamentosActivos.map((dept) => (
-                          <SelectItem key={dept.id} value={dept.nombre}>
-                            {dept.nombre}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="flex justify-end gap-3">
-                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleAddEmpleado}>Agregar Empleado</Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
+          <EmployeeFiltersBar
+            values={filters}
+            departmentOptions={departmentOptions}
+            onChange={setFilters}
+            onClear={clearFilters}
+            error={filtersError(filters)}
+          />
         </CardContent>
       </Card>
 
-      {/* Employees Table */}
       <Card>
         <CardHeader>
           <CardTitle>Lista de Empleados</CardTitle>
-          <CardDescription>
-            {filteredEmpleados.length} empleado{filteredEmpleados.length !== 1 ? "s" : ""} encontrado
-            {filteredEmpleados.length !== 1 ? "s" : ""}
-          </CardDescription>
+          <CardDescription>{listDescription}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nombre</TableHead>
+                  <SortableTableHead
+                    label="Nombre"
+                    field="fullName"
+                    sortField={sort.field}
+                    sortDirection={sort.direction}
+                    onSort={handleSort}
+                  />
                   <TableHead>Email</TableHead>
                   <TableHead>Teléfono</TableHead>
-                  <TableHead>Departamento</TableHead>
-                  <TableHead>Fecha Alta</TableHead>
+                  <SortableTableHead
+                    label="Departamento"
+                    field="departmentName"
+                    sortField={sort.field}
+                    sortDirection={sort.direction}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    label="Fecha Alta"
+                    field="hiredOn"
+                    sortField={sort.field}
+                    sortDirection={sort.direction}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    label="Último Ingreso"
+                    field="lastLoginAt"
+                    sortField={sort.field}
+                    sortDirection={sort.direction}
+                    onSort={handleSort}
+                  />
                   <TableHead>Estado</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredEmpleados.length === 0 ? (
+                {isLoading ? (
+                  Array.from({ length: 3 }, (_, index) => (
+                    <TableRow key={index}>
+                      <TableCell colSpan={8}>
+                        <Skeleton className="h-6 w-full" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : loadFailed ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      No se encontraron empleados
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      <p>No pudimos cargar los empleados.</p>
+                      <Button variant="outline" size="sm" className="mt-3" onClick={() => void loadStaff()}>
+                        Reintentar
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ) : visibleEmployees.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      {totalEmployees === 0 ? (
+                        "Todavía no diste de alta a ningún empleado"
+                      ) : (
+                        <>
+                          <p>Ningún empleado coincide con los filtros.</p>
+                          <Button variant="outline" size="sm" className="mt-3" onClick={clearFilters}>
+                            Limpiar filtros
+                          </Button>
+                        </>
+                      )}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredEmpleados.map((empleado) => (
-                    <TableRow key={empleado.id}>
-                      <TableCell className="font-medium">{empleado.nombre}</TableCell>
-                      <TableCell>{empleado.email}</TableCell>
-                      <TableCell>{empleado.telefono}</TableCell>
-                      <TableCell>{empleado.departamento}</TableCell>
-                      <TableCell>{formatDate(empleado.fechaAlta)}</TableCell>
+                  visibleEmployees.map((employee) => (
+                    <TableRow key={employee.id}>
+                      <TableCell className="font-medium">{employee.fullName}</TableCell>
+                      <TableCell>{employee.email}</TableCell>
+                      <TableCell>{employee.phoneNumber ?? <Placeholder />}</TableCell>
+                      <TableCell>{employee.departmentName ?? <Placeholder />}</TableCell>
+                      <TableCell>{formatDate(employee.hiredOn)}</TableCell>
                       <TableCell>
-                        <Badge
-                          variant={empleado.estado === "activo" ? "default" : "secondary"}
-                          className="cursor-pointer"
-                          onClick={() => toggleEmpleadoEstado(empleado.id)}
-                        >
-                          {empleado.estado === "activo" ? "Activo" : "Inactivo"}
-                        </Badge>
+                        {employee.lastLoginAt ? (
+                          formatRelativeTime(employee.lastLoginAt)
+                        ) : (
+                          <span className="text-muted-foreground">Nunca</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={employee.isActive}
+                            disabled={reactivatingId === employee.id}
+                            onCheckedChange={(checked) =>
+                              checked ? void reactivate(employee) : setEmployeeToDeactivate(employee)
+                            }
+                            aria-label={`${employee.isActive ? "Desactivar" : "Reactivar"} el acceso de ${employee.fullName}`}
+                          />
+                          <span className={employee.isActive ? "text-sm" : "text-sm text-muted-foreground"}>
+                            {employee.isActive ? "Activo" : "Inactivo"}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => openEditDialog(empleado.id)} title="Editar">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setFormState({ open: true, employee })}
+                            title="Editar"
+                            aria-label={`Editar ${employee.fullName}`}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleDeleteEmpleado(empleado.id)}
+                            onClick={() => setEmployeeToDelete(employee)}
                             title="Eliminar"
+                            aria-label={`Eliminar ${employee.fullName}`}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
@@ -307,81 +335,35 @@ export default function EmpleadosPage() {
         </CardContent>
       </Card>
 
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Editar Empleado</DialogTitle>
-            <DialogDescription>Modifica los datos del empleado</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-nombre">Nombre Completo</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="edit-nombre"
-                  placeholder="Juan Pérez"
-                  value={formData.nombre}
-                  onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-email">Correo Electrónico</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="edit-email"
-                  type="email"
-                  placeholder="juan.perez@empresa.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-telefono">Teléfono</Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="edit-telefono"
-                  placeholder="+54 9 11 1234-5678"
-                  value={formData.telefono}
-                  onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-departamento">Departamento</Label>
-              <Select
-                value={formData.departamento}
-                onValueChange={(value) => setFormData({ ...formData, departamento: value })}
-              >
-                <SelectTrigger id="edit-departamento">
-                  <SelectValue placeholder="Selecciona un departamento" />
-                </SelectTrigger>
-                <SelectContent>
-                  {departamentosActivos.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.nombre}>
-                      {dept.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleEditEmpleado}>Guardar Cambios</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <EmployeeFormDialog
+        employee={formState.employee}
+        departments={departments}
+        open={formState.open}
+        onOpenChange={(open) => setFormState((current) => ({ ...current, open }))}
+        onCreated={handleCreated}
+        onUpdated={replaceEmployee}
+      />
+
+      <TemporaryPasswordDialog created={created} onClose={() => setCreated(null)} />
+
+      {employeeToDeactivate && (
+        <DeactivateEmployeeDialog
+          employee={employeeToDeactivate}
+          open
+          onOpenChange={(open) => !open && setEmployeeToDeactivate(null)}
+          onDeactivated={replaceEmployee}
+        />
+      )}
+
+      {employeeToDelete && (
+        <DeleteEmployeeDialog
+          employee={employeeToDelete}
+          open
+          onOpenChange={(open) => !open && setEmployeeToDelete(null)}
+          onDeleted={handleDeleted}
+          onDeactivated={replaceEmployee}
+        />
+      )}
     </div>
   )
 }
