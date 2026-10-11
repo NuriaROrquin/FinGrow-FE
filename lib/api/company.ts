@@ -37,3 +37,48 @@ export function updateDepartment(departmentId: string, payload: DepartmentPayloa
 export function deleteDepartment(departmentId: string): Promise<void> {
   return api.delete(`/api/company/departments/${departmentId}`)
 }
+
+export const EMPLOYEE_EMAIL_MAX_LENGTH = 256
+
+export interface CompanyEmployeeDto {
+  id: string
+  fullName: string
+  email: string
+  phoneNumber: string | null
+  departmentId: string | null
+  departmentName: string | null
+  hiredOn: string
+  isActive: boolean
+  lastLoginAt: string | null
+}
+
+export interface EmployeeDetailsPayload {
+  fullName: string
+  email: string
+  phoneNumber: string | null
+}
+
+export interface CreateEmployeePayload extends EmployeeDetailsPayload {
+  departmentId: string | null
+}
+
+export interface CreatedEmployeeDto {
+  employee: CompanyEmployeeDto
+  temporaryPassword: string
+}
+
+export function listEmployees(signal?: AbortSignal): Promise<CompanyEmployeeDto[]> {
+  return api.get<CompanyEmployeeDto[]>("/api/company/employees", { signal })
+}
+
+export function createEmployee(payload: CreateEmployeePayload): Promise<CreatedEmployeeDto> {
+  return api.post<CreatedEmployeeDto>("/api/company/employees", payload)
+}
+
+export function updateEmployee(employeeId: string, payload: EmployeeDetailsPayload): Promise<CompanyEmployeeDto> {
+  return api.put<CompanyEmployeeDto>(`/api/company/employees/${employeeId}`, payload)
+}
+
+export function deleteEmployee(employeeId: string): Promise<void> {
+  return api.delete(`/api/company/employees/${employeeId}`)
+}
