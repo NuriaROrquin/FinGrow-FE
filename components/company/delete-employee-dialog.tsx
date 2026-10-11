@@ -32,7 +32,7 @@ export function DeleteEmployeeDialog({
     try {
       await deleteEmployee(employee.id)
       onDeleted(employee.id)
-      toast.success(`${employee.fullName} fue eliminado`)
+      toast.success(`Se eliminó a ${employee.fullName}`)
       onOpenChange(false)
     } catch (error) {
       toastApiError(error, "No se pudo eliminar el empleado.")
