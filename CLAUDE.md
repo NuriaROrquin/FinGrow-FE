@@ -29,15 +29,30 @@ responde con la cookie **HttpOnly** `fingrow-session` (que lleva el JWT) y un `S
 con `userId`, `companyId`, `fullName`, `role` y `expiresAt`. Al cargar la página se rehidrata
 con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve el token: en
 `localStorage` solo queda `fingrow-role`, para saber a qué login volver ante un 401.
-- **`lib/company-context.tsx`** guarda departamentos y empleados en memoria. El empleado se
-  relaciona con su departamento **por nombre** (`departamento: string`), no por id. En
-  FinGrow-BE esa misma relación es por id — cuando se conecte a la API real, renombrar un
-  departamento ya no puede romper la relación como rompe acá.
+- **Departamentos y empleados del panel de empresa** (HU-51, HU-54) usan la API real
+  (`lib/api/company.ts`, `/api/company/departments` y `/api/company/employees`). El empleado se
+  relaciona con su departamento por id. El alta devuelve una contraseña temporal que se muestra
+  una sola vez (`components/company/temporary-password-dialog.tsx`): no hay forma de volver a
+  pedirla. El switch de estado activa o desactiva el acceso (HU-55): desactivar conserva los
+  datos, eliminar los borra. El responsable de un departamento (HU-52) es un empleado activo de
+  la empresa elegido con `components/company/manager-picker.tsx`; si después pierde el acceso,
+  sigue figurando como "(sin acceso)" hasta que se cambie. El panel principal de la empresa
+  (`/dashboard/company`) sigue con métricas mock.
+- **Educación** (artículos y cursos) usa la API real. La pantalla de Inversiones abre el contenido
+  de cada tipo de activo (HU-35, `components/investments/related-education-dialog.tsx`) y todo
+  artículo o curso con `isInvestmentContent` muestra `components/education/investment-disclaimer.tsx`:
+  es material educativo, no asesoramiento financiero certificado, y esa aclaración no se saca.
 - La capa de acceso HTTP tipada es `lib/api/` (**T-04, SCRUM-22**): `api.get/post/...` manda
   siempre `credentials: "include"` para que viaje la cookie de sesión, y `toastApiError` muestra
   el error. Las rutas se pasan completas (`/api/integrations/...`); `NEXT_PUBLIC_API_URL` no
   incluye `/api`. Como la cookie es `SameSite=None; Secure`, el front en `localhost:3000` puede
   hablar con la API en dev o en local sin configuración extra.
+- **La campanita de notificaciones** (`components/notifications/notification-bell.tsx`) usa la
+  bandeja real (`/api/notifications`) y no consulta el contador cada tanto: escucha el hub de
+  SignalR `/hubs/notifications` (`lib/api/notifications-hub.ts`), que viaja con la misma cookie
+  de sesión. Cada notificación nueva llega con el evento `NotificationReceived`. Al conectarse,
+  al perder la conexión y al volver a la pestaña se vuelve a pedir el contador: ese pedido pasa
+  por `api`, así que de paso renueva la sesión vencida antes de reconectar.
 - **Bandeja de pendientes (HU-15)**: es la pestaña "Pendientes" de Transacciones
   (`components/transactions/pending-inbox.tsx`, también `/dashboard/transactions?view=pending`).
   Lista lo que propuso un canal automático (`GET /api/transactions/pending`), y cada movimiento
@@ -71,7 +86,7 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
 ```
 app/            Rutas (App Router): dashboard, login/empleado, login/empresa
 components/ui/  Componentes shadcn — generados, no reescribir el estilo base a mano
-lib/            Contexts (auth, company) y utils; todavía sin capa de acceso HTTP
+lib/            Contexts (auth, preferencias), utils y la capa de acceso HTTP (lib/api)
 hooks/          Hooks compartidos (use-mobile, use-toast)
 ```
 

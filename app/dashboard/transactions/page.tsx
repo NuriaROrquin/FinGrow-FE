@@ -81,6 +81,7 @@ import {
   type TransactionListStatus,
   type TransactionSummaryResponse,
   type TransactionsResponse,
+  removeTransactionReceipt,
   updateTransaction,
 } from "@/lib/api/transactions"
 import { AddTransactionForm } from "@/components/transactions/add-transaction-form"
@@ -802,9 +803,15 @@ export default function TransactionsPage() {
                 <AddTransactionForm
                   mode={editingTransaction ? "edit" : "create"}
                   initialTransaction={editingTransaction}
-                  onSubmit={async (payload) => {
+                  onSubmit={async (payload, { removeReceipt }) => {
                     if (editingTransaction) {
-                      const updated = await updateTransaction(editingTransaction.id, payload)
+                      let updated = await updateTransaction(editingTransaction.id, payload)
+
+                      if (removeReceipt) {
+                        await removeTransactionReceipt(editingTransaction.id)
+                        updated = { ...updated, receiptId: null }
+                      }
+
                       setTransactionsResponse((previous) => ({
                         ...previous,
                         items: previous.items.map((item) => (item.id === updated.id ? updated : item)),

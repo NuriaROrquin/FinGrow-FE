@@ -76,6 +76,7 @@ export interface TransactionDto {
   source: string
   status: TransactionListStatus
   createdAt: string
+  receiptId: string | null
 }
 
 export interface CreateTransactionPayload {
@@ -88,6 +89,7 @@ export interface CreateTransactionPayload {
   occurredOn: string
   paymentMethod: PaymentMethod
   status: TransactionStatus
+  receiptId?: string | null
 }
 
 export type UpdateTransactionPayload = CreateTransactionPayload
@@ -213,6 +215,10 @@ export function updateTransaction(
 
 export function deleteTransaction(id: string, signal?: AbortSignal): Promise<void> {
   return api.delete(`/api/transactions/${encodeURIComponent(id)}`, { signal })
+}
+
+export function removeTransactionReceipt(id: string, signal?: AbortSignal): Promise<void> {
+  return api.delete(`/api/transactions/${encodeURIComponent(id)}/receipt`, { signal })
 }
 
 export type ConfidenceLevel = "Low" | "Medium" | "High"

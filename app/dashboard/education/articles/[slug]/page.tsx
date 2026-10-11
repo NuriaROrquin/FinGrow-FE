@@ -4,6 +4,8 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { ArrowLeftIcon, ClockIcon } from "lucide-react"
 import { ArticleMarkdown } from "@/components/education/article-markdown"
+import { useBackTarget } from "@/components/education/back-target"
+import { InvestmentDisclaimer } from "@/components/education/investment-disclaimer"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -19,6 +21,7 @@ export default function ArticlePage() {
   const params = useParams<{ slug: string }>()
   const router = useRouter()
   const [state, setState] = useState<LoadState>({ status: "loading" })
+  const back = useBackTarget({ href: BACK_TO_ARTICLES, label: "Volver a Educación" })
 
   useEffect(() => {
     const controller = new AbortController()
@@ -40,7 +43,7 @@ export default function ArticlePage() {
   }, [params.slug])
 
   const backButton = (
-    <Button variant="ghost" size="icon" aria-label="Volver a artículos" onClick={() => router.push(BACK_TO_ARTICLES)}>
+    <Button variant="ghost" size="icon" aria-label={back.label} onClick={() => router.push(back.href)}>
       <ArrowLeftIcon className="size-4" />
     </Button>
   )
@@ -94,6 +97,8 @@ export default function ArticlePage() {
         </div>
       </div>
 
+      {article.isInvestmentContent && <InvestmentDisclaimer />}
+
       <Card>
         <CardContent className="pt-6">
           <p className="mb-6 text-lg text-muted-foreground">{article.summary}</p>
@@ -102,9 +107,9 @@ export default function ArticlePage() {
       </Card>
 
       <div className="flex justify-start">
-        <Button variant="outline" onClick={() => router.push(BACK_TO_ARTICLES)}>
+        <Button variant="outline" onClick={() => router.push(back.href)}>
           <ArrowLeftIcon className="size-4" />
-          Volver a Educación
+          {back.label}
         </Button>
       </div>
     </div>

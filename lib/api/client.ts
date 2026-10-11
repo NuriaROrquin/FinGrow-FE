@@ -59,7 +59,9 @@ async function request<TResponse>(
     ...options.headers,
   }
 
-  if (body !== undefined) {
+  const isFormData = body instanceof FormData
+
+  if (body !== undefined && !isFormData) {
     headers["Content-Type"] = "application/json"
   }
 
@@ -69,7 +71,7 @@ async function request<TResponse>(
     response = await fetch(buildUrl(path) + buildQueryString(options.query), {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
       signal: options.signal,
       credentials: "include",
     })

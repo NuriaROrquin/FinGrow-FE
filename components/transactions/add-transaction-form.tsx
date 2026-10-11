@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ReceiptField } from "@/components/transactions/receipt-field"
 import { useToast } from "@/hooks/use-toast"
 import {
   expenseCategoryLabels,
@@ -98,7 +99,7 @@ export function AddTransactionForm({
 }: {
   mode?: "create" | "edit"
   initialTransaction?: TransactionDto | null
-  onSubmit: (payload: CreateTransactionPayload) => Promise<void>
+  onSubmit: (payload: CreateTransactionPayload, options: { removeReceipt: boolean }) => Promise<void>
   onClose: () => void
 }) {
   const [transactionType, setTransactionType] = useState<"Income" | "Expense">(
@@ -119,6 +120,9 @@ export function AddTransactionForm({
     initialTransaction?.status === "Confirmed" ? "Confirmed" : null,
   )
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [receiptId, setReceiptId] = useState<string | null>(null)
+  const [isUploadingReceipt, setIsUploadingReceipt] = useState(false)
+  const [removesExistingReceipt, setRemovesExistingReceipt] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [generalError, setGeneralError] = useState<string | null>(null)
   const { toast } = useToast()
@@ -138,6 +142,9 @@ export function AddTransactionForm({
     setLockedStatus(initialTransaction?.status === "Confirmed" ? "Confirmed" : null)
     setFieldErrors({})
     setGeneralError(null)
+    setReceiptId(null)
+    setIsUploadingReceipt(false)
+    setRemovesExistingReceipt(false)
   }, [initialTransaction, preferences.currency])
 
   const handleCategoryChange = (nextCategory: string) => {
@@ -173,7 +180,8 @@ export function AddTransactionForm({
         occurredOn: date,
         paymentMethod,
         status: mode === "edit" ? status : "Confirmed",
-      })
+        ...(receiptId ? { receiptId } : {}),
+      }, { removeReceipt: removesExistingReceipt && !receiptId })
 
       onClose()
     } catch (error) {
@@ -353,6 +361,15 @@ export function AddTransactionForm({
         {fieldErrors.paymentMethod && <p className="text-xs text-destructive">{fieldErrors.paymentMethod}</p>}
       </div>
 
+      <ReceiptField
+        key={initialTransaction?.id ?? "new"}
+        existingReceiptId={mode === "edit" ? initialTransaction?.receiptId ?? null : null}
+        onChange={setReceiptId}
+        onRemoveExisting={() => setRemovesExistingReceipt(true)}
+        onUploadingChange={setIsUploadingReceipt}
+        disabled={isSubmitting}
+      />
+
       {mode === "edit" && (
         <div className="space-y-2 rounded-md border border-border/70 bg-muted/30 p-3">
           <Label htmlFor="transaction-status">Estado</Label>
@@ -389,8 +406,14 @@ export function AddTransactionForm({
         <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
           Cancelar
         </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Guardando..." : mode === "edit" ? "Guardar cambios" : "Agregar Transacción"}
+        <Button type="submit" disabled={isSubmitting || isUploadingReceipt}>
+          {isSubmitting
+            ? "Guardando..."
+            : isUploadingReceipt
+              ? "Subiendo comprobante..."
+              : mode === "edit"
+                ? "Guardar cambios"
+                : "Agregar Transacción"}
         </Button>
       </div>
     </form>
