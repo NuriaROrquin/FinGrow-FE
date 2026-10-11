@@ -4,13 +4,17 @@ export const DEPARTMENT_NAME_MAX_LENGTH = 120
 
 export const DEPARTMENT_DESCRIPTION_MAX_LENGTH = 500
 
-export const DEPARTMENT_MANAGER_NAME_MAX_LENGTH = 150
+export interface DepartmentManagerDto {
+  id: string
+  fullName: string
+  isActive: boolean
+}
 
 export interface DepartmentDto {
   id: string
   name: string
   description: string | null
-  managerName: string | null
+  manager: DepartmentManagerDto | null
   employeeCount: number
   isActive: boolean
   createdAt: string
@@ -19,7 +23,7 @@ export interface DepartmentDto {
 export interface DepartmentPayload {
   name: string
   description: string | null
-  managerName: string | null
+  managerId: string | null
 }
 
 export function listDepartments(signal?: AbortSignal): Promise<DepartmentDto[]> {

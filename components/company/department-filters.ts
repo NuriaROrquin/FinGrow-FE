@@ -39,7 +39,7 @@ export const departmentManagerLabels: Record<DepartmentManagerFilter, string> = 
   withoutManager: "Sin responsable",
 }
 
-export type DepartmentSortField = "name" | "managerName" | "employeeCount" | "createdAt"
+export type DepartmentSortField = "name" | "manager" | "employeeCount" | "createdAt"
 
 export interface DepartmentSort {
   field: DepartmentSortField
@@ -57,7 +57,7 @@ function matchesSearch(department: DepartmentDto, search: string): boolean {
 
   return (
     !term ||
-    [department.name, department.description, department.managerName].some(
+    [department.name, department.description, department.manager?.fullName ?? null].some(
       (field) => field !== null && normalizeForSearch(field).includes(term),
     )
   )
@@ -72,7 +72,7 @@ function matchesStaff(department: DepartmentDto, staff: DepartmentStaffFilter): 
 }
 
 function matchesManager(department: DepartmentDto, manager: DepartmentManagerFilter): boolean {
-  return manager === "all" || (department.managerName !== null) === (manager === "withManager")
+  return manager === "all" || (department.manager !== null) === (manager === "withManager")
 }
 
 export function filterDepartments(departments: DepartmentDto[], values: DepartmentFilterValues): DepartmentDto[] {
@@ -95,8 +95,8 @@ function compareField(a: DepartmentDto, b: DepartmentDto, field: DepartmentSortF
       return a.employeeCount - b.employeeCount
     case "createdAt":
       return a.createdAt.localeCompare(b.createdAt)
-    case "managerName":
-      return (a.managerName ?? "").localeCompare(b.managerName ?? "", "es", { sensitivity: "base" })
+    case "manager":
+      return (a.manager?.fullName ?? "").localeCompare(b.manager?.fullName ?? "", "es", { sensitivity: "base" })
     default:
       return byName(a, b)
   }
@@ -106,8 +106,8 @@ export function sortDepartments(departments: DepartmentDto[], sort: DepartmentSo
   const direction = sort.direction === "asc" ? 1 : -1
 
   return [...departments].sort((a, b) => {
-    if (sort.field === "managerName" && (a.managerName === null) !== (b.managerName === null)) {
-      return a.managerName === null ? 1 : -1
+    if (sort.field === "manager" && (a.manager === null) !== (b.manager === null)) {
+      return a.manager === null ? 1 : -1
     }
 
     return compareField(a, b, sort.field) * direction || byName(a, b)
