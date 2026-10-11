@@ -32,6 +32,18 @@ export {
   type EducationCategory,
 } from "./articles"
 export {
+  createBudget,
+  duplicatePreviousBudget,
+  getBudget,
+  setBudgetLimit,
+  type BudgetDto,
+  type BudgetHealth,
+  type BudgetLimitDto,
+  type BudgetPeriod,
+  type CreateBudgetPayload,
+  type SetBudgetLimitPayload,
+} from "./budgets"
+export {
   addContribution,
   CONTRIBUTION_NOTE_MAX_LENGTH,
   createGoal,
@@ -85,3 +97,13 @@ export {
   type SortDirection,
 } from "./investments"
 export { getSavingsVsGoals, type SavingsVsGoalsDto, type SavingsVsGoalsMonthDto } from "./reports"
+export {
+  getExpensesByCategory,
+  getIncomeVsExpenses,
+  getMonthlyExpenses,
+  type DashboardDateRangeQuery,
+  type DashboardPeriodQuery,
+  type ExpenseCategoryTotalDto,
+  type IncomeExpenseMonthDto,
+  type MonthlyExpenseDto,
+} from "./dashboard"
