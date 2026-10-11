@@ -27,7 +27,14 @@ import {
 import { DepartmentFormDialog } from "@/components/company/department-form-dialog"
 import { FilterStatCard } from "@/components/company/filter-stat-card"
 import { SortableTableHead } from "@/components/company/sortable-table-head"
-import { changeDepartmentStatus, listDepartments, toastApiError, type DepartmentDto } from "@/lib/api"
+import {
+  changeDepartmentStatus,
+  listDepartments,
+  listEmployees,
+  toastApiError,
+  type CompanyEmployeeDto,
+  type DepartmentDto,
+} from "@/lib/api"
 import { formatDate } from "@/lib/format"
 import { plural } from "@/lib/utils"
 
@@ -37,6 +44,7 @@ function Placeholder() {
 
 export default function DepartamentosPage() {
   const [departments, setDepartments] = useState<DepartmentDto[] | null>(null)
+  const [employees, setEmployees] = useState<CompanyEmployeeDto[]>([])
   const [loadFailed, setLoadFailed] = useState(false)
   const [filters, setFilters] = useState<DepartmentFilterValues>(defaultDepartmentFilters)
   const [sort, setSort] = useState<DepartmentSort>(defaultDepartmentSort)
@@ -48,7 +56,9 @@ export default function DepartamentosPage() {
   const loadDepartments = useCallback(async (signal?: AbortSignal) => {
     setLoadFailed(false)
     try {
-      setDepartments(await listDepartments(signal))
+      const [loadedDepartments, loadedEmployees] = await Promise.all([listDepartments(signal), listEmployees(signal)])
+      setDepartments(loadedDepartments)
+      setEmployees(loadedEmployees)
     } catch (error) {
       if (signal?.aborted) {
         return
@@ -102,7 +112,7 @@ export default function DepartamentosPage() {
   const isLoading = departments === null && !loadFailed
   const totalDepartments = departments?.length ?? 0
   const emptyDepartments = departments?.filter((department) => department.employeeCount === 0).length ?? 0
-  const departmentsWithoutManager = departments?.filter((department) => department.managerName === null).length ?? 0
+  const departmentsWithoutManager = departments?.filter((department) => department.manager === null).length ?? 0
   const assignedEmployees = departments?.reduce((sum, department) => sum + department.employeeCount, 0) ?? 0
   const inactiveDepartments = departments?.filter((department) => !department.isActive).length ?? 0
   const totalHint = [
@@ -185,7 +195,7 @@ export default function DepartamentosPage() {
                   <TableHead>Descripción</TableHead>
                   <SortableTableHead
                     label="Responsable"
-                    field="managerName"
+                    field="manager"
                     sortField={sort.field}
                     sortDirection={sort.direction}
                     onSort={handleSort}
@@ -248,7 +258,16 @@ export default function DepartamentosPage() {
                       <TableCell className="max-w-xs truncate" title={department.description ?? undefined}>
                         {department.description ?? <Placeholder />}
                       </TableCell>
-                      <TableCell>{department.managerName ?? <Placeholder />}</TableCell>
+                      <TableCell>
+                        {department.manager ? (
+                          <span className={department.manager.isActive ? undefined : "text-muted-foreground"}>
+                            {department.manager.fullName}
+                            {!department.manager.isActive && " (sin acceso)"}
+                          </span>
+                        ) : (
+                          <Placeholder />
+                        )}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Users className="h-4 w-4 text-muted-foreground" />
@@ -304,6 +323,7 @@ export default function DepartamentosPage() {
 
       <DepartmentFormDialog
         department={formState.department}
+        employees={employees}
         open={formState.open}
         onOpenChange={(open) => setFormState((current) => ({ ...current, open }))}
         onSaved={handleSaved}
