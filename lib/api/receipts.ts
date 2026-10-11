@@ -2,6 +2,8 @@ import { api } from "./client"
 
 export const receiptAcceptedTypes = ["image/jpeg", "image/png", "application/pdf"] as const
 
+export const receiptFileInputAccept = [".jpg", ".jpeg", ".png", ".pdf", ...receiptAcceptedTypes].join(",")
+
 export const receiptMaxSizeBytes = 10 * 1024 * 1024
 
 export interface TransactionReceiptDto {

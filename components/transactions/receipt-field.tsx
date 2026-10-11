@@ -17,7 +17,13 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { isApiError } from "@/lib/api/errors"
-import { getReceiptFile, receiptAcceptedTypes, receiptMaxSizeBytes, uploadReceipt } from "@/lib/api/receipts"
+import {
+  getReceiptFile,
+  receiptAcceptedTypes,
+  receiptFileInputAccept,
+  receiptMaxSizeBytes,
+  uploadReceipt,
+} from "@/lib/api/receipts"
 
 type UploadState = "idle" | "uploading" | "uploaded" | "error"
 
@@ -168,7 +174,7 @@ export function ReceiptField({
         ref={inputRef}
         id="receipt"
         type="file"
-        accept={receiptAcceptedTypes.join(",")}
+        accept={receiptFileInputAccept}
         className="hidden"
         onChange={handleSelect}
         disabled={disabled}
