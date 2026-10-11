@@ -13,8 +13,10 @@ import {
   TrophyIcon,
 } from "lucide-react"
 import { toast } from "sonner"
+import { useBackTarget } from "@/components/education/back-target"
 import { CourseRating } from "@/components/education/course-rating"
 import { formatDuration } from "@/components/education/format-duration"
+import { InvestmentDisclaimer } from "@/components/education/investment-disclaimer"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -46,6 +48,7 @@ export default function CoursePage() {
   const [state, setState] = useState<LoadState>({ status: "loading" })
   const [currentLessonId, setCurrentLessonId] = useState<string | null>(null)
   const [isCompleting, setIsCompleting] = useState(false)
+  const back = useBackTarget({ href: BACK_TO_COURSES, label: "Volver a los cursos" })
 
   useEffect(() => {
     const controller = new AbortController()
@@ -70,7 +73,7 @@ export default function CoursePage() {
   }, [params.slug])
 
   const backButton = (
-    <Button variant="ghost" size="icon" aria-label="Volver a los cursos" onClick={() => router.push(BACK_TO_COURSES)}>
+    <Button variant="ghost" size="icon" aria-label={back.label} onClick={() => router.push(back.href)}>
       <ArrowLeftIcon className="size-4" />
     </Button>
   )
@@ -158,6 +161,8 @@ export default function CoursePage() {
           </div>
         </div>
       </div>
+
+      {course.isInvestmentContent && <InvestmentDisclaimer />}
 
       <Card>
         <CardContent className="space-y-2 pt-6">

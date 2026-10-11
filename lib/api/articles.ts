@@ -20,6 +20,7 @@ export interface ArticleSummaryDto {
   category: EducationCategory
   readingTimeMinutes: number
   relatedInvestmentType: InvestmentType | null
+  isInvestmentContent: boolean
   publishedAt: string
 }
 
@@ -30,11 +31,16 @@ export interface ArticleDto extends ArticleSummaryDto {
 export interface ArticleFilters {
   category?: EducationCategory
   maxReadingTime?: number
+  investmentType?: InvestmentType
 }
 
 export function listArticles(filters: ArticleFilters = {}, signal?: AbortSignal): Promise<ArticleSummaryDto[]> {
   return api.get<ArticleSummaryDto[]>("/api/articles", {
-    query: { category: filters.category, maxReadingTime: filters.maxReadingTime },
+    query: {
+      category: filters.category,
+      maxReadingTime: filters.maxReadingTime,
+      investmentType: filters.investmentType,
+    },
     signal,
   })
 }
