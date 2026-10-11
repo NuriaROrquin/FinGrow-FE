@@ -188,15 +188,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </Sidebar>
 
       <SidebarInset className="min-w-0 flex-1">
-        <header className="grid grid-cols-3 h-14 items-center border-b bg-background px-6">
-          <div className="flex items-center gap-4">
+        <header className="flex h-14 items-center gap-2 border-b bg-background px-4 sm:px-6">
+          <div className="flex flex-1 items-center gap-4 md:flex-none">
             <SidebarTrigger />
           </div>
 
-          <div className="justify-center flex">
+          <div className="flex shrink-0 justify-center md:hidden">
             <Link
                 href={role === "empresa" ? "/dashboard/company" : "/dashboard"}
-                className="flex items-center gap-2 hover:opacity-80 transition-opacity md:hidden"
+                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
             >
               <Image
                   src="/9.png"
@@ -210,18 +210,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Link>
           </div>
 
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex flex-1 items-center justify-end gap-1 sm:min-w-0 sm:gap-2">
             <NotificationBell />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2">
+                <Button variant="ghost" className="flex min-w-0 shrink items-center gap-2 px-1.5 sm:px-3">
                   <Avatar className="size-8">
                     <AvatarImage src="/placeholder-user.jpg" alt={userName} />
                     <AvatarFallback>{getInitials(userName)}</AvatarFallback>
                   </Avatar>
-                  <div className="flex flex-col items-start">
-                    <span className="text-sm font-medium">{userName}</span>
-                    <span className="text-xs text-muted-foreground">
+                  <div className="hidden min-w-0 flex-col items-start sm:flex">
+                    <span className="max-w-full truncate text-sm font-medium" title={userName}>{userName}</span>
+                    <span className="max-w-full truncate text-xs text-muted-foreground">
                       {role === "empleado" ? t.header.roleEmployee : t.header.roleCompany}
                     </span>
                   </div>
