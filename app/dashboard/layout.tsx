@@ -188,15 +188,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </Sidebar>
 
       <SidebarInset className="min-w-0 flex-1">
-        <header className="grid grid-cols-3 h-14 items-center border-b bg-background px-6">
-          <div className="flex items-center gap-4">
+        <header className="flex h-14 items-center gap-2 border-b bg-background px-4 sm:px-6">
+          <div className="flex flex-1 items-center gap-4 md:flex-none">
             <SidebarTrigger />
           </div>
 
-          <div className="justify-center flex">
+          <div className="flex shrink-0 justify-center md:hidden">
             <Link
                 href={role === "empresa" ? "/dashboard/company" : "/dashboard"}
-                className="flex items-center gap-2 hover:opacity-80 transition-opacity md:hidden"
+                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
             >
               <Image
                   src="/9.png"
@@ -210,7 +210,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Link>
           </div>
 
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex flex-1 items-center justify-end gap-1 sm:min-w-0 sm:gap-2">
             <NotificationBell />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
