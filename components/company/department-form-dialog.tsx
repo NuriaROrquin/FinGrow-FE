@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, type FormEvent } from "react"
-import { Building2, Users } from "lucide-react"
+import { Building2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,24 +15,25 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { ManagerPicker } from "@/components/company/manager-picker"
 import {
   createDepartment,
   DEPARTMENT_DESCRIPTION_MAX_LENGTH,
-  DEPARTMENT_MANAGER_NAME_MAX_LENGTH,
   DEPARTMENT_NAME_MAX_LENGTH,
   isApiError,
   toastApiError,
   updateDepartment,
+  type CompanyEmployeeDto,
   type DepartmentDto,
 } from "@/lib/api"
 
 interface Draft {
   name: string
   description: string
-  managerName: string
+  managerId: string | null
 }
 
-const emptyDraft: Draft = { name: "", description: "", managerName: "" }
+const emptyDraft: Draft = { name: "", description: "", managerId: null }
 
 function toDraft(department?: DepartmentDto): Draft {
   if (!department) {
@@ -42,17 +43,19 @@ function toDraft(department?: DepartmentDto): Draft {
   return {
     name: department.name,
     description: department.description ?? "",
-    managerName: department.managerName ?? "",
+    managerId: department.manager?.id ?? null,
   }
 }
 
 export function DepartmentFormDialog({
   department,
+  employees,
   open,
   onOpenChange,
   onSaved,
 }: {
   department?: DepartmentDto
+  employees: CompanyEmployeeDto[]
   open: boolean
   onOpenChange: (open: boolean) => void
   onSaved: (department: DepartmentDto) => void
@@ -60,12 +63,14 @@ export function DepartmentFormDialog({
   const isEditing = department !== undefined
   const [draft, setDraft] = useState<Draft>(() => toDraft(department))
   const [nameError, setNameError] = useState<string | null>(null)
+  const [managerError, setManagerError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
     if (open) {
       setDraft(toDraft(department))
       setNameError(null)
+      setManagerError(null)
     }
   }, [open, department])
 
@@ -81,7 +86,7 @@ export function DepartmentFormDialog({
     const payload = {
       name,
       description: draft.description.trim() || null,
-      managerName: draft.managerName.trim() || null,
+      managerId: draft.managerId,
     }
 
     setIsSaving(true)
@@ -93,6 +98,11 @@ export function DepartmentFormDialog({
     } catch (error) {
       if (isApiError(error) && error.code === "Department.NameTaken") {
         setNameError(error.description)
+        return
+      }
+
+      if (isApiError(error) && error.code === "Department.ManagerNotAvailable") {
+        setManagerError(error.description)
         return
       }
 
@@ -149,17 +159,22 @@ export function DepartmentFormDialog({
 
             <div className="space-y-2">
               <Label htmlFor="department-manager">Responsable</Label>
-              <div className="relative">
-                <Users className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="department-manager"
-                  placeholder="Nombre de quien está a cargo"
-                  maxLength={DEPARTMENT_MANAGER_NAME_MAX_LENGTH}
-                  value={draft.managerName}
-                  onChange={(event) => setDraft({ ...draft, managerName: event.target.value })}
-                  className="pl-10"
-                />
-              </div>
+              <ManagerPicker
+                id="department-manager"
+                employees={employees}
+                currentManager={department?.manager ?? null}
+                value={draft.managerId}
+                onChange={(managerId) => {
+                  setDraft({ ...draft, managerId })
+                  setManagerError(null)
+                }}
+                disabled={isSaving}
+              />
+              {managerError ? (
+                <p className="text-sm text-destructive">{managerError}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Un empleado con acceso activo, de cualquier departamento.</p>
+              )}
             </div>
           </div>
 
