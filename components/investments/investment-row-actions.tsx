@@ -1,20 +1,35 @@
 "use client"
 
-import { PencilIcon, Trash2 } from "lucide-react"
+import { GraduationCapIcon, PencilIcon, Trash2 } from "lucide-react"
+import { investmentTypeTopics } from "@/components/investments/investment-type-topics"
 import { Button } from "@/components/ui/button"
-import type { InvestmentDto } from "@/lib/api"
+import type { InvestmentDto, InvestmentType } from "@/lib/api"
 
 export function InvestmentRowActions({
   investment,
+  onLearn,
   onEdit,
   onDelete,
 }: {
   investment: InvestmentDto
+  onLearn: (type: InvestmentType) => void
   onEdit: (investment: InvestmentDto) => void
   onDelete: (investment: InvestmentDto) => void
 }) {
+  const learnLabel = `Aprender sobre ${investmentTypeTopics[investment.type]}`
+
   return (
     <div className="flex items-center justify-end gap-1">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-8"
+        title={learnLabel}
+        aria-label={learnLabel}
+        onClick={() => onLearn(investment.type)}
+      >
+        <GraduationCapIcon className="size-4" />
+      </Button>
       <Button
         variant="ghost"
         size="icon"

@@ -826,6 +826,7 @@ export default function InvestmentsPage() {
                   <TableCell className="text-right">
                     <InvestmentRowActions
                       investment={investment}
+                      onLearn={openLearning}
                       onEdit={openEditDialog}
                       onDelete={setInvestmentToDelete}
                     />
