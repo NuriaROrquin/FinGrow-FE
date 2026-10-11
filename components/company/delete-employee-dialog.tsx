@@ -48,7 +48,8 @@ export function DeleteEmployeeDialog({
           <AlertDialogTitle>¿Eliminar a {employee.fullName}?</AlertDialogTitle>
           <AlertDialogDescription>
             Pierde el acceso a FinGrow y se borran sus datos financieros: movimientos, presupuestos, metas,
-            inversiones, comprobantes e integraciones. Esta acción no se puede deshacer.
+            inversiones, comprobantes e integraciones. Esta acción no se puede deshacer. Si solo querés cortarle
+            el acceso, desactivalo: sus datos se conservan.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
