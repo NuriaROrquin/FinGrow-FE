@@ -1,4 +1,5 @@
 import type { CompanyEmployeeDto } from "@/lib/api"
+import { normalizeForSearch } from "@/lib/utils"
 
 export const NO_DEPARTMENT_FILTER = "none"
 
@@ -53,13 +54,6 @@ const DAY_IN_MS = 24 * 60 * 60 * 1000
 
 const MIN_PHONE_DIGITS_TO_SEARCH = 3
 
-export function normalize(text: string): string {
-  return text
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-}
-
 export function hasActiveFilters(values: EmployeeFilterValues): boolean {
   return (
     values.search.trim() !== "" ||
@@ -78,14 +72,14 @@ export function filtersError(values: EmployeeFilterValues): string | null {
 }
 
 function matchesSearch(employee: CompanyEmployeeDto, search: string): boolean {
-  const term = normalize(search.trim())
+  const term = normalizeForSearch(search.trim())
 
   if (!term) {
     return true
   }
 
   const matchesText = [employee.fullName, employee.email, employee.departmentName].some(
-    (field) => field !== null && normalize(field).includes(term),
+    (field) => field !== null && normalizeForSearch(field).includes(term),
   )
 
   if (matchesText) {

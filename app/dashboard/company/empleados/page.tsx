@@ -26,6 +26,7 @@ import {
   type EmployeeStatusFilter,
 } from "@/components/company/employee-filters"
 import { EmployeeFormDialog } from "@/components/company/employee-form-dialog"
+import { FilterStatCard } from "@/components/company/filter-stat-card"
 import { SortableTableHead } from "@/components/company/sortable-table-head"
 import { TemporaryPasswordDialog } from "@/components/company/temporary-password-dialog"
 import {
@@ -38,53 +39,10 @@ import {
   type DepartmentDto,
 } from "@/lib/api"
 import { formatDate, formatRelativeTime } from "@/lib/format"
-import { cn } from "@/lib/utils"
+import { plural } from "@/lib/utils"
 
 function Placeholder() {
   return <span className="text-muted-foreground">—</span>
-}
-
-function StatusCard({
-  label,
-  value,
-  valueClassName,
-  isLoading,
-  isSelected,
-  onSelect,
-}: {
-  label: string
-  value: number
-  valueClassName?: string
-  isLoading: boolean
-  isSelected: boolean
-  onSelect: () => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-pressed={isSelected}
-      className="rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <Card
-        className={cn(
-          "h-full py-4 transition-colors hover:border-primary/50 sm:py-6",
-          isSelected && "border-primary ring-1 ring-primary",
-        )}
-      >
-        <CardHeader className="px-3 pb-3 sm:px-6">
-          <CardDescription className="text-xs sm:text-sm">{label}</CardDescription>
-          <CardTitle className={cn("text-2xl sm:text-3xl", valueClassName)}>
-            {isLoading ? <Skeleton className="h-9 w-12" /> : value}
-          </CardTitle>
-        </CardHeader>
-      </Card>
-    </button>
-  )
-}
-
-function plural(count: number, singular: string, pluralForm: string): string {
-  return count === 1 ? singular : pluralForm
 }
 
 export default function EmpleadosPage() {
@@ -202,14 +160,14 @@ export default function EmpleadosPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
-        <StatusCard
+        <FilterStatCard
           label="Total Empleados"
           value={totalEmployees}
           isLoading={isLoading}
           isSelected={filters.status === "all"}
           onSelect={() => setFilters((current) => ({ ...current, status: "all" }))}
         />
-        <StatusCard
+        <FilterStatCard
           label="Empleados Activos"
           value={activeEmployees}
           valueClassName="text-green-600"
@@ -217,7 +175,7 @@ export default function EmpleadosPage() {
           isSelected={filters.status === "active"}
           onSelect={() => selectStatus("active")}
         />
-        <StatusCard
+        <FilterStatCard
           label="Empleados Inactivos"
           value={inactiveEmployees}
           valueClassName="text-orange-600"

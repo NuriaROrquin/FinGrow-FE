@@ -1,15 +1,14 @@
 "use client"
 
-import { useState, type ReactNode } from "react"
+import { useState } from "react"
 import { ChevronsUpDown, SearchIcon, XIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { cn } from "@/lib/utils"
+import { FilterField } from "@/components/company/filter-field"
 import {
   hasActiveFilters,
   lastLoginFilterLabels,
@@ -25,27 +24,6 @@ export interface DepartmentFilterOption {
   name: string
   employees: number
   isActive: boolean
-}
-
-function Field({
-  id,
-  label,
-  className,
-  children,
-}: {
-  id: string
-  label: string
-  className?: string
-  children: ReactNode
-}) {
-  return (
-    <div className={cn("flex min-w-0 flex-col gap-1", className)}>
-      <Label htmlFor={id} className="text-xs text-muted-foreground">
-        {label}
-      </Label>
-      {children}
-    </div>
-  )
 }
 
 function departmentsSummary(selected: string[], options: DepartmentFilterOption[]): string {
@@ -93,7 +71,7 @@ export function EmployeeFiltersBar({
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 2xl:grid-cols-[minmax(0,2fr)_repeat(5,minmax(0,1fr))_auto]">
         <div className="col-span-2 2xl:col-span-1">
-          <Field id="employee-filter-search" label="Buscar">
+          <FilterField id="employee-filter-search" label="Buscar">
             <div className="relative">
               <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -104,10 +82,10 @@ export function EmployeeFiltersBar({
                 onChange={(event) => update("search", event.target.value)}
               />
             </div>
-          </Field>
+          </FilterField>
         </div>
 
-        <Field id="employee-filter-department" label="Departamento">
+        <FilterField id="employee-filter-department" label="Departamento">
           <Popover open={isDepartmentPickerOpen} onOpenChange={setIsDepartmentPickerOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -148,9 +126,9 @@ export function EmployeeFiltersBar({
               </Command>
             </PopoverContent>
           </Popover>
-        </Field>
+        </FilterField>
 
-        <Field id="employee-filter-status" label="Estado">
+        <FilterField id="employee-filter-status" label="Estado">
           <Select value={values.status} onValueChange={(value) => update("status", value as EmployeeStatusFilter)}>
             <SelectTrigger id="employee-filter-status" className="w-full">
               <SelectValue />
@@ -163,9 +141,9 @@ export function EmployeeFiltersBar({
               ))}
             </SelectContent>
           </Select>
-        </Field>
+        </FilterField>
 
-        <Field id="employee-filter-last-login" label="Último ingreso" className="col-span-2 sm:col-span-1">
+        <FilterField id="employee-filter-last-login" label="Último ingreso" className="col-span-2 sm:col-span-1">
           <Select value={values.lastLogin} onValueChange={(value) => update("lastLogin", value as LastLoginFilter)}>
             <SelectTrigger id="employee-filter-last-login" className="w-full">
               <SelectValue />
@@ -178,9 +156,9 @@ export function EmployeeFiltersBar({
               ))}
             </SelectContent>
           </Select>
-        </Field>
+        </FilterField>
 
-        <Field id="employee-filter-hired-from" label="Alta desde" className="col-span-2 sm:col-span-1">
+        <FilterField id="employee-filter-hired-from" label="Alta desde" className="col-span-2 sm:col-span-1">
           <Input
             id="employee-filter-hired-from"
             type="date"
@@ -188,9 +166,9 @@ export function EmployeeFiltersBar({
             value={values.hiredFrom}
             onChange={(event) => update("hiredFrom", event.target.value)}
           />
-        </Field>
+        </FilterField>
 
-        <Field id="employee-filter-hired-to" label="Alta hasta" className="col-span-2 sm:col-span-1">
+        <FilterField id="employee-filter-hired-to" label="Alta hasta" className="col-span-2 sm:col-span-1">
           <Input
             id="employee-filter-hired-to"
             type="date"
@@ -198,7 +176,7 @@ export function EmployeeFiltersBar({
             value={values.hiredTo}
             onChange={(event) => update("hiredTo", event.target.value)}
           />
-        </Field>
+        </FilterField>
 
         {hasActiveFilters(values) && (
           <div className="col-span-2 flex items-end sm:col-span-1">
