@@ -1,10 +1,10 @@
 "use client"
 
 import { useState } from "react"
+import { Archive } from "lucide-react"
 import { toast } from "sonner"
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -12,7 +12,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
 import { deleteDepartment, isApiError, toastApiError, type DepartmentDto } from "@/lib/api"
+import { plural } from "@/lib/utils"
 
 export function DeleteDepartmentDialog({
   department,
@@ -20,15 +22,18 @@ export function DeleteDepartmentDialog({
   onOpenChange,
   onDeleted,
   onRejected,
+  onDeactivateInstead,
 }: {
   department: DepartmentDto
   open: boolean
   onOpenChange: (open: boolean) => void
   onDeleted: (departmentId: string) => void
   onRejected: () => void
+  onDeactivateInstead: () => void
 }) {
   const [isDeleting, setIsDeleting] = useState(false)
-  const hasEmployees = department.employeeCount > 0
+  const employees = department.employeeCount
+  const hasEmployees = employees > 0
 
   const handleDelete = async () => {
     setIsDeleting(true)
@@ -58,22 +63,53 @@ export function DeleteDepartmentDialog({
           <AlertDialogTitle>¿Eliminar el departamento &quot;{department.name}&quot;?</AlertDialogTitle>
           <AlertDialogDescription>
             {hasEmployees
-              ? `Tiene ${department.employeeCount} empleado${department.employeeCount === 1 ? "" : "s"} asignado${department.employeeCount === 1 ? "" : "s"}: no se va a poder eliminar hasta que los reasignes a otro departamento.`
-              : "El departamento deja de existir y no se puede recuperar."}
+              ? `Tiene ${employees} ${plural(employees, "empleado asignado", "empleados asignados")}: no se puede eliminar mientras tenga gente.`
+              : "Se borra junto con sus métricas de meses anteriores y no se puede recuperar."}
           </AlertDialogDescription>
         </AlertDialogHeader>
+
+        {department.isActive ? (
+          <div className="flex flex-col gap-3 rounded-md border bg-muted/50 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-medium text-foreground">
+                {hasEmployees ? "¿El departamento ya no existe?" : "¿Querés conservar su historial?"}
+              </p>
+              <p className="text-muted-foreground">
+                {hasEmployees
+                  ? "Desactivalo: movés a su gente en el mismo paso y sus métricas se conservan."
+                  : "Desactivalo: deja de usarse pero sus métricas se conservan."}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0 gap-2"
+              disabled={isDeleting}
+              onClick={onDeactivateInstead}
+            >
+              <Archive className="h-4 w-4" />
+              Desactivar en su lugar
+            </Button>
+          </div>
+        ) : (
+          !hasEmployees && (
+            <p className="rounded-md border bg-muted/50 p-3 text-sm text-muted-foreground">
+              Ya está desactivado: mientras no lo elimines, sus métricas de meses anteriores se conservan.
+            </p>
+          )
+        )}
+
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
-          <AlertDialogAction
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            disabled={isDeleting}
-            onClick={(event) => {
-              event.preventDefault()
-              void handleDelete()
-            }}
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={isDeleting || hasEmployees}
+            onClick={() => void handleDelete()}
           >
             {isDeleting ? "Eliminando..." : "Eliminar"}
-          </AlertDialogAction>
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
