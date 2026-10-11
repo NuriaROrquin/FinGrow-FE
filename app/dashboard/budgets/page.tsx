@@ -2,10 +2,10 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { toast } from "sonner"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
 import {
   Dialog,
   DialogContent,
@@ -17,103 +17,63 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { PlusIcon, TrendingUpIcon, AlertCircleIcon, CheckCircleIcon, PiggyBankIcon } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { PlusIcon, TrendingUpIcon, AlertCircleIcon, PiggyBankIcon, TrophyIcon } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { GoalContributionsDialog } from "@/components/goals/goal-contributions-dialog"
+import { AchievedGoalCard, InProgressGoalCard } from "@/components/goals/goal-cards"
+import { MonthlyBudgetSection } from "@/components/budgets/monthly-budget-section"
+import { formatAmount } from "@/components/budgets/budget-month"
+import { createGoal, GOAL_NAME_MAX_LENGTH, listGoals, toastApiError, type BudgetDto, type GoalDto } from "@/lib/api"
+import type { Currency } from "@/lib/api/transactions"
 
-const mockBudgets = [
-  {
-    id: 1,
-    category: "Comida y Restaurantes",
-    limit: 500000,
-    spent: 385000.5,
-    period: "mensual",
-    icon: "🍔",
-  },
-  {
-    id: 2,
-    category: "Transporte",
-    limit: 300000,
-    spent: 260000,
-    period: "mensual",
-    icon: "🚗",
-  },
-  {
-    id: 3,
-    category: "Entretenimiento",
-    limit: 200000,
-    spent: 230000,
-    period: "mensual",
-    icon: "🎬",
-  },
-  {
-    id: 4,
-    category: "Servicios y Facturas",
-    limit: 400000,
-    spent: 320000,
-    period: "mensual",
-    icon: "💡",
-  },
-  {
-    id: 5,
-    category: "Compras",
-    limit: 350000,
-    spent: 180000,
-    period: "mensual",
-    icon: "🛍️",
-  },
-]
+const currencyLabels: Record<Currency, string> = {
+  ARS: "ARS ($)",
+  USD: "USD ($)",
+  EUR: "EUR (€)",
+  BRL: "BRL (R$)",
+}
 
-const mockSavingsGoals = [
-  {
-    id: 1,
-    name: "Fondo de Emergencia",
-    target: 1000000,
-    current: 650000,
-    deadline: "2025-12-31",
-    icon: "🏥",
-  },
-  {
-    id: 2,
-    name: "Vacaciones en Europa",
-    target: 500000,
-    current: 280000,
-    deadline: "2025-08-15",
-    icon: "✈️",
-  },
-  {
-    id: 3,
-    name: "Laptop Nueva",
-    target: 200000,
-    current: 165000,
-    deadline: "2025-06-30",
-    icon: "💻",
-  },
-  {
-    id: 4,
-    name: "Entrada para Casa",
-    target: 5000000,
-    current: 1850000,
-    deadline: "2027-01-01",
-    icon: "🏠",
-  },
-]
+function todayLocal(): string {
+  const now = new Date()
+  const offsetMs = now.getTimezoneOffset() * 60 * 1000
+  return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10)
+}
 
 export default function BudgetsPage() {
-  const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false)
+  const [currentBudget, setCurrentBudget] = useState<BudgetDto | null>(null)
   const [isSavingsDialogOpen, setIsSavingsDialogOpen] = useState(false)
+  const [savingsGoals, setSavingsGoals] = useState<GoalDto[]>([])
+  const [isLoadingGoals, setIsLoadingGoals] = useState(true)
+  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null)
+  const selectedGoal = savingsGoals.find((goal) => goal.id === selectedGoalId) ?? null
+  const goalsInProgress = savingsGoals.filter((goal) => goal.status === "Active")
+  const achievedGoals = savingsGoals
+    .filter((goal) => goal.status === "Achieved")
+    .sort((a, b) => (b.achievedAt ?? "").localeCompare(a.achievedAt ?? ""))
 
-  const getBudgetStatus = (spent: number, limit: number) => {
-    const percentage = (spent / limit) * 100
-    if (percentage >= 100) return { status: "exceeded", color: "text-destructive", icon: AlertCircleIcon }
-    if (percentage >= 80) return { status: "warning", color: "text-amber-500", icon: AlertCircleIcon }
-    return { status: "good", color: "text-success", icon: CheckCircleIcon }
-  }
+  useEffect(() => {
+    const controller = new AbortController()
 
-  const totalBudget = mockBudgets.reduce((sum, b) => sum + b.limit, 0)
-  const totalSpent = mockBudgets.reduce((sum, b) => sum + b.spent, 0)
-  const totalSavingsTarget = mockSavingsGoals.reduce((sum, g) => sum + g.target, 0)
-  const totalSavingsCurrent = mockSavingsGoals.reduce((sum, g) => sum + g.current, 0)
+    listGoals(controller.signal)
+      .then(setSavingsGoals)
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return
+        toastApiError(error, "No se pudieron cargar tus metas de ahorro.")
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoadingGoals(false)
+      })
+
+    return () => controller.abort()
+  }, [])
+
+  const replaceGoal = (updated: GoalDto) =>
+    setSavingsGoals((current) => current.map((goal) => (goal.id === updated.id ? updated : goal)))
+
+  const totalBudget = currentBudget?.limits.reduce((sum, limit) => sum + limit.amount, 0) ?? 0
+  const totalSavingsTarget = savingsGoals.reduce((sum, g) => sum + g.targetAmount, 0)
+  const totalSavingsCurrent = savingsGoals.reduce((sum, g) => sum + g.currentAmount, 0)
 
   return (
     <div className="space-y-6">
@@ -128,30 +88,31 @@ export default function BudgetsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Presupuesto Total</CardDescription>
-            <CardTitle className="text-2xl">${totalBudget.toLocaleString()}</CardTitle>
+            <CardTitle className="text-2xl">
+              {currentBudget ? formatAmount(totalBudget, currentBudget.currency) : "—"}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">Asignación mensual</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Gastado</CardDescription>
-            <CardTitle className="text-2xl">${totalSpent.toLocaleString()}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Progress value={(totalSpent / totalBudget) * 100} className="h-2" />
-            <p className="text-sm text-muted-foreground mt-2">
-              {((totalSpent / totalBudget) * 100).toFixed(1)}% del presupuesto usado
+            <p className="text-sm text-muted-foreground">
+              {currentBudget ? "Suma de los topes del mes" : "Sin presupuesto para el mes"}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
+            <CardDescription>Categorías con Tope</CardDescription>
+            <CardTitle className="text-2xl">{currentBudget?.limits.length ?? 0}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">En el mes seleccionado</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
             <CardDescription>Metas de Ahorro</CardDescription>
-            <CardTitle className="text-2xl">{mockSavingsGoals.length}</CardTitle>
+            <CardTitle className="text-2xl">{goalsInProgress.length}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">Metas activas</p>
@@ -165,7 +126,8 @@ export default function BudgetsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              {((totalSavingsCurrent / totalSavingsTarget) * 100).toFixed(1)}% del objetivo
+              {(totalSavingsTarget > 0 ? (totalSavingsCurrent / totalSavingsTarget) * 100 : 0).toFixed(1)}% del
+              objetivo
             </p>
           </CardContent>
         </Card>
@@ -178,62 +140,7 @@ export default function BudgetsPage() {
         </TabsList>
 
         <TabsContent value="budgets" className="space-y-4">
-          <div className="flex justify-between items-center gap-2">
-            <h2 className="text-xl font-semibold">Presupuestos Mensuales</h2>
-            <Dialog open={isBudgetDialogOpen} onOpenChange={setIsBudgetDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <PlusIcon className="size-4" />
-                  Agregar Presupuesto
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Crear Nuevo Presupuesto</DialogTitle>
-                  <DialogDescription>Establece un límite de gasto para una categoría</DialogDescription>
-                </DialogHeader>
-                <AddBudgetForm onClose={() => setIsBudgetDialogOpen(false)} />
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            {mockBudgets.map((budget) => {
-              const percentage = (budget.spent / budget.limit) * 100
-              const status = getBudgetStatus(budget.spent, budget.limit)
-              const StatusIcon = status.icon
-
-              return (
-                <Card key={budget.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="text-3xl">{budget.icon}</div>
-                        <div>
-                          <CardTitle className="text-lg">{budget.category}</CardTitle>
-                          <CardDescription className="capitalize">{budget.period}</CardDescription>
-                        </div>
-                      </div>
-                      <StatusIcon className={`size-5 ${status.color}`} />
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-2xl font-bold">${budget.spent.toLocaleString()}</span>
-                      <span className="text-sm text-muted-foreground">de ${budget.limit.toLocaleString()}</span>
-                    </div>
-                    <Progress value={percentage} className="h-2" />
-                    <div className="flex items-center justify-between text-sm">
-                      <span className={status.color}>{percentage.toFixed(1)}% usado</span>
-                      <span className="text-muted-foreground">
-                        ${(budget.limit - budget.spent).toLocaleString()} restante
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
+          <MonthlyBudgetSection onBudgetChange={setCurrentBudget} />
         </TabsContent>
 
         <TabsContent value="savings" className="space-y-4">
@@ -251,61 +158,76 @@ export default function BudgetsPage() {
                   <DialogTitle>Crear Meta de Ahorro</DialogTitle>
                   <DialogDescription>Establece un monto objetivo y fecha límite para tu ahorro</DialogDescription>
                 </DialogHeader>
-                <AddSavingsGoalForm onClose={() => setIsSavingsDialogOpen(false)} />
+                <AddSavingsGoalForm
+                  onCreated={(goal) => setSavingsGoals((current) => [goal, ...current])}
+                  onClose={() => setIsSavingsDialogOpen(false)}
+                />
               </DialogContent>
             </Dialog>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            {mockSavingsGoals.map((goal) => {
-              const percentage = (goal.current / goal.target) * 100
-              const daysLeft = Math.ceil(
-                (new Date(goal.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24),
-              )
+          {isLoadingGoals ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              <Skeleton className="h-48 w-full" />
+              <Skeleton className="h-48 w-full" />
+            </div>
+          ) : savingsGoals.length === 0 ? (
+            <Card>
+              <CardContent className="py-10 text-center text-muted-foreground">
+                Todavía no tenés metas de ahorro. Creá la primera con &quot;Agregar Meta&quot;.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-6">
+              <section className="space-y-3">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  En curso ({goalsInProgress.length})
+                </h3>
+                {goalsInProgress.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No tenés metas en curso. Creá una nueva con &quot;Agregar Meta&quot;.
+                  </p>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {goalsInProgress.map((goal) => (
+                      <InProgressGoalCard
+                        key={goal.id}
+                        goal={goal}
+                        onOpenContributions={() => setSelectedGoalId(goal.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
 
-              return (
-                <Card key={goal.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="text-3xl">{goal.icon}</div>
-                        <div>
-                          <CardTitle className="text-lg">{goal.name}</CardTitle>
-                          <CardDescription>
-                            {daysLeft > 0 ? `${daysLeft} días restantes` : "Fecha límite pasada"}
-                          </CardDescription>
-                        </div>
-                      </div>
-                      {percentage >= 100 ? (
-                        <Badge className="bg-success text-white">Completado</Badge>
-                      ) : (
-                        <Badge variant="outline">{percentage.toFixed(0)}%</Badge>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-2xl font-bold text-success">${goal.current.toLocaleString()}</span>
-                      <span className="text-sm text-muted-foreground">de ${goal.target.toLocaleString()}</span>
-                    </div>
-                    <Progress value={percentage} className="h-2" />
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        ${(goal.target - goal.current).toLocaleString()} por alcanzar
-                      </span>
-                      <span className="text-muted-foreground">
-                        {new Date(goal.deadline).toLocaleDateString("es-ES", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
+              {achievedGoals.length > 0 && (
+                <section className="space-y-3">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-success">
+                    <TrophyIcon className="size-4" />
+                    Alcanzadas ({achievedGoals.length})
+                  </h3>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {achievedGoals.map((goal) => (
+                      <AchievedGoalCard
+                        key={goal.id}
+                        goal={goal}
+                        onOpenContributions={() => setSelectedGoalId(goal.id)}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
+            </div>
+          )}
+
+          {selectedGoal && (
+            <GoalContributionsDialog
+              goal={selectedGoal}
+              open
+              onOpenChange={(open) => !open && setSelectedGoalId(null)}
+              onGoalChange={replaceGoal}
+            />
+          )}
         </TabsContent>
       </Tabs>
 
@@ -355,95 +277,105 @@ export default function BudgetsPage() {
   )
 }
 
-function AddBudgetForm({ onClose }: { onClose: () => void }) {
-  const handleSubmit = (e: React.FormEvent) => {
+function AddSavingsGoalForm({
+  onCreated,
+  onClose,
+}: {
+  onCreated: (goal: GoalDto) => void
+  onClose: () => void
+}) {
+  const [name, setName] = useState("")
+  const [targetAmount, setTargetAmount] = useState("")
+  const [currency, setCurrency] = useState<Currency>("ARS")
+  const [deadline, setDeadline] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    onClose()
-  }
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="budget-category">Categoría</Label>
-        <Select>
-          <SelectTrigger id="budget-category">
-            <SelectValue placeholder="Selecciona categoría" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="food">Comida y Restaurantes</SelectItem>
-            <SelectItem value="transport">Transporte</SelectItem>
-            <SelectItem value="entertainment">Entretenimiento</SelectItem>
-            <SelectItem value="bills">Servicios y Facturas</SelectItem>
-            <SelectItem value="shopping">Compras</SelectItem>
-            <SelectItem value="health">Salud</SelectItem>
-            <SelectItem value="education">Educación</SelectItem>
-            <SelectItem value="other">Otros</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="budget-limit">Límite de Presupuesto</Label>
-        <Input id="budget-limit" type="number" placeholder="0.00" step="0.01" required />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="budget-period">Período</Label>
-        <Select defaultValue="monthly">
-          <SelectTrigger id="budget-period">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="weekly">Semanal</SelectItem>
-            <SelectItem value="monthly">Mensual</SelectItem>
-            <SelectItem value="yearly">Anual</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex gap-2 justify-end pt-4">
-        <Button type="button" variant="outline" onClick={onClose}>
-          Cancelar
-        </Button>
-        <Button type="submit">Crear Presupuesto</Button>
-      </div>
-    </form>
-  )
-}
-
-function AddSavingsGoalForm({ onClose }: { onClose: () => void }) {
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onClose()
+    setIsSubmitting(true)
+    try {
+      const goal = await createGoal({
+        name: name.trim(),
+        targetAmount: parseFloat(targetAmount),
+        currency,
+        deadline,
+      })
+      onCreated(goal)
+      toast.success(`Meta "${goal.name}" creada`)
+      onClose()
+    } catch (error) {
+      // Si el validador del backend rechaza la fecha o el monto, el mensaje ya viene en castellano.
+      toastApiError(error, "No se pudo crear la meta.")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="goal-name">Nombre de la Meta</Label>
-        <Input id="goal-name" placeholder="ej., Fondo de Emergencia" required />
+        <Input
+          id="goal-name"
+          placeholder="ej., Fondo de Emergencia"
+          maxLength={GOAL_NAME_MAX_LENGTH}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        <div className="col-span-2 space-y-2">
+          <Label htmlFor="goal-target">Monto Objetivo</Label>
+          <Input
+            id="goal-target"
+            type="number"
+            placeholder="0.00"
+            step="0.01"
+            min="0.01"
+            value={targetAmount}
+            onChange={(e) => setTargetAmount(e.target.value)}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="goal-currency">Moneda</Label>
+          <Select value={currency} onValueChange={(value) => setCurrency(value as Currency)}>
+            <SelectTrigger id="goal-currency">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(currencyLabels).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="goal-target">Monto Objetivo</Label>
-        <Input id="goal-target" type="number" placeholder="0.00" step="0.01" required />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="goal-current">Monto Actual</Label>
-        <Input id="goal-current" type="number" placeholder="0.00" step="0.01" defaultValue="0" />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="goal-deadline">Fecha Objetivo</Label>
-        <Input id="goal-deadline" type="date" required />
+        <Label htmlFor="goal-deadline">Fecha Límite</Label>
+        <Input
+          id="goal-deadline"
+          type="date"
+          min={todayLocal()}
+          value={deadline}
+          onChange={(e) => setDeadline(e.target.value)}
+          required
+        />
       </div>
 
       <div className="flex gap-2 justify-end pt-4">
-        <Button type="button" variant="outline" onClick={onClose}>
+        <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
           Cancelar
         </Button>
-        <Button type="submit">Crear Meta</Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Guardando..." : "Crear Meta"}
+        </Button>
       </div>
     </form>
   )

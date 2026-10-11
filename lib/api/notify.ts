@@ -9,25 +9,33 @@ import { ApiError, isApiError } from "./errors"
  * `code` va abajo y en chico: no significa nada para quien usa la app, pero es lo
  * primero que se pide cuando alguien reporta un problema.
  */
-export function toastApiError(error: unknown, fallbackMessage = "Ocurrió un error inesperado."): void {
+export interface ToastApiErrorOptions {
+  showCode?: boolean
+}
+
+export function toastApiError(
+  error: unknown,
+  fallbackMessage = "Ocurrió un error inesperado.",
+  { showCode = true }: ToastApiErrorOptions = {},
+): void {
   if (!isApiError(error)) {
     toast.error(fallbackMessage)
     return
   }
 
   toast.error(error.description, {
-    description: buildDetail(error),
+    description: buildDetail(error, showCode),
   })
 }
 
-function buildDetail(error: ApiError): string | undefined {
+function buildDetail(error: ApiError, showCode: boolean): string | undefined {
   const parts: string[] = []
 
   if (error.fieldErrors) {
     parts.push(...Object.values(error.fieldErrors).flat())
   }
 
-  if (parts.length === 0) {
+  if (parts.length === 0 && showCode) {
     parts.push(`Código: ${error.code}`)
   }
 
@@ -35,5 +43,5 @@ function buildDetail(error: ApiError): string | undefined {
     parts.push(`Referencia: ${error.traceId}`)
   }
 
-  return parts.join(" · ")
+  return parts.length > 0 ? parts.join(" · ") : undefined
 }

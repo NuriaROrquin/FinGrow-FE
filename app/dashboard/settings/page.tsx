@@ -26,18 +26,52 @@ import {
   Info,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
+import { changePassword, PASSWORD_MIN_LENGTH, toastApiError } from "@/lib/api"
+import { TwoFactorCard } from "@/components/security/two-factor-card"
 import { MercadoPagoCard } from "@/components/integrations/mercado-pago-card"
 import { TelegramCard } from "@/components/integrations/telegram-card"
 import { WhatsAppCard } from "@/components/integrations/whatsapp-card"
 import { useTheme } from "next-themes"
-import { useEffect, useState } from "react"
+import { useEffect, useState, type FormEvent } from "react"
+import { toast as sonnerToast } from "sonner"
 import { useToast } from "@/hooks/use-toast"
 
 export default function SettingsPage() {
-  const { role } = useAuth()
+  const { role, logout } = useAuth()
   const { theme, setTheme } = useTheme()
   const { toast } = useToast()
   const [mounted, setMounted] = useState(false)
+
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [changingPassword, setChangingPassword] = useState(false)
+
+  const handleChangePassword = async (e: FormEvent) => {
+    e.preventDefault()
+
+    if (newPassword !== confirmPassword) {
+      sonnerToast.error("Las contraseñas nuevas no coinciden.")
+      return
+    }
+
+    if (newPassword === currentPassword) {
+      sonnerToast.error("La nueva contraseña tiene que ser distinta de la actual.")
+      return
+    }
+
+    setChangingPassword(true)
+
+    try {
+      await changePassword({ currentPassword, newPassword })
+      sonnerToast.success("Contraseña actualizada", { description: "Volvé a iniciar sesión con tu nueva contraseña." })
+      await logout(`/login/${role}`)
+    } catch (error) {
+      toastApiError(error, "No pudimos cambiar la contraseña.", { showCode: false })
+    } finally {
+      setChangingPassword(false)
+    }
+  }
 
   // Estados para las integraciones
   const [gmailLinked, setGmailLinked] = useState(false)
@@ -527,38 +561,60 @@ export default function SettingsPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-4">
+              <form onSubmit={handleChangePassword} className="space-y-4">
                 <h3 className="font-semibold flex items-center gap-2">
                   <LockIcon className="size-4" />
                   Cambiar Contraseña
                 </h3>
                 <div className="space-y-2">
                   <Label htmlFor="currentPassword">Contraseña Actual</Label>
-                  <Input id="currentPassword" type="password" />
+                  <Input
+                    id="currentPassword"
+                    type="password"
+                    autoComplete="current-password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    required
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="newPassword">Nueva Contraseña</Label>
-                  <Input id="newPassword" type="password" />
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={PASSWORD_MIN_LENGTH}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">Al menos {PASSWORD_MIN_LENGTH} caracteres.</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword">Confirmar Nueva Contraseña</Label>
-                  <Input id="confirmPassword" type="password" />
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
                 </div>
-                <Button>Actualizar Contraseña</Button>
-              </div>
+                <p className="text-sm text-muted-foreground">
+                  Al actualizarla se cierran todas tus sesiones abiertas y vas a tener que volver a iniciar sesión.
+                </p>
+                <Button type="submit" disabled={changingPassword}>
+                  {changingPassword ? "Actualizando..." : "Actualizar Contraseña"}
+                </Button>
+              </form>
 
-              <Separator />
-
-              <div className="space-y-4">
-                <h3 className="font-semibold">Autenticación de Dos Factores</h3>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Habilitar 2FA</Label>
-                    <p className="text-sm text-muted-foreground">Agrega una capa extra de seguridad a tu cuenta</p>
-                  </div>
-                  <Switch />
-                </div>
-              </div>
+              {role === "empleado" && (
+                <>
+                  <Separator />
+                  <TwoFactorCard />
+                </>
+              )}
 
               <Separator />
 

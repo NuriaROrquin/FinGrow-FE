@@ -16,6 +16,36 @@ export type ExpenseCategory =
 
 export type IncomeCategory = "Salario" | "Freelance" | "Inversiones" | "Regalo" | "Otros"
 
+export const expenseCategoryLabels: Record<ExpenseCategory, string> = {
+  Alimentos: "Alimentos",
+  Transporte: "Transporte",
+  Vivienda: "Vivienda",
+  Servicios: "Servicios",
+  Salud: "Salud",
+  Educacion: "Educación",
+  Entretenimiento: "Entretenimiento",
+  Indumentaria: "Indumentaria",
+  AhorroInversion: "Ahorro e Inversión",
+  Otros: "Otros",
+}
+
+export const incomeCategoryLabels: Record<IncomeCategory, string> = {
+  Salario: "Salario",
+  Freelance: "Freelance",
+  Inversiones: "Inversiones",
+  Regalo: "Regalo",
+  Otros: "Otros",
+}
+
+export type TransactionStatus = "Confirmed" | "Pending"
+export type TransactionListStatus = TransactionStatus | "Eliminated"
+
+export const transactionStatusLabels: Record<TransactionListStatus, string> = {
+  Confirmed: "Confirmada",
+  Pending: "Pendiente",
+  Eliminated: "Eliminada",
+}
+
 export type Currency = "ARS" | "USD" | "EUR" | "BRL"
 
 export type PaymentMethod = "Cash" | "CreditCard" | "DebitCard" | "BankTransfer" | "DigitalWallet"
@@ -44,7 +74,7 @@ export interface TransactionDto {
   occurredOn: string
   paymentMethod: PaymentMethodLabel
   source: string
-  status: string
+  status: TransactionListStatus
   createdAt: string
 }
 
@@ -57,7 +87,10 @@ export interface CreateTransactionPayload {
   description: string
   occurredOn: string
   paymentMethod: PaymentMethod
+  status: TransactionStatus
 }
+
+export type UpdateTransactionPayload = CreateTransactionPayload
 
 export interface TransactionsResponse {
   items: TransactionDto[]
@@ -77,13 +110,40 @@ export interface TransactionSummaryResponse {
   totalIncomeTransactions: number
 }
 
-export type TransactionHistoryType = "ingreso" | "gasto" | "income" | "expense"
-
-export function getTransactionSummary(signal?: AbortSignal): Promise<TransactionSummaryResponse> {
-  return api.get<TransactionSummaryResponse>("/api/transactions/summary", { signal })
+export interface TransactionFilters {
+  search?: string
+  type?: TransactionType
+  expenseCategory?: ExpenseCategory
+  incomeCategory?: IncomeCategory
+  status?: TransactionListStatus[]
+  paymentMethod?: PaymentMethod
+  /** Fecha desde, formato yyyy-MM-dd (inclusive). */
+  dateFrom?: string
+  /** Fecha hasta, formato yyyy-MM-dd (inclusive). */
+  dateTo?: string
 }
 
-function translateTransaction(transaction: Omit<TransactionDto, "paymentMethod"> & { paymentMethod: PaymentMethod }) {
+export interface TransactionSummaryFilters {
+  dateFrom?: string
+  dateTo?: string
+}
+
+export function getTransactionSummary(
+  filters: TransactionSummaryFilters = {},
+  signal?: AbortSignal,
+): Promise<TransactionSummaryResponse> {
+  return api.get<TransactionSummaryResponse>("/api/transactions/summary", {
+    query: { dateFrom: filters.dateFrom, dateTo: filters.dateTo },
+    signal,
+  })
+}
+
+type ApiTransaction = Omit<TransactionDto, "paymentMethod" | "status"> & {
+  paymentMethod: PaymentMethod
+  status: TransactionListStatus
+}
+
+function translateTransaction(transaction: ApiTransaction) {
   return {
     ...transaction,
     paymentMethod: paymentMethodLabels[transaction.paymentMethod] ?? transaction.paymentMethod,
@@ -93,12 +153,22 @@ function translateTransaction(transaction: Omit<TransactionDto, "paymentMethod">
 export function listTransactions(
   pageNumber = 1,
   pageSize = 10,
-  search?: string,
-  type?: TransactionHistoryType,
+  filters: TransactionFilters = {},
   signal?: AbortSignal,
 ): Promise<TransactionsResponse> {
-  return api.get<{ items: (Omit<TransactionDto, "paymentMethod"> & { paymentMethod: PaymentMethod })[]; pageNumber: number; pageSize: number; totalCount: number; totalPages: number }>("/api/transactions", {
-    query: { pageNumber, pageSize, search, type },
+  return api.get<{ items: ApiTransaction[]; pageNumber: number; pageSize: number; totalCount: number; totalPages: number }>("/api/transactions", {
+    query: {
+      pageNumber,
+      pageSize,
+      search: filters.search,
+      type: filters.type,
+      expenseCategory: filters.expenseCategory,
+      incomeCategory: filters.incomeCategory,
+      status: filters.status,
+      paymentMethod: filters.paymentMethod,
+      dateFrom: filters.dateFrom,
+      dateTo: filters.dateTo,
+    },
     signal,
   }).then((response) => ({
     ...response,
@@ -106,8 +176,41 @@ export function listTransactions(
   }))
 }
 
+export function exportTransactions(filters: TransactionFilters = {}): Promise<Blob> {
+  return api.get<Blob>("/api/transactions/export", {
+    query: {
+      search: filters.search,
+      transactionType: filters.type,
+      expenseCategory: filters.expenseCategory,
+      incomeCategory: filters.incomeCategory,
+      transactionStatus: filters.status,
+      paymentMethod: filters.paymentMethod,
+      dateFrom: filters.dateFrom,
+      dateTo: filters.dateTo,
+    },
+    headers: {
+      Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    },
+    responseType: "blob",
+  })
+}
+
 export function createTransaction(payload: CreateTransactionPayload, signal?: AbortSignal): Promise<TransactionDto> {
   return api
     .post<Omit<TransactionDto, "paymentMethod"> & { paymentMethod: PaymentMethod }>("/api/transactions", payload, { signal })
     .then(translateTransaction)
+}
+
+export function updateTransaction(
+  id: string,
+  payload: UpdateTransactionPayload,
+  signal?: AbortSignal,
+): Promise<TransactionDto> {
+  return api
+    .put<Omit<TransactionDto, "paymentMethod"> & { paymentMethod: PaymentMethod }>(`/api/transactions/${encodeURIComponent(id)}`, payload, { signal })
+    .then(translateTransaction)
+}
+
+export function deleteTransaction(id: string, signal?: AbortSignal): Promise<void> {
+  return api.delete(`/api/transactions/${encodeURIComponent(id)}`, { signal })
 }
