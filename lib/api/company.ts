@@ -79,6 +79,14 @@ export function updateEmployee(employeeId: string, payload: EmployeeDetailsPaylo
   return api.put<CompanyEmployeeDto>(`/api/company/employees/${employeeId}`, payload)
 }
 
+export function changeEmployeeDepartment(employeeId: string, departmentId: string | null): Promise<CompanyEmployeeDto> {
+  return api.put<CompanyEmployeeDto>(`/api/company/employees/${employeeId}/department`, { departmentId })
+}
+
+export function changeEmployeeAccess(employeeId: string, isActive: boolean): Promise<CompanyEmployeeDto> {
+  return api.put<CompanyEmployeeDto>(`/api/company/employees/${employeeId}/access`, { isActive })
+}
+
 export function deleteEmployee(employeeId: string): Promise<void> {
   return api.delete(`/api/company/employees/${employeeId}`)
 }

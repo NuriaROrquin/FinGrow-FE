@@ -2,16 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Edit, Search, Trash2, UserPlus } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DeactivateEmployeeDialog } from "@/components/company/deactivate-employee-dialog"
 import { DeleteEmployeeDialog } from "@/components/company/delete-employee-dialog"
 import { EmployeeFormDialog } from "@/components/company/employee-form-dialog"
 import { TemporaryPasswordDialog } from "@/components/company/temporary-password-dialog"
 import {
+  changeEmployeeAccess,
   listDepartments,
   listEmployees,
   toastApiError,
@@ -50,6 +53,8 @@ export default function EmpleadosPage() {
   const [formState, setFormState] = useState<{ open: boolean; employee?: CompanyEmployeeDto }>({ open: false })
   const [created, setCreated] = useState<CreatedEmployeeDto | null>(null)
   const [employeeToDelete, setEmployeeToDelete] = useState<CompanyEmployeeDto | null>(null)
+  const [employeeToDeactivate, setEmployeeToDeactivate] = useState<CompanyEmployeeDto | null>(null)
+  const [reactivatingId, setReactivatingId] = useState<string | null>(null)
 
   const loadStaff = useCallback(async (signal?: AbortSignal) => {
     setLoadFailed(false)
@@ -86,6 +91,18 @@ export default function EmpleadosPage() {
   const handleCreated = (result: CreatedEmployeeDto) => {
     replaceEmployee(result.employee)
     setCreated(result)
+  }
+
+  const reactivate = async (employee: CompanyEmployeeDto) => {
+    setReactivatingId(employee.id)
+    try {
+      replaceEmployee(await changeEmployeeAccess(employee.id, true))
+      toast.success(`Se reactivó el acceso de ${employee.fullName}`)
+    } catch (error) {
+      toastApiError(error, "No se pudo reactivar el acceso.")
+    } finally {
+      setReactivatingId(null)
+    }
   }
 
   const handleDeleted = (employeeId: string) => {
@@ -216,9 +233,19 @@ export default function EmpleadosPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={employee.isActive ? "default" : "secondary"}>
-                          {employee.isActive ? "Activo" : "Inactivo"}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={employee.isActive}
+                            disabled={reactivatingId === employee.id}
+                            onCheckedChange={(checked) =>
+                              checked ? void reactivate(employee) : setEmployeeToDeactivate(employee)
+                            }
+                            aria-label={`${employee.isActive ? "Desactivar" : "Reactivar"} el acceso de ${employee.fullName}`}
+                          />
+                          <span className={employee.isActive ? "text-sm" : "text-sm text-muted-foreground"}>
+                            {employee.isActive ? "Activo" : "Inactivo"}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
@@ -261,6 +288,15 @@ export default function EmpleadosPage() {
       />
 
       <TemporaryPasswordDialog created={created} onClose={() => setCreated(null)} />
+
+      {employeeToDeactivate && (
+        <DeactivateEmployeeDialog
+          employee={employeeToDeactivate}
+          open
+          onOpenChange={(open) => !open && setEmployeeToDeactivate(null)}
+          onDeactivated={replaceEmployee}
+        />
+      )}
 
       {employeeToDelete && (
         <DeleteEmployeeDialog
