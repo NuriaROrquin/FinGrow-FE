@@ -212,3 +212,4 @@ export {
   type NotificationDto,
   type NotificationType,
 } from "./notifications"
+export { connectToNotifications, type NotificationsHubHandlers } from "./notifications-hub"
