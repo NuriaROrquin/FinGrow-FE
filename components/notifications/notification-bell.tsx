@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Spinner } from "@/components/ui/spinner"
 import {
+  connectToNotifications,
   getUnreadNotificationCount,
   listNotifications,
   markAllNotificationsAsRead,
@@ -19,10 +20,6 @@ import {
 import { formatRelativeTime } from "@/lib/format"
 import { useMessages } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
-
-// El contador se consulta cada tanto y al volver a la pestaña: las alertas de metas salen de un
-// trabajo diario del backend y las de movimientos, de un sync, así que no hace falta más seguido.
-const UNREAD_POLL_INTERVAL_MS = 60_000
 
 const iconByType: Record<NotificationType, LucideIcon> = {
   TransactionsToReview: InboxIcon,
@@ -46,13 +43,10 @@ export function NotificationBell() {
   const [notifications, setNotifications] = useState<NotificationDto[]>([])
   const [status, setStatus] = useState<ListStatus>("idle")
 
-  const refreshUnread = useCallback(async (signal?: AbortSignal) => {
-    try {
-      setUnread(await getUnreadNotificationCount(signal))
-    } catch {
-      // Un contador desactualizado no merece un toast cada minuto: se reintenta en la próxima vuelta.
-    }
-  }, [])
+  const refreshUnread = useCallback(
+    (signal?: AbortSignal) => getUnreadNotificationCount(signal).then(setUnread, () => undefined),
+    [],
+  )
 
   const loadNotifications = useCallback(async (signal?: AbortSignal) => {
     setStatus("loading")
@@ -73,17 +67,27 @@ export function NotificationBell() {
 
   useEffect(() => {
     const controller = new AbortController()
-    void refreshUnread(controller.signal)
+    const refresh = () => void refreshUnread(controller.signal)
 
-    const interval = window.setInterval(() => void refreshUnread(), UNREAD_POLL_INTERVAL_MS)
+    const disconnect = connectToNotifications({
+      onNotification: (notification) => {
+        setUnread((current) => current + 1)
+        setNotifications((current) =>
+          current.some((item) => item.id === notification.id) ? current : [notification, ...current],
+        )
+      },
+      onConnected: refresh,
+      onConnectionLost: refresh,
+    })
+
     const onVisible = () => {
-      if (document.visibilityState === "visible") void refreshUnread()
+      if (document.visibilityState === "visible") refresh()
     }
     document.addEventListener("visibilitychange", onVisible)
 
     return () => {
       controller.abort()
-      window.clearInterval(interval)
+      disconnect()
       document.removeEventListener("visibilitychange", onVisible)
     }
   }, [refreshUnread])
