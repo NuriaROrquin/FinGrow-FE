@@ -312,6 +312,45 @@ export const es = {
     unlinkFailed: "No pudimos desvincular Mercado Pago. Intentá de nuevo.",
   },
 
+  iol: {
+    description: "Conectá tu cuenta de InvertirOnline para seguir tu portafolio desde FinGrow",
+    checking: "Consultando el estado de IOL...",
+    intro:
+      "Ingresá tu usuario y contraseña de IOL. FinGrow los usa una sola vez para obtener un permiso de acceso: la contraseña no se guarda.",
+    requirement:
+      "Tu cuenta tiene que tener las APIs activadas: en IOL, entrá al menú de tu usuario > Configuración API y aceptá los términos.",
+    username: "Usuario de IOL",
+    password: "Contraseña de IOL",
+    connect: "Vincular IOL",
+    relink: "Volver a vincular",
+    linkedPrefix: "Cuenta de IOL ",
+    linkedMiddle: " vinculada",
+    linkedOn: (date: string) => ` el ${date}`,
+    linkedSuffix: ".",
+    needsAttention: "Requiere atención",
+    expired:
+      "La autorización de IOL venció o fue revocada (por ejemplo, si cambiaste la contraseña en IOL). Volvé a ingresar tus credenciales para seguir conectado.",
+    unlinkTitle: "¿Desvincular IOL?",
+    unlinkWarning: "FinGrow deja de acceder a tu cuenta de IOL y borra la autorización guardada.",
+    whatItDoes: "¿Qué hace la vinculación?",
+    features: [
+      "FinGrow accede a tu cuenta con la API de IOL, sin guardar tu contraseña",
+      "Podés desvincularla cuando quieras desde acá",
+      "Próximamente: tu portafolio y sus cotizaciones se van a actualizar solos",
+    ],
+    linkErrors: {
+      "Integrations.Iol.InvalidCredentials":
+        "IOL rechazó el usuario o la contraseña. Revisalos y verificá que tengas las APIs activadas en tu cuenta de IOL (menú de usuario > Configuración API).",
+      "Integrations.Iol.AccountInUse": "Esa cuenta de IOL ya está vinculada a otro empleado.",
+      "Integrations.Iol.Unavailable": "IOL no responde en este momento. Volvé a intentar en unos minutos.",
+    } as Record<string, string>,
+    linkedToast: "IOL vinculado",
+    linkFailedToast: "No pudimos vincular IOL",
+    statusFailed: "No pudimos consultar el estado de IOL.",
+    unlinkedToast: "IOL desvinculado",
+    unlinkFailed: "No pudimos desvincular IOL. Intentá de nuevo.",
+  },
+
   gmail: {
     description: "Tus facturas y consumos que llegan por mail se registran solos",
     checking: "Consultando el estado de Gmail...",

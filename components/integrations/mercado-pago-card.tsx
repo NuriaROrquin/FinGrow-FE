@@ -33,7 +33,7 @@ import {
 } from "@/lib/api"
 import { useMessages } from "@/lib/i18n"
 
-import { formatLinkedDate } from "./link-code-integration-card"
+import { formatLinkedDate, LINKED_ICON_CLASS } from "./link-code-integration-card"
 
 const PROVIDER = "mercadopago"
 const RESULT_PARAM = "mercadopago"
@@ -124,16 +124,16 @@ export function MercadoPagoCard() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Wallet className="size-5 text-cyan-500" />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-3">
+            <Wallet className="size-5 shrink-0 text-cyan-500" />
             <div>
               <CardTitle>Mercado Pago</CardTitle>
               <CardDescription>{t.mercadoPago.description}</CardDescription>
             </div>
           </div>
           {linked && (
-            <Badge variant="default" className="gap-1">
+            <Badge variant="default" className="shrink-0 gap-1">
               <CheckCircle2 className="size-3" />
               {t.common.linked}
             </Badge>
@@ -148,7 +148,7 @@ export function MercadoPagoCard() {
         ) : linked ? (
           <div className="space-y-4">
             <Alert>
-              <CheckCircle2 className="h-4 w-4" />
+              <CheckCircle2 className={LINKED_ICON_CLASS} />
               <AlertDescription>
                 {t.mercadoPago.linkedPrefix}
                 <span className="font-mono">{integration.externalAccountId}</span>
@@ -205,8 +205,8 @@ export function MercadoPagoCard() {
           <h4 className="text-sm font-medium">{t.mercadoPago.whatItDoes}</h4>
           <ul className="space-y-1 text-sm text-muted-foreground">
             {t.mercadoPago.features.map((feature) => (
-              <li key={feature} className="flex items-center gap-2">
-                <CheckCircle2 className="size-3" /> {feature}
+              <li key={feature} className="flex items-start gap-2">
+                <CheckCircle2 className="mt-1 size-3 shrink-0" /> {feature}
               </li>
             ))}
           </ul>

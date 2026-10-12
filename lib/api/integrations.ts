@@ -1,8 +1,8 @@
 import { api } from "./client"
 
-export type IntegrationProvider = "whatsapp" | "telegram" | "mercadopago" | "gmail"
+export type IntegrationProvider = "whatsapp" | "telegram" | "mercadopago" | "gmail" | "iol"
 
-export type IntegrationStatus = "Active" | "Failed"
+export type IntegrationStatus = "Active" | "Error"
 
 export interface LinkCode {
   code: string
@@ -13,7 +13,9 @@ export interface Integration {
   linked: boolean
   externalAccountId: string | null
   linkedAt: string | null
-  status: IntegrationStatus | null
+  /** Solo viene cuando la integracion existe. En Error hay que volver a vincular. */
+  status?: IntegrationStatus | null
+  errorReason?: string | null
 }
 
 export const NOT_LINKED: Integration = { linked: false, externalAccountId: null, linkedAt: null, status: null }
@@ -73,4 +75,8 @@ export interface GmailSyncSummary {
 
 export function syncGmail(signal?: AbortSignal): Promise<GmailSyncSummary> {
   return api.post<GmailSyncSummary>("/api/integrations/gmail/sync", undefined, { signal })
+}
+
+export function linkIol(username: string, password: string, signal?: AbortSignal): Promise<Integration> {
+  return api.post<Integration>("/api/integrations/iol/link", { username, password }, { signal })
 }

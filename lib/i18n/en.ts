@@ -308,6 +308,45 @@ export const en: Messages = {
     unlinkFailed: "We couldn't unlink Mercado Pago. Please try again.",
   },
 
+  iol: {
+    description: "Connect your InvertirOnline account to follow your portfolio from FinGrow",
+    checking: "Checking IOL status...",
+    intro:
+      "Enter your IOL username and password. FinGrow uses them only once to get an access permission: your password is not stored.",
+    requirement:
+      "Your account must have APIs enabled: in IOL, open your user menu > API settings (Configuración API) and accept the terms.",
+    username: "IOL username",
+    password: "IOL password",
+    connect: "Link IOL",
+    relink: "Link again",
+    linkedPrefix: "IOL account ",
+    linkedMiddle: " linked",
+    linkedOn: (date: string) => ` on ${date}`,
+    linkedSuffix: ".",
+    needsAttention: "Needs attention",
+    expired:
+      "The IOL authorization expired or was revoked (for example, if you changed your IOL password). Enter your credentials again to stay connected.",
+    unlinkTitle: "Unlink IOL?",
+    unlinkWarning: "FinGrow stops accessing your IOL account and deletes the stored authorization.",
+    whatItDoes: "What does linking do?",
+    features: [
+      "FinGrow accesses your account through the IOL API, without storing your password",
+      "You can unlink it from here whenever you want",
+      "Coming soon: your portfolio and its prices will update on their own",
+    ],
+    linkErrors: {
+      "Integrations.Iol.InvalidCredentials":
+        "IOL rejected the username or password. Check them and make sure APIs are enabled in your IOL account (user menu > API settings).",
+      "Integrations.Iol.AccountInUse": "That IOL account is already linked to another employee.",
+      "Integrations.Iol.Unavailable": "IOL is not responding right now. Try again in a few minutes.",
+    },
+    linkedToast: "IOL linked",
+    linkFailedToast: "We couldn't link IOL",
+    statusFailed: "We couldn't check the IOL status.",
+    unlinkedToast: "IOL unlinked",
+    unlinkFailed: "We couldn't unlink IOL. Try again.",
+  },
+
   gmail: {
     description: "Bills and receipts that reach your inbox are recorded automatically",
     checking: "Checking Gmail status...",
