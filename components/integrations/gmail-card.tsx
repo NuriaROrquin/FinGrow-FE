@@ -33,7 +33,7 @@ import {
 } from "@/lib/api"
 import { useMessages } from "@/lib/i18n"
 
-import { formatLinkedDate } from "./link-code-integration-card"
+import { formatLinkedDate, LINKED_ICON_CLASS } from "./link-code-integration-card"
 
 const PROVIDER = "gmail"
 const RESULT_PARAM = "gmail"
@@ -45,7 +45,7 @@ export function GmailCard() {
   const [syncing, setSyncing] = useState(false)
   const [unlinking, setUnlinking] = useState(false)
   const linked = integration?.linked ?? false
-  const failed = integration?.status === "Failed"
+  const failed = integration?.status === "Error"
 
   useEffect(() => {
     const controller = new AbortController()
@@ -165,7 +165,7 @@ export function GmailCard() {
               </Alert>
             ) : (
               <Alert>
-                <CheckCircle2 className="h-4 w-4" />
+                <CheckCircle2 className={LINKED_ICON_CLASS} />
                 <AlertDescription>
                   {t.gmail.linkedPrefix}
                   <span className="font-medium">{integration.externalAccountId}</span>
