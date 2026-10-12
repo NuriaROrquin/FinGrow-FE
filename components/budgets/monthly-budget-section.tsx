@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  BUDGET_NOTIFICATION_EVENT,
   deleteBudget,
   duplicatePreviousBudget,
   getBudget,
@@ -129,6 +130,11 @@ export function MonthlyBudgetSection({
 
   const reload = () => setReloadKey((key) => key + 1);
 
+  useEffect(() => {
+    const onBudgetAlert = () => setReloadKey((key) => key + 1);
+    window.addEventListener(BUDGET_NOTIFICATION_EVENT, onBudgetAlert);
+    return () => window.removeEventListener(BUDGET_NOTIFICATION_EVENT, onBudgetAlert);
+  }, []);
   const handleDuplicate = async () => {
     setIsDuplicating(true);
     try {

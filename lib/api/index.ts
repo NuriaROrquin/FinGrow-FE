@@ -207,6 +207,7 @@ export {
   type MonthlyExpenseDto,
 } from "./dashboard"
 export {
+  BUDGET_NOTIFICATION_EVENT,
   getUnreadNotificationCount,
   listNotifications,
   markAllNotificationsAsRead,

@@ -2,12 +2,23 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { BellIcon, CalendarClockIcon, CheckCheckIcon, InboxIcon, TargetIcon, type LucideIcon } from "lucide-react"
+import {
+  BellIcon,
+  CalendarClockIcon,
+  CheckCheckIcon,
+  CircleAlertIcon,
+  InboxIcon,
+  TargetIcon,
+  TriangleAlertIcon,
+  type LucideIcon,
+} from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Spinner } from "@/components/ui/spinner"
 import {
+  BUDGET_NOTIFICATION_EVENT,
   connectToNotifications,
   getUnreadNotificationCount,
   listNotifications,
@@ -25,12 +36,21 @@ const iconByType: Record<NotificationType, LucideIcon> = {
   TransactionsToReview: InboxIcon,
   GoalStalled: TargetIcon,
   GoalDeadlineApproaching: CalendarClockIcon,
+  BudgetWarning: TriangleAlertIcon,
+  BudgetExceeded: CircleAlertIcon,
+}
+
+const unreadStyleByType: Partial<Record<NotificationType, string>> = {
+  BudgetWarning: "bg-orange-500/15 text-orange-600",
+  BudgetExceeded: "bg-red-500/15 text-red-600",
 }
 
 const hrefByType: Partial<Record<NotificationType, string>> = {
   TransactionsToReview: "/dashboard/transactions",
   GoalStalled: "/dashboard",
   GoalDeadlineApproaching: "/dashboard",
+  BudgetWarning: "/dashboard/budgets",
+  BudgetExceeded: "/dashboard/budgets",
 }
 
 type ListStatus = "idle" | "loading" | "error" | "ready"
@@ -71,6 +91,11 @@ export function NotificationBell() {
 
     const disconnect = connectToNotifications({
       onNotification: (notification) => {
+        if (notification.type === "BudgetWarning" || notification.type === "BudgetExceeded") {
+          const show = notification.type === "BudgetExceeded" ? toast.error : toast.warning
+          show(notification.title, { description: notification.body })
+          window.dispatchEvent(new Event(BUDGET_NOTIFICATION_EVENT))
+        }
         setUnread((current) => current + 1)
         setNotifications((current) =>
           current.some((item) => item.id === notification.id) ? current : [notification, ...current],
@@ -212,7 +237,8 @@ export function NotificationBell() {
                       <span
                         className={cn(
                           "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground",
-                          !notification.isRead && "bg-primary/10 text-primary",
+                          !notification.isRead &&
+                            (unreadStyleByType[notification.type] ?? "bg-primary/10 text-primary"),
                         )}
                       >
                         <Icon className="size-4" />
