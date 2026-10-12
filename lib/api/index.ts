@@ -152,10 +152,15 @@ export {
   linkIol,
   NOT_LINKED,
   requestLinkCode,
+  startGmailLink,
+  syncGmail,
   startMercadoPagoLink,
   syncIol,
   syncMercadoPago,
   unlinkIntegration,
+  type GmailAuthorization,
+  type GmailLinkResult,
+  type GmailSyncSummary,
   type Integration,
   type IntegrationProvider,
   type IntegrationStatus,
@@ -211,6 +216,7 @@ export {
   type MonthlyExpenseDto,
 } from "./dashboard"
 export {
+  BUDGET_NOTIFICATION_EVENT,
   getUnreadNotificationCount,
   listNotifications,
   markAllNotificationsAsRead,
