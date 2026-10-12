@@ -148,6 +148,7 @@ export {
 } from "./goals"
 export {
   getIntegration,
+  linkIol,
   NOT_LINKED,
   requestLinkCode,
   startMercadoPagoLink,
@@ -155,6 +156,7 @@ export {
   unlinkIntegration,
   type Integration,
   type IntegrationProvider,
+  type IntegrationStatus,
   type LinkCode,
   type MercadoPagoAuthorization,
   type MercadoPagoLinkResult,

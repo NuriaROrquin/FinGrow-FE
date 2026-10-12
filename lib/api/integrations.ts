@@ -1,6 +1,8 @@
 import { api } from "./client"
 
-export type IntegrationProvider = "whatsapp" | "telegram" | "mercadopago"
+export type IntegrationProvider = "whatsapp" | "telegram" | "mercadopago" | "iol"
+
+export type IntegrationStatus = "Active" | "Error"
 
 export interface LinkCode {
   code: string
@@ -11,6 +13,9 @@ export interface Integration {
   linked: boolean
   externalAccountId: string | null
   linkedAt: string | null
+  /** Solo viene cuando la integracion existe. En Error hay que volver a vincular. */
+  status?: IntegrationStatus | null
+  errorReason?: string | null
 }
 
 export const NOT_LINKED: Integration = { linked: false, externalAccountId: null, linkedAt: null }
@@ -47,4 +52,8 @@ export function startMercadoPagoLink(signal?: AbortSignal): Promise<MercadoPagoA
 
 export function syncMercadoPago(signal?: AbortSignal): Promise<MercadoPagoSyncSummary> {
   return api.post<MercadoPagoSyncSummary>("/api/integrations/mercadopago/sync", undefined, { signal })
+}
+
+export function linkIol(username: string, password: string, signal?: AbortSignal): Promise<Integration> {
+  return api.post<Integration>("/api/integrations/iol/link", { username, password }, { signal })
 }
