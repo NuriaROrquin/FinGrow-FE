@@ -28,6 +28,8 @@ import { changePassword, PASSWORD_MIN_LENGTH, toastApiError } from "@/lib/api"
 import { ProfileCard } from "@/components/profile/profile-card"
 import { TwoFactorCard } from "@/components/security/two-factor-card"
 import { PreferencesCard } from "@/components/preferences/preferences-card"
+import { IolCard } from "@/components/integrations/iol-card"
+import { LINKED_ICON_CLASS } from "@/components/integrations/link-code-integration-card"
 import { MercadoPagoCard } from "@/components/integrations/mercado-pago-card"
 import { TelegramCard } from "@/components/integrations/telegram-card"
 import { WhatsAppCard } from "@/components/integrations/whatsapp-card"
@@ -337,16 +339,16 @@ export default function SettingsPage() {
           {/* Gmail Integration */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Mail className="size-5 text-red-500" />
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Mail className="size-5 shrink-0 text-red-500" />
                   <div>
                     <CardTitle>Gmail</CardTitle>
                     <CardDescription>{t.settings.gmail.description}</CardDescription>
                   </div>
                 </div>
                 {gmailLinked && (
-                  <Badge variant="default" className="gap-1">
+                  <Badge variant="default" className="shrink-0 gap-1">
                     <CheckCircle2 className="size-3" />
                     {t.common.linked}
                   </Badge>
@@ -395,7 +397,7 @@ export default function SettingsPage() {
                   </div>
 
                   <Alert>
-                    <CheckCircle2 className="h-4 w-4" />
+                    <CheckCircle2 className={LINKED_ICON_CLASS} />
                     <AlertDescription>{t.settings.gmail.syncInfo}</AlertDescription>
                   </Alert>
 
@@ -422,6 +424,8 @@ export default function SettingsPage() {
           </Card>
 
           <MercadoPagoCard />
+
+          <IolCard />
 
           {/* OCR Integration */}
           <Card>
