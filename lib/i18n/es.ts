@@ -351,7 +351,7 @@ export const es = {
     linkedPrefix: "Cuenta de IOL ",
     linkedMiddle: " vinculada",
     linkedOn: (date: string) => ` el ${date}`,
-    linkedSuffix: ".",
+    linkedSuffix: ". Tu portafolio se importa solo cada media hora mientras el mercado está abierto y aparece en Inversiones.",
     needsAttention: "Requiere atención",
     expired:
       "La autorización de IOL venció o fue revocada (por ejemplo, si cambiaste la contraseña en IOL). Volvé a ingresar tus credenciales para seguir conectado.",
@@ -359,9 +359,10 @@ export const es = {
     unlinkWarning: "FinGrow deja de acceder a tu cuenta de IOL y borra la autorización guardada.",
     whatItDoes: "¿Qué hace la vinculación?",
     features: [
+      "Tus acciones, CEDEAR, bonos, obligaciones negociables, letras y fondos de IOL aparecen solos en Inversiones",
+      "Su valor se actualiza cada media hora mientras el mercado está abierto",
       "FinGrow accede a tu cuenta con la API de IOL, sin guardar tu contraseña",
       "Podés desvincularla cuando quieras desde acá",
-      "Próximamente: tu portafolio y sus cotizaciones se van a actualizar solos",
     ],
     linkErrors: {
       "Integrations.Iol.InvalidCredentials":
@@ -372,6 +373,18 @@ export const es = {
     linkedToast: "IOL vinculado",
     linkFailedToast: "No pudimos vincular IOL",
     statusFailed: "No pudimos consultar el estado de IOL.",
+    syncNow: "Sincronizar ahora",
+    synced: "Portafolio de IOL sincronizado",
+    syncDetail: (imported: number, updated: number, ignored: number) =>
+      [
+        `${imported} ${imported === 1 ? "inversión nueva" : "inversiones nuevas"}`,
+        `${updated} ${updated === 1 ? "actualizada" : "actualizadas"}`,
+        ...(ignored > 0 ? [`${ignored} ${ignored === 1 ? "posición omitida" : "posiciones omitidas"} (opciones o cauciones)`] : []),
+      ].join(", "),
+    syncFailed: "No pudimos sincronizar IOL",
+    relinkToSync: "La autorización de IOL venció. Volvé a vincular la cuenta para seguir sincronizando.",
+    relinkInSettings: "La autorización de IOL venció. Volvé a vincularla en Configuración > Integraciones.",
+    syncInvestments: "Sincronizar IOL",
     unlinkedToast: "IOL desvinculado",
     unlinkFailed: "No pudimos desvincular IOL. Intentá de nuevo.",
   },
