@@ -335,6 +335,45 @@ export const pt: Messages = {
     unlinkFailed: "Não conseguimos desvincular o Mercado Pago. Tente novamente.",
   },
 
+  iol: {
+    description: "Conecte sua conta da InvertirOnline para acompanhar seu portfólio no FinGrow",
+    checking: "Verificando o status da IOL...",
+    intro:
+      "Informe seu usuário e senha da IOL. O FinGrow os usa uma única vez para obter uma permissão de acesso: a senha não é armazenada.",
+    requirement:
+      "Sua conta precisa ter as APIs ativadas: na IOL, abra o menu do seu usuário > Configuración API e aceite os termos.",
+    username: "Usuário da IOL",
+    password: "Senha da IOL",
+    connect: "Vincular IOL",
+    relink: "Vincular novamente",
+    linkedPrefix: "Conta da IOL ",
+    linkedMiddle: " vinculada",
+    linkedOn: (date: string) => ` em ${date}`,
+    linkedSuffix: ".",
+    needsAttention: "Requer atenção",
+    expired:
+      "A autorização da IOL expirou ou foi revogada (por exemplo, se você mudou a senha na IOL). Informe suas credenciais novamente para continuar conectado.",
+    unlinkTitle: "Desvincular a IOL?",
+    unlinkWarning: "O FinGrow deixa de acessar sua conta da IOL e apaga a autorização armazenada.",
+    whatItDoes: "O que a vinculação faz?",
+    features: [
+      "O FinGrow acessa sua conta pela API da IOL, sem armazenar sua senha",
+      "Você pode desvinculá-la daqui quando quiser",
+      "Em breve: seu portfólio e as cotações vão se atualizar sozinhos",
+    ],
+    linkErrors: {
+      "Integrations.Iol.InvalidCredentials":
+        "A IOL recusou o usuário ou a senha. Verifique-os e confirme que as APIs estão ativadas na sua conta da IOL (menu do usuário > Configuración API).",
+      "Integrations.Iol.AccountInUse": "Essa conta da IOL já está vinculada a outro funcionário.",
+      "Integrations.Iol.Unavailable": "A IOL não está respondendo agora. Tente novamente em alguns minutos.",
+    },
+    linkedToast: "IOL vinculada",
+    linkFailedToast: "Não conseguimos vincular a IOL",
+    statusFailed: "Não conseguimos verificar o status da IOL.",
+    unlinkedToast: "IOL desvinculada",
+    unlinkFailed: "Não conseguimos desvincular a IOL. Tente novamente.",
+  },
+
   pendingInbox: {
     tabMovements: "Movimentações",
     tabPending: "Pendentes",

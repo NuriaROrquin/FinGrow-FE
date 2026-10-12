@@ -28,6 +28,7 @@ import { changePassword, PASSWORD_MIN_LENGTH, toastApiError } from "@/lib/api"
 import { ProfileCard } from "@/components/profile/profile-card"
 import { TwoFactorCard } from "@/components/security/two-factor-card"
 import { PreferencesCard } from "@/components/preferences/preferences-card"
+import { IolCard } from "@/components/integrations/iol-card"
 import { LINKED_ICON_CLASS } from "@/components/integrations/link-code-integration-card"
 import { MercadoPagoCard } from "@/components/integrations/mercado-pago-card"
 import { TelegramCard } from "@/components/integrations/telegram-card"
@@ -423,6 +424,8 @@ export default function SettingsPage() {
           </Card>
 
           <MercadoPagoCard />
+
+          <IolCard />
 
           {/* OCR Integration */}
           <Card>
