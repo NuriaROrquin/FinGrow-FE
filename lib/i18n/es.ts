@@ -294,6 +294,7 @@ export const es = {
       "Integrations.MercadoPago.Denied":
         "No autorizaste la conexión en Mercado Pago. Podés volver a intentar cuando quieras.",
       "Integrations.MercadoPago.InvalidState": "La vinculación venció o no se inició desde FinGrow. Volvé a intentar.",
+      "Integrations.MercadoPago.AccountTaken": "La cuenta de Mercado Pago que estás intentando vincular ya está asociada a otro usuario.",
       "Integrations.MercadoPago.ExchangeFailed":
         "Mercado Pago no entregó las credenciales. Volvé a intentar en unos minutos.",
     } as Record<string, string>,
@@ -322,6 +323,13 @@ export const es = {
     failed:
       "Perdimos el acceso a tu Gmail, probablemente porque quitaste el permiso desde tu cuenta de Google. Volvé a autorizar para seguir registrando tus facturas.",
     reauthorize: "Volver a autorizar",
+    syncNow: "Sincronizar ahora",
+    noNewBills: "No hay facturas nuevas",
+    newBills: (count: number) =>
+      `${count} ${count === 1 ? "factura nueva" : "facturas nuevas"} para revisar en Transacciones`,
+    remaining: (count: number) =>
+      `Quedan ${count} ${count === 1 ? "mail" : "mails"} por revisar: volvé a sincronizar para traerlos.`,
+    syncFailed: "No pudimos sincronizar Gmail. Intentá de nuevo.",
     unlinkTitle: "¿Desvincular Gmail?",
     unlinkWarning:
       "FinGrow deja de leer tus mails y le pide a Google que borre la autorización. Los movimientos que ya se registraron no se pierden.",
@@ -331,7 +339,7 @@ export const es = {
     detectedTitle: "Servicios que detectamos:",
     detected: [
       "Facturas de electricidad (Edenor, Edesur, EPE)",
-      "Facturas de gas (MetroGAS, Camuzzi)",
+      "Facturas de gas (MetroGAS, Naturgy, Camuzzi)",
       "Facturas de agua (AySA, ABSA)",
       "Internet y telefonía (Fibertel, Movistar, Personal)",
       "Otros servicios recurrentes",
@@ -342,6 +350,7 @@ export const es = {
         "Sin permiso para leer tus mails no podemos registrar tus facturas. Volvé a intentar y marcá esa opción en Google.",
       "Integrations.Gmail.InvalidState": "La vinculación venció o no se inició desde FinGrow. Volvé a intentar.",
       "Integrations.Gmail.ExchangeFailed": "Google no entregó las credenciales. Volvé a intentar en unos minutos.",
+      "Integrations.Gmail.AccountTaken": "El mail que estás intentando vincular ya está asociado a otro usuario.",
     } as Record<string, string>,
     linkedToast: "Gmail vinculado",
     linkedToastDescription: "Las facturas que te lleguen van a aparecer como pendientes en Transacciones.",

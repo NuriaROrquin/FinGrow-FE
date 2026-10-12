@@ -1,7 +1,11 @@
 import { api } from "./client"
 import type { PagedResultDto } from "./investments"
 
-export type NotificationType = "TransactionsToReview" | "GoalStalled" | "GoalDeadlineApproaching"
+export type NotificationType =
+  | "TransactionsToReview"
+  | "GoalStalled"
+  | "GoalDeadlineApproaching"
+  | "IntegrationAccessLost"
 
 export const NOTIFICATIONS_PAGE_SIZE = 20
 

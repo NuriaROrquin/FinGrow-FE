@@ -293,6 +293,7 @@ export const pt: Messages = {
       "Integrations.MercadoPago.Denied":
         "Você não autorizou a conexão no Mercado Pago. Pode tentar novamente quando quiser.",
       "Integrations.MercadoPago.InvalidState": "A vinculação expirou ou não foi iniciada pelo FinGrow. Tente novamente.",
+      "Integrations.MercadoPago.AccountTaken": "A conta do Mercado Pago que você está tentando vincular já está associada a outro usuário.",
       "Integrations.MercadoPago.ExchangeFailed":
         "O Mercado Pago não entregou as credenciais. Tente novamente em alguns minutos.",
     },
@@ -320,6 +321,13 @@ export const pt: Messages = {
     failed:
       "Perdemos o acesso ao seu Gmail, provavelmente porque você removeu a permissão na sua conta do Google. Autorize novamente para continuar registrando suas contas.",
     reauthorize: "Autorizar novamente",
+    syncNow: "Sincronizar agora",
+    noNewBills: "Não há contas novas",
+    newBills: (count: number) =>
+      `${count} ${count === 1 ? "conta nova" : "contas novas"} para revisar em Transações`,
+    remaining: (count: number) =>
+      `Faltam ${count} ${count === 1 ? "e-mail" : "e-mails"} para verificar: sincronize de novo para trazê-los.`,
+    syncFailed: "Não conseguimos sincronizar o Gmail. Tente novamente.",
     unlinkTitle: "Desvincular o Gmail?",
     unlinkWarning:
       "O FinGrow deixa de ler seus e-mails e pede ao Google que apague a autorização. Os movimentos já registrados não se perdem.",
@@ -329,7 +337,7 @@ export const pt: Messages = {
     detectedTitle: "Serviços que detectamos:",
     detected: [
       "Contas de luz (Edenor, Edesur, EPE)",
-      "Contas de gás (MetroGAS, Camuzzi)",
+      "Contas de gás (MetroGAS, Naturgy, Camuzzi)",
       "Contas de água (AySA, ABSA)",
       "Internet e telefonia (Fibertel, Movistar, Personal)",
       "Outros serviços recorrentes",
@@ -340,6 +348,7 @@ export const pt: Messages = {
         "Sem permissão para ler seus e-mails não conseguimos registrar suas contas. Tente novamente e marque essa opção no Google.",
       "Integrations.Gmail.InvalidState": "A vinculação expirou ou não foi iniciada no FinGrow. Tente novamente.",
       "Integrations.Gmail.ExchangeFailed": "O Google não entregou as credenciais. Tente novamente em alguns minutos.",
+      "Integrations.Gmail.AccountTaken": "O e-mail que você está tentando vincular já está associado a outro usuário.",
     } as Record<string, string>,
     linkedToast: "Gmail vinculado",
     linkedToastDescription: "As contas que chegarem vão aparecer como pendentes em Transações.",

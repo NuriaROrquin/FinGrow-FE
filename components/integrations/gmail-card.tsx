@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { AlertTriangle, CheckCircle2, ExternalLink, Info, Mail, Unlink } from "lucide-react"
+import { AlertTriangle, CheckCircle2, ExternalLink, Info, Mail, RefreshCw, Unlink } from "lucide-react"
 import { toast } from "sonner"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -25,6 +25,7 @@ import {
   getIntegration,
   NOT_LINKED,
   startGmailLink,
+  syncGmail,
   toastApiError,
   unlinkIntegration,
   type GmailLinkResult,
@@ -41,6 +42,7 @@ export function GmailCard() {
   const t = useMessages()
   const [integration, setIntegration] = useState<Integration | null>(null)
   const [starting, setStarting] = useState(false)
+  const [syncing, setSyncing] = useState(false)
   const [unlinking, setUnlinking] = useState(false)
   const linked = integration?.linked ?? false
   const failed = integration?.status === "Failed"
@@ -91,6 +93,24 @@ export function GmailCard() {
     }
   }
 
+  const sync = async () => {
+    setSyncing(true)
+    try {
+      const summary = await syncGmail()
+      toast.success(summary.imported === 0 ? t.gmail.noNewBills : t.gmail.newBills(summary.imported), {
+        description: summary.remaining > 0 ? t.gmail.remaining(summary.remaining) : undefined,
+      })
+    } catch (error) {
+      toastApiError(error, t.gmail.syncFailed)
+    } finally {
+      setSyncing(false)
+      // Si Google rechazó el acceso, la integración quedó con error: se refleja sin recargar la página.
+      getIntegration(PROVIDER)
+        .then(setIntegration)
+        .catch(() => undefined)
+    }
+  }
+
   const unlink = async () => {
     setUnlinking(true)
     try {
@@ -104,7 +124,7 @@ export function GmailCard() {
     }
   }
 
-  const busy = starting || unlinking
+  const busy = starting || syncing || unlinking
 
   return (
     <Card>
@@ -156,6 +176,12 @@ export function GmailCard() {
               </Alert>
             )}
             <div className="flex flex-wrap gap-2">
+              {!failed && (
+                <Button onClick={sync} disabled={busy} variant="outline">
+                  {syncing ? <Spinner className="mr-2" /> : <RefreshCw className="size-4 mr-2" />}
+                  {t.gmail.syncNow}
+                </Button>
+              )}
               <Button onClick={start} disabled={busy} variant={failed ? "default" : "outline"}>
                 {starting && <Spinner className="mr-2" />}
                 {t.gmail.reauthorize}

@@ -292,6 +292,7 @@ export const en: Messages = {
     linkErrors: {
       "Integrations.MercadoPago.Denied": "You didn't authorize the connection in Mercado Pago. You can try again anytime.",
       "Integrations.MercadoPago.InvalidState": "The link expired or wasn't started from FinGrow. Please try again.",
+      "Integrations.MercadoPago.AccountTaken": "The Mercado Pago account you're trying to link is already associated with another user.",
       "Integrations.MercadoPago.ExchangeFailed": "Mercado Pago didn't provide the credentials. Try again in a few minutes.",
     },
     linkedToast: "Mercado Pago linked",
@@ -318,6 +319,12 @@ export const en: Messages = {
     failed:
       "We lost access to your Gmail, probably because you removed the permission from your Google account. Authorize again to keep recording your bills.",
     reauthorize: "Authorize again",
+    syncNow: "Sync now",
+    noNewBills: "No new bills",
+    newBills: (count: number) => `${count} new ${count === 1 ? "bill" : "bills"} to review in Transactions`,
+    remaining: (count: number) =>
+      `${count} ${count === 1 ? "email" : "emails"} left to check: sync again to bring them in.`,
+    syncFailed: "We couldn't sync Gmail. Please try again.",
     unlinkTitle: "Unlink Gmail?",
     unlinkWarning:
       "FinGrow stops reading your email and asks Google to delete the authorization. Movements already recorded are kept.",
@@ -327,7 +334,7 @@ export const en: Messages = {
     detectedTitle: "Services we detect:",
     detected: [
       "Electricity bills (Edenor, Edesur, EPE)",
-      "Gas bills (MetroGAS, Camuzzi)",
+      "Gas bills (MetroGAS, Naturgy, Camuzzi)",
       "Water bills (AySA, ABSA)",
       "Internet and phone (Fibertel, Movistar, Personal)",
       "Other recurring services",
@@ -338,6 +345,7 @@ export const en: Messages = {
         "Without permission to read your email we can't record your bills. Try again and tick that option in Google.",
       "Integrations.Gmail.InvalidState": "The link expired or wasn't started from FinGrow. Please try again.",
       "Integrations.Gmail.ExchangeFailed": "Google didn't return the credentials. Try again in a few minutes.",
+      "Integrations.Gmail.AccountTaken": "The email you're trying to link is already associated with another user.",
     } as Record<string, string>,
     linkedToast: "Gmail linked",
     linkedToastDescription: "Bills you receive will show up as pending in Transactions.",

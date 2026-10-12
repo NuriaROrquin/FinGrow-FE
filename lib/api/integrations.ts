@@ -62,3 +62,15 @@ export type GmailLinkResult = "linked" | "error"
 export function startGmailLink(signal?: AbortSignal): Promise<GmailAuthorization> {
   return api.post<GmailAuthorization>("/api/integrations/gmail/oauth/start", undefined, { signal })
 }
+
+export interface GmailSyncSummary {
+  imported: number
+  alreadyKnown: number
+  notBills: number
+  remaining: number
+  syncedAt: string
+}
+
+export function syncGmail(signal?: AbortSignal): Promise<GmailSyncSummary> {
+  return api.post<GmailSyncSummary>("/api/integrations/gmail/sync", undefined, { signal })
+}

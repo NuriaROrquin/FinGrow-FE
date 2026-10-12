@@ -2,7 +2,15 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { BellIcon, CalendarClockIcon, CheckCheckIcon, InboxIcon, TargetIcon, type LucideIcon } from "lucide-react"
+import {
+  BellIcon,
+  CalendarClockIcon,
+  CheckCheckIcon,
+  InboxIcon,
+  PlugZapIcon,
+  TargetIcon,
+  type LucideIcon,
+} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -25,12 +33,14 @@ const iconByType: Record<NotificationType, LucideIcon> = {
   TransactionsToReview: InboxIcon,
   GoalStalled: TargetIcon,
   GoalDeadlineApproaching: CalendarClockIcon,
+  IntegrationAccessLost: PlugZapIcon,
 }
 
 const hrefByType: Partial<Record<NotificationType, string>> = {
   TransactionsToReview: "/dashboard/transactions",
   GoalStalled: "/dashboard",
   GoalDeadlineApproaching: "/dashboard",
+  IntegrationAccessLost: "/dashboard/settings",
 }
 
 type ListStatus = "idle" | "loading" | "error" | "ready"
