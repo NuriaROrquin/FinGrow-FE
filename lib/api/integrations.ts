@@ -77,6 +77,22 @@ export function syncGmail(signal?: AbortSignal): Promise<GmailSyncSummary> {
   return api.post<GmailSyncSummary>("/api/integrations/gmail/sync", undefined, { signal })
 }
 
+export interface IolSyncSummary {
+  imported: number
+  updated: number
+  unchanged: number
+  ignored: number
+  noLongerHeld: number
+  syncedAt: string
+}
+
+/** El backend responde 409 con este codigo cuando la autorizacion de IOL vencio y hay que volver a vincular. */
+export const IOL_GRANT_EXPIRED = "Integrations.Iol.GrantExpired"
+
 export function linkIol(username: string, password: string, signal?: AbortSignal): Promise<Integration> {
   return api.post<Integration>("/api/integrations/iol/link", { username, password }, { signal })
+}
+
+export function syncIol(signal?: AbortSignal): Promise<IolSyncSummary> {
+  return api.post<IolSyncSummary>("/api/integrations/iol/sync", undefined, { signal })
 }
