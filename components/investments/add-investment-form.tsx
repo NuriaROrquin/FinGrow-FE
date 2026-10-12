@@ -4,6 +4,8 @@ import type React from "react"
 
 import { useEffect, useState } from "react"
 import { format } from "date-fns"
+import { Info } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -153,6 +155,7 @@ export function AddInvestmentForm({
   onClose: () => void
 }) {
   const isEditing = Boolean(initialInvestment)
+  const isImported = initialInvestment?.source === "Iol"
   const [type, setType] = useState<InvestmentType | "">(initialInvestment?.type ?? "")
   const [assetName, setAssetName] = useState(initialInvestment?.assetName ?? "")
   const [assetNameTouched, setAssetNameTouched] = useState(isEditing)
@@ -175,9 +178,10 @@ export function AddInvestmentForm({
   const currencyIsQuotable = market !== null && canQuoteIn(market, currency)
 
   const quoteKeyFor = (tickerSymbol: string) => `${market}:${tickerSymbol}:${currency}`
-  const quoteKey = canBeQuoted && !isFund && isValidTicker && currencyIsQuotable ? quoteKeyFor(normalizedSymbol) : null
+  const quoteKey =
+    !isImported && canBeQuoted && !isFund && isValidTicker && currencyIsQuotable ? quoteKeyFor(normalizedSymbol) : null
 
-  const searchScope = canBeQuoted && currencyIsQuotable ? `${market}:${isFund ? "" : currency}` : null
+  const searchScope = !isImported && canBeQuoted && currencyIsQuotable ? `${market}:${isFund ? "" : currency}` : null
   const searchMinLength = isFund ? FUND_SEARCH_MIN_LENGTH : TICKER_SEARCH_MIN_LENGTH
   const searchKey =
     searchScope !== null && normalizedSymbol.length >= searchMinLength && (isFund || isValidTicker)
@@ -367,7 +371,12 @@ export function AddInvestmentForm({
       <div className="grid grid-cols-3 gap-2">
         <div className="col-span-2 space-y-2">
           <Label htmlFor="investment-type">Tipo de activo</Label>
-          <Select value={type} onValueChange={(value) => handleTypeChange(value as InvestmentType)} required>
+          <Select
+            value={type}
+            onValueChange={(value) => handleTypeChange(value as InvestmentType)}
+            disabled={isImported}
+            required
+          >
             <SelectTrigger id="investment-type" className="w-full">
               <SelectValue placeholder="Seleccioná el tipo" />
             </SelectTrigger>
@@ -382,7 +391,7 @@ export function AddInvestmentForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="investment-currency">Moneda</Label>
-          <Select value={currency} onValueChange={(value) => setCurrency(value as Currency)}>
+          <Select value={currency} onValueChange={(value) => setCurrency(value as Currency)} disabled={isImported}>
             <SelectTrigger id="investment-currency" className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -397,7 +406,22 @@ export function AddInvestmentForm({
         </div>
       </div>
 
-      {canBeQuoted && (
+      {isImported ? (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            {type !== "" && symbol !== "" && quantity !== "" && (
+              <p className="font-medium text-foreground">
+                {symbol} · {formatQuantity(Number(quantity), type)}
+              </p>
+            )}
+            <p>
+              Esta inversión la trae IOL: el tipo, la moneda, la cantidad, el capital y la fecha se actualizan solos en
+              cada sincronización. Acá solo podés cambiarle el nombre.
+            </p>
+          </AlertDescription>
+        </Alert>
+      ) : canBeQuoted && (
         <section aria-labelledby="investment-quote-title" className="space-y-3 rounded-md border p-3">
           <div>
             <p id="investment-quote-title" className="text-sm font-medium">
@@ -534,6 +558,7 @@ export function AddInvestmentForm({
           min="0.01"
           value={effectiveInvestedAmount}
           onChange={(e) => handleInvestedAmountChange(e.target.value)}
+          disabled={isImported}
           required
         />
         {isAmountCalculated && quotedPrice && (
@@ -556,6 +581,7 @@ export function AddInvestmentForm({
           max={todayForDateInput()}
           value={purchasedOn}
           onChange={(e) => setPurchasedOn(e.target.value)}
+          disabled={isImported}
           required
         />
       </div>

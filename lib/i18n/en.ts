@@ -126,32 +126,6 @@ export const en: Messages = {
       emailHint: "Get notifications by email",
       save: "Save Preferences",
     },
-    gmail: {
-      description: "Automatically process utility bills",
-      linkedToastTitle: "Gmail linked!",
-      linkedToastDescription: "Your bills will be processed automatically",
-      unlinkedToastTitle: "Gmail unlinked",
-      unlinkedToastDescription: "Bills will no longer be processed automatically",
-      intro:
-        "Connect your Gmail account to automatically import electricity, gas, water, internet and other utility bills.",
-      detectedTitle: "Services we'll detect:",
-      detected: [
-        "Electricity bills (Edenor, Edesur, EPE)",
-        "Gas bills (MetroGAS, Camuzzi)",
-        "Water bills (AySA, ABSA)",
-        "Internet and phone (Fibertel, Movistar, Personal)",
-        "Other recurring services",
-      ],
-      connect: "Connect with Gmail",
-      syncActive: "Sync active",
-      syncInfo: "Your bills will be processed automatically. Last sync: 5 minutes ago.",
-      processedTitle: "Bills processed this month:",
-      processed: {
-        electricity: "Edenor - Electricity",
-        gas: "MetroGAS - Natural Gas",
-        internet: "Fibertel - Internet",
-      },
-    },
     ocr: {
       title: "OCR Processing",
       description: "Scan receipts and bills with your camera",
@@ -318,6 +292,7 @@ export const en: Messages = {
     linkErrors: {
       "Integrations.MercadoPago.Denied": "You didn't authorize the connection in Mercado Pago. You can try again anytime.",
       "Integrations.MercadoPago.InvalidState": "The link expired or wasn't started from FinGrow. Please try again.",
+      "Integrations.MercadoPago.AccountTaken": "The Mercado Pago account you're trying to link is already associated with another user.",
       "Integrations.MercadoPago.ExchangeFailed": "Mercado Pago didn't provide the credentials. Try again in a few minutes.",
     },
     linkedToast: "Mercado Pago linked",
@@ -331,6 +306,107 @@ export const en: Messages = {
     syncFailed: "We couldn't sync Mercado Pago. Please try again.",
     unlinkedToast: "Mercado Pago unlinked",
     unlinkFailed: "We couldn't unlink Mercado Pago. Please try again.",
+  },
+
+  iol: {
+    description: "Connect your InvertirOnline account to follow your portfolio from FinGrow",
+    checking: "Checking IOL status...",
+    intro:
+      "Enter your IOL username and password. FinGrow uses them only once to get an access permission: your password is not stored.",
+    requirement:
+      "Your account must have APIs enabled: in IOL, open your user menu > API settings (Configuración API) and accept the terms.",
+    username: "IOL username",
+    password: "IOL password",
+    connect: "Link IOL",
+    relink: "Link again",
+    linkedPrefix: "IOL account ",
+    linkedMiddle: " linked",
+    linkedOn: (date: string) => ` on ${date}`,
+    linkedSuffix: ". Your portfolio is imported on its own every half hour while the market is open and shows up in Investments.",
+    needsAttention: "Needs attention",
+    expired:
+      "The IOL authorization expired or was revoked (for example, if you changed your IOL password). Enter your credentials again to stay connected.",
+    unlinkTitle: "Unlink IOL?",
+    unlinkWarning: "FinGrow stops accessing your IOL account and deletes the stored authorization.",
+    whatItDoes: "What does linking do?",
+    features: [
+      "Your IOL stocks, CEDEARs, bonds, corporate bonds, bills and funds show up on their own in Investments",
+      "Their value updates every half hour while the market is open",
+      "FinGrow accesses your account through the IOL API, without storing your password",
+      "You can unlink it from here whenever you want",
+    ],
+    linkErrors: {
+      "Integrations.Iol.InvalidCredentials":
+        "IOL rejected the username or password. Check them and make sure APIs are enabled in your IOL account (user menu > API settings).",
+      "Integrations.Iol.AccountInUse": "That IOL account is already linked to another employee.",
+      "Integrations.Iol.Unavailable": "IOL is not responding right now. Try again in a few minutes.",
+    },
+    linkedToast: "IOL linked",
+    linkFailedToast: "We couldn't link IOL",
+    statusFailed: "We couldn't check the IOL status.",
+    syncNow: "Sync now",
+    synced: "IOL portfolio synced",
+    syncDetail: (imported: number, updated: number, ignored: number) =>
+      [
+        `${imported} new ${imported === 1 ? "investment" : "investments"}`,
+        `${updated} updated`,
+        ...(ignored > 0 ? [`${ignored} skipped ${ignored === 1 ? "position" : "positions"} (options or repos)`] : []),
+      ].join(", "),
+    syncFailed: "We couldn't sync IOL",
+    relinkToSync: "The IOL authorization expired. Link your account again to keep syncing.",
+    relinkInSettings: "The IOL authorization expired. Link it again in Settings > Integrations.",
+    syncInvestments: "Sync IOL",
+    unlinkedToast: "IOL unlinked",
+    unlinkFailed: "We couldn't unlink IOL. Try again.",
+  },
+
+  gmail: {
+    description: "Bills and receipts that reach your inbox are recorded automatically",
+    checking: "Checking Gmail status...",
+    linkedPrefix: "Account ",
+    linkedMiddle: " linked",
+    linkedOn: (date: string) => ` on ${date}`,
+    linkedSuffix: ". Bills from recognized services will show up as pending in Transactions.",
+    failedBadge: "Error",
+    failed:
+      "We lost access to your Gmail, probably because you removed the permission from your Google account. Authorize again to keep recording your bills.",
+    reauthorize: "Authorize again",
+    syncNow: "Sync now",
+    noNewBills: "No new bills",
+    newBills: (count: number) => `${count} new ${count === 1 ? "bill" : "bills"} to review in Transactions`,
+    remaining: (count: number) =>
+      `${count} ${count === 1 ? "email" : "emails"} left to check: sync again to bring them in.`,
+    syncFailed: "We couldn't sync Gmail. Please try again.",
+    unlinkTitle: "Unlink Gmail?",
+    unlinkWarning:
+      "FinGrow stops reading your email and asks Google to delete the authorization. Movements already recorded are kept.",
+    intro:
+      "We'll take you to Google so you can authorize FinGrow to read your email. We only look for bills and receipts from recognized services, we never see your password and you can revoke access at any time, from here or from your Google account.",
+    connect: "Connect with Gmail",
+    detectedTitle: "Services we detect:",
+    detected: [
+      "Electricity bills (Edenor, Edesur, EPE)",
+      "Gas bills (MetroGAS, Naturgy, Camuzzi)",
+      "Water bills (AySA, ABSA)",
+      "Internet and phone (Fibertel, Movistar, Personal)",
+      "Other recurring services",
+    ],
+    linkErrors: {
+      "Integrations.Gmail.Denied": "You didn't authorize the connection in Google. You can try again whenever you want.",
+      "Integrations.Gmail.MailAccessNotGranted":
+        "Without permission to read your email we can't record your bills. Try again and tick that option in Google.",
+      "Integrations.Gmail.InvalidState": "The link expired or wasn't started from FinGrow. Please try again.",
+      "Integrations.Gmail.ExchangeFailed": "Google didn't return the credentials. Try again in a few minutes.",
+      "Integrations.Gmail.AccountTaken": "The email you're trying to link is already associated with another user.",
+    } as Record<string, string>,
+    linkedToast: "Gmail linked",
+    linkedToastDescription: "Bills you receive will show up as pending in Transactions.",
+    linkFailedToast: "We couldn't link Gmail",
+    retryLater: "Try again in a few minutes.",
+    statusFailed: "We couldn't check the Gmail status.",
+    startFailed: "We couldn't start linking. Please try again.",
+    unlinkedToast: "Gmail unlinked",
+    unlinkFailed: "We couldn't unlink Gmail. Please try again.",
   },
 
   pendingInbox: {

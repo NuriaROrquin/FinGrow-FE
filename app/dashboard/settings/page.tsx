@@ -8,7 +8,6 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
-import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   BellIcon,
@@ -16,8 +15,6 @@ import {
   LockIcon,
   TrashIcon,
   BuildingIcon,
-  CheckCircle2,
-  Mail,
   Send,
   ScanLine,
   Info,
@@ -28,17 +25,17 @@ import { changePassword, PASSWORD_MIN_LENGTH, toastApiError } from "@/lib/api"
 import { ProfileCard } from "@/components/profile/profile-card"
 import { TwoFactorCard } from "@/components/security/two-factor-card"
 import { PreferencesCard } from "@/components/preferences/preferences-card"
+import { IolCard } from "@/components/integrations/iol-card"
+import { GmailCard } from "@/components/integrations/gmail-card"
 import { MercadoPagoCard } from "@/components/integrations/mercado-pago-card"
 import { TelegramCard } from "@/components/integrations/telegram-card"
 import { WhatsAppCard } from "@/components/integrations/whatsapp-card"
 import { useEffect, useState, type FormEvent } from "react"
 import { toast as sonnerToast } from "sonner"
-import { useToast } from "@/hooks/use-toast"
 
 export default function SettingsPage() {
   const { role, logout } = useAuth()
   const t = useMessages()
-  const { toast } = useToast()
   const [mounted, setMounted] = useState(false)
 
   const [currentPassword, setCurrentPassword] = useState("")
@@ -72,29 +69,10 @@ export default function SettingsPage() {
     }
   }
 
-  // Estados para las integraciones
-  const [gmailLinked, setGmailLinked] = useState(false)
-
   // Evitar hidratación incorrecta
   useEffect(() => {
     setMounted(true)
   }, [])
-
-  const handleLinkGmail = () => {
-    setGmailLinked(true)
-    toast({
-      title: t.settings.gmail.linkedToastTitle,
-      description: t.settings.gmail.linkedToastDescription,
-    })
-  }
-
-  const handleUnlinkGmail = () => {
-    setGmailLinked(false)
-    toast({
-      title: t.settings.gmail.unlinkedToastTitle,
-      description: t.settings.gmail.unlinkedToastDescription,
-    })
-  }
 
   if (!mounted) {
     return null
@@ -334,94 +312,11 @@ export default function SettingsPage() {
 
           <WhatsAppCard />
 
-          {/* Gmail Integration */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Mail className="size-5 text-red-500" />
-                  <div>
-                    <CardTitle>Gmail</CardTitle>
-                    <CardDescription>{t.settings.gmail.description}</CardDescription>
-                  </div>
-                </div>
-                {gmailLinked && (
-                  <Badge variant="default" className="gap-1">
-                    <CheckCircle2 className="size-3" />
-                    {t.common.linked}
-                  </Badge>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {!gmailLinked ? (
-                <>
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>{t.settings.gmail.intro}</AlertDescription>
-                  </Alert>
-
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium">{t.settings.gmail.detectedTitle}</h4>
-                    <ul className="space-y-1 text-sm text-muted-foreground">
-                      {t.settings.gmail.detected.map((service) => (
-                        <li key={service}>• {service}</li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="pt-2">
-                    <Button onClick={handleLinkGmail} className="w-full sm:w-auto gap-2">
-                      <Mail className="size-4" />
-                      {t.settings.gmail.connect}
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="size-10 rounded-full bg-red-500 flex items-center justify-center">
-                        <Mail className="size-5 text-white" />
-                      </div>
-                      <div>
-                        <p className="font-medium">usuario@gmail.com</p>
-                        <p className="text-sm text-muted-foreground">{t.settings.gmail.syncActive}</p>
-                      </div>
-                    </div>
-                    <Button variant="outline" onClick={handleUnlinkGmail}>
-                      {t.common.unlink}
-                    </Button>
-                  </div>
-
-                  <Alert>
-                    <CheckCircle2 className="h-4 w-4" />
-                    <AlertDescription>{t.settings.gmail.syncInfo}</AlertDescription>
-                  </Alert>
-
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium">{t.settings.gmail.processedTitle}</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm p-2 border rounded">
-                        <span>{t.settings.gmail.processed.electricity}</span>
-                        <span className="font-medium">$4,500</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm p-2 border rounded">
-                        <span>{t.settings.gmail.processed.gas}</span>
-                        <span className="font-medium">$2,300</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm p-2 border rounded">
-                        <span>{t.settings.gmail.processed.internet}</span>
-                        <span className="font-medium">$8,900</span>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+          <GmailCard />
 
           <MercadoPagoCard />
+
+          <IolCard />
 
           {/* OCR Integration */}
           <Card>

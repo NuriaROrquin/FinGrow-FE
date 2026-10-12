@@ -87,6 +87,9 @@ export const investmentTypeLabels: Record<InvestmentType, string> = {
   Crypto: "Criptomoneda",
 }
 
+/** De donde vino la inversion: la cargo el empleado o la importo IOL. */
+export type InvestmentSource = "Manual" | "Iol"
+
 export interface InvestmentDto {
   id: string
   assetName: string
@@ -102,6 +105,7 @@ export interface InvestmentDto {
   symbol: string | null
   quantity: number | null
   createdAt: string
+  source: InvestmentSource
 }
 
 export interface CreateInvestmentPayload {
