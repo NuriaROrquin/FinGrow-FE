@@ -5,6 +5,7 @@ export type NotificationType =
   | "TransactionsToReview"
   | "GoalStalled"
   | "GoalDeadlineApproaching"
+  | "IntegrationAccessLost"
   | "BudgetWarning"
   | "BudgetExceeded"
 

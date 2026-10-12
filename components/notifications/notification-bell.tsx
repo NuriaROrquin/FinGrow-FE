@@ -8,6 +8,7 @@ import {
   CheckCheckIcon,
   CircleAlertIcon,
   InboxIcon,
+  PlugZapIcon,
   TargetIcon,
   TriangleAlertIcon,
   type LucideIcon,
@@ -36,6 +37,7 @@ const iconByType: Record<NotificationType, LucideIcon> = {
   TransactionsToReview: InboxIcon,
   GoalStalled: TargetIcon,
   GoalDeadlineApproaching: CalendarClockIcon,
+  IntegrationAccessLost: PlugZapIcon,
   BudgetWarning: TriangleAlertIcon,
   BudgetExceeded: CircleAlertIcon,
 }
@@ -49,6 +51,7 @@ const hrefByType: Partial<Record<NotificationType, string>> = {
   TransactionsToReview: "/dashboard/transactions",
   GoalStalled: "/dashboard",
   GoalDeadlineApproaching: "/dashboard",
+  IntegrationAccessLost: "/dashboard/settings",
   BudgetWarning: "/dashboard/budgets",
   BudgetExceeded: "/dashboard/budgets",
 }

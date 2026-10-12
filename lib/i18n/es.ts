@@ -144,32 +144,6 @@ export const es = {
       emailHint: "Recibe notificaciones vía correo electrónico",
       save: "Guardar Preferencias",
     },
-    gmail: {
-      description: "Procesa automáticamente facturas de servicios",
-      linkedToastTitle: "¡Gmail vinculado!",
-      linkedToastDescription: "Tus facturas serán procesadas automáticamente",
-      unlinkedToastTitle: "Gmail desvinculado",
-      unlinkedToastDescription: "Ya no se procesarán facturas automáticamente",
-      intro:
-        "Conecta tu cuenta de Gmail para importar automáticamente facturas de luz, gas, agua, internet y otros servicios.",
-      detectedTitle: "Servicios que detectaremos:",
-      detected: [
-        "Facturas de electricidad (Edenor, Edesur, EPE)",
-        "Facturas de gas (MetroGAS, Camuzzi)",
-        "Facturas de agua (AySA, ABSA)",
-        "Internet y telefonía (Fibertel, Movistar, Personal)",
-        "Otros servicios recurrentes",
-      ],
-      connect: "Conectar con Gmail",
-      syncActive: "Sincronización activa",
-      syncInfo: "Tus facturas se procesarán automáticamente. Última sincronización: hace 5 minutos.",
-      processedTitle: "Facturas procesadas este mes:",
-      processed: {
-        electricity: "Edenor - Electricidad",
-        gas: "MetroGAS - Gas Natural",
-        internet: "Fibertel - Internet",
-      },
-    },
     ocr: {
       title: "Procesamiento OCR",
       description: "Escanea tickets y facturas con tu cámara",
@@ -340,6 +314,7 @@ export const es = {
       "Integrations.MercadoPago.Denied":
         "No autorizaste la conexión en Mercado Pago. Podés volver a intentar cuando quieras.",
       "Integrations.MercadoPago.InvalidState": "La vinculación venció o no se inició desde FinGrow. Volvé a intentar.",
+      "Integrations.MercadoPago.AccountTaken": "La cuenta de Mercado Pago que estás intentando vincular ya está asociada a otro usuario.",
       "Integrations.MercadoPago.ExchangeFailed":
         "Mercado Pago no entregó las credenciales. Volvé a intentar en unos minutos.",
     } as Record<string, string>,
@@ -371,7 +346,7 @@ export const es = {
     linkedPrefix: "Cuenta de IOL ",
     linkedMiddle: " vinculada",
     linkedOn: (date: string) => ` el ${date}`,
-    linkedSuffix: ".",
+    linkedSuffix: ". Tu portafolio se importa solo cada media hora mientras el mercado está abierto y aparece en Inversiones.",
     needsAttention: "Requiere atención",
     expired:
       "La autorización de IOL venció o fue revocada (por ejemplo, si cambiaste la contraseña en IOL). Volvé a ingresar tus credenciales para seguir conectado.",
@@ -379,9 +354,10 @@ export const es = {
     unlinkWarning: "FinGrow deja de acceder a tu cuenta de IOL y borra la autorización guardada.",
     whatItDoes: "¿Qué hace la vinculación?",
     features: [
+      "Tus acciones, CEDEAR, bonos, obligaciones negociables, letras y fondos de IOL aparecen solos en Inversiones",
+      "Su valor se actualiza cada media hora mientras el mercado está abierto",
       "FinGrow accede a tu cuenta con la API de IOL, sin guardar tu contraseña",
       "Podés desvincularla cuando quieras desde acá",
-      "Próximamente: tu portafolio y sus cotizaciones se van a actualizar solos",
     ],
     linkErrors: {
       "Integrations.Iol.InvalidCredentials":
@@ -392,8 +368,70 @@ export const es = {
     linkedToast: "IOL vinculado",
     linkFailedToast: "No pudimos vincular IOL",
     statusFailed: "No pudimos consultar el estado de IOL.",
+    syncNow: "Sincronizar ahora",
+    synced: "Portafolio de IOL sincronizado",
+    syncDetail: (imported: number, updated: number, ignored: number) =>
+      [
+        `${imported} ${imported === 1 ? "inversión nueva" : "inversiones nuevas"}`,
+        `${updated} ${updated === 1 ? "actualizada" : "actualizadas"}`,
+        ...(ignored > 0 ? [`${ignored} ${ignored === 1 ? "posición omitida" : "posiciones omitidas"} (opciones o cauciones)`] : []),
+      ].join(", "),
+    syncFailed: "No pudimos sincronizar IOL",
+    relinkToSync: "La autorización de IOL venció. Volvé a vincular la cuenta para seguir sincronizando.",
+    relinkInSettings: "La autorización de IOL venció. Volvé a vincularla en Configuración > Integraciones.",
+    syncInvestments: "Sincronizar IOL",
     unlinkedToast: "IOL desvinculado",
     unlinkFailed: "No pudimos desvincular IOL. Intentá de nuevo.",
+  },
+
+  gmail: {
+    description: "Tus facturas y consumos que llegan por mail se registran solos",
+    checking: "Consultando el estado de Gmail...",
+    linkedPrefix: "Cuenta ",
+    linkedMiddle: " vinculada",
+    linkedOn: (date: string) => ` el ${date}`,
+    linkedSuffix: ". Las facturas de servicios reconocidos van a aparecer como pendientes en Transacciones.",
+    failedBadge: "Con error",
+    failed:
+      "Perdimos el acceso a tu Gmail, probablemente porque quitaste el permiso desde tu cuenta de Google. Volvé a autorizar para seguir registrando tus facturas.",
+    reauthorize: "Volver a autorizar",
+    syncNow: "Sincronizar ahora",
+    noNewBills: "No hay facturas nuevas",
+    newBills: (count: number) =>
+      `${count} ${count === 1 ? "factura nueva" : "facturas nuevas"} para revisar en Transacciones`,
+    remaining: (count: number) =>
+      `Quedan ${count} ${count === 1 ? "mail" : "mails"} por revisar: volvé a sincronizar para traerlos.`,
+    syncFailed: "No pudimos sincronizar Gmail. Intentá de nuevo.",
+    unlinkTitle: "¿Desvincular Gmail?",
+    unlinkWarning:
+      "FinGrow deja de leer tus mails y le pide a Google que borre la autorización. Los movimientos que ya se registraron no se pierden.",
+    intro:
+      "Te llevamos a Google para que autorices a FinGrow a leer tus mails. Solo buscamos facturas y consumos de servicios reconocidos, no vemos tu contraseña y podés revocar el permiso cuando quieras, desde acá o desde tu cuenta de Google.",
+    connect: "Conectar con Gmail",
+    detectedTitle: "Servicios que detectamos:",
+    detected: [
+      "Facturas de electricidad (Edenor, Edesur, EPE)",
+      "Facturas de gas (MetroGAS, Naturgy, Camuzzi)",
+      "Facturas de agua (AySA, ABSA)",
+      "Internet y telefonía (Fibertel, Movistar, Personal)",
+      "Otros servicios recurrentes",
+    ],
+    linkErrors: {
+      "Integrations.Gmail.Denied": "No autorizaste la conexión en Google. Podés volver a intentar cuando quieras.",
+      "Integrations.Gmail.MailAccessNotGranted":
+        "Sin permiso para leer tus mails no podemos registrar tus facturas. Volvé a intentar y marcá esa opción en Google.",
+      "Integrations.Gmail.InvalidState": "La vinculación venció o no se inició desde FinGrow. Volvé a intentar.",
+      "Integrations.Gmail.ExchangeFailed": "Google no entregó las credenciales. Volvé a intentar en unos minutos.",
+      "Integrations.Gmail.AccountTaken": "El mail que estás intentando vincular ya está asociado a otro usuario.",
+    } as Record<string, string>,
+    linkedToast: "Gmail vinculado",
+    linkedToastDescription: "Las facturas que te lleguen van a aparecer como pendientes en Transacciones.",
+    linkFailedToast: "No pudimos vincular Gmail",
+    retryLater: "Volvé a intentar en unos minutos.",
+    statusFailed: "No pudimos consultar el estado de Gmail.",
+    startFailed: "No pudimos iniciar la vinculación. Intentá de nuevo.",
+    unlinkedToast: "Gmail desvinculado",
+    unlinkFailed: "No pudimos desvincular Gmail. Intentá de nuevo.",
   },
 
   pendingInbox: {
