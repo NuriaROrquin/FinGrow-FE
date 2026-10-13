@@ -5,19 +5,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
-import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   BellIcon,
   ShieldIcon,
   LockIcon,
   TrashIcon,
-  BuildingIcon,
-  CheckCircle2,
-  Mail,
   Send,
   ScanLine,
   Info,
@@ -26,21 +21,20 @@ import { useAuth } from "@/lib/auth-context"
 import { useMessages } from "@/lib/i18n"
 import { changePassword, PASSWORD_MIN_LENGTH, toastApiError } from "@/lib/api"
 import { ProfileCard } from "@/components/profile/profile-card"
+import { CompanyProfileCard } from "@/components/company/company-profile-card"
 import { TwoFactorCard } from "@/components/security/two-factor-card"
 import { PreferencesCard } from "@/components/preferences/preferences-card"
 import { IolCard } from "@/components/integrations/iol-card"
-import { LINKED_ICON_CLASS } from "@/components/integrations/link-code-integration-card"
+import { GmailCard } from "@/components/integrations/gmail-card"
 import { MercadoPagoCard } from "@/components/integrations/mercado-pago-card"
 import { TelegramCard } from "@/components/integrations/telegram-card"
 import { WhatsAppCard } from "@/components/integrations/whatsapp-card"
 import { useEffect, useState, type FormEvent } from "react"
 import { toast as sonnerToast } from "sonner"
-import { useToast } from "@/hooks/use-toast"
 
 export default function SettingsPage() {
   const { role, logout } = useAuth()
   const t = useMessages()
-  const { toast } = useToast()
   const [mounted, setMounted] = useState(false)
 
   const [currentPassword, setCurrentPassword] = useState("")
@@ -74,29 +68,10 @@ export default function SettingsPage() {
     }
   }
 
-  // Estados para las integraciones
-  const [gmailLinked, setGmailLinked] = useState(false)
-
   // Evitar hidratación incorrecta
   useEffect(() => {
     setMounted(true)
   }, [])
-
-  const handleLinkGmail = () => {
-    setGmailLinked(true)
-    toast({
-      title: t.settings.gmail.linkedToastTitle,
-      description: t.settings.gmail.linkedToastDescription,
-    })
-  }
-
-  const handleUnlinkGmail = () => {
-    setGmailLinked(false)
-    toast({
-      title: t.settings.gmail.unlinkedToastTitle,
-      description: t.settings.gmail.unlinkedToastDescription,
-    })
-  }
 
   if (!mounted) {
     return null
@@ -124,88 +99,7 @@ export default function SettingsPage() {
 
         {/* Profile Tab */}
         <TabsContent value="profile" className="space-y-4">
-          {role === "empleado" ? (
-            <ProfileCard />
-          ) : (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <BuildingIcon className="size-5" />
-                  <div>
-                    <CardTitle>{t.settings.companyProfile.title}</CardTitle>
-                    <CardDescription>{t.settings.companyProfile.description}</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="companyName">{t.settings.companyProfile.legalName}</Label>
-                  <Input id="companyName" placeholder="Mi Empresa S.A." defaultValue="Mi Empresa S.A." />
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="cuit">{t.settings.companyProfile.taxId}</Label>
-                    <Input id="cuit" placeholder="30-12345678-9" defaultValue="30-12345678-9" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="industry">{t.settings.companyProfile.industry}</Label>
-                    <Select defaultValue="tech">
-                      <SelectTrigger id="industry">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="tech">{t.settings.companyProfile.industries.tech}</SelectItem>
-                        <SelectItem value="finance">{t.settings.companyProfile.industries.finance}</SelectItem>
-                        <SelectItem value="retail">{t.settings.companyProfile.industries.retail}</SelectItem>
-                        <SelectItem value="manufacturing">{t.settings.companyProfile.industries.manufacturing}</SelectItem>
-                        <SelectItem value="services">{t.settings.companyProfile.industries.services}</SelectItem>
-                        <SelectItem value="other">{t.settings.companyProfile.industries.other}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="companyEmail">{t.settings.companyProfile.email}</Label>
-                  <Input
-                    id="companyEmail"
-                    type="email"
-                    placeholder="contacto@miempresa.com"
-                    defaultValue="contacto@miempresa.com"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="companyPhone">{t.settings.companyProfile.phone}</Label>
-                  <Input id="companyPhone" type="tel" placeholder="+54 11 4000-0000" />
-                </div>
-
-                <Separator />
-
-                <div className="space-y-2">
-                  <Label htmlFor="companyAddress">{t.settings.companyProfile.address}</Label>
-                  <Input id="companyAddress" placeholder="Av. Libertador 5000, CABA" />
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="employeeCount">{t.settings.companyProfile.employeeCount}</Label>
-                    <Input id="employeeCount" type="number" placeholder="50" defaultValue="50" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="foundedYear">{t.settings.companyProfile.foundedYear}</Label>
-                    <Input id="foundedYear" type="number" placeholder="2010" />
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button variant="outline">{t.common.cancel}</Button>
-                  <Button>{t.common.saveChanges}</Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {role === "empleado" ? <ProfileCard /> : <CompanyProfileCard />}
         </TabsContent>
 
         {/* Notifications Tab */}
@@ -336,92 +230,7 @@ export default function SettingsPage() {
 
           <WhatsAppCard />
 
-          {/* Gmail Integration */}
-          <Card>
-            <CardHeader>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex min-w-0 items-center gap-3">
-                  <Mail className="size-5 shrink-0 text-red-500" />
-                  <div>
-                    <CardTitle>Gmail</CardTitle>
-                    <CardDescription>{t.settings.gmail.description}</CardDescription>
-                  </div>
-                </div>
-                {gmailLinked && (
-                  <Badge variant="default" className="shrink-0 gap-1">
-                    <CheckCircle2 className="size-3" />
-                    {t.common.linked}
-                  </Badge>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {!gmailLinked ? (
-                <>
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>{t.settings.gmail.intro}</AlertDescription>
-                  </Alert>
-
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium">{t.settings.gmail.detectedTitle}</h4>
-                    <ul className="space-y-1 text-sm text-muted-foreground">
-                      {t.settings.gmail.detected.map((service) => (
-                        <li key={service}>• {service}</li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="pt-2">
-                    <Button onClick={handleLinkGmail} className="w-full sm:w-auto gap-2">
-                      <Mail className="size-4" />
-                      {t.settings.gmail.connect}
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="size-10 rounded-full bg-red-500 flex items-center justify-center">
-                        <Mail className="size-5 text-white" />
-                      </div>
-                      <div>
-                        <p className="font-medium">usuario@gmail.com</p>
-                        <p className="text-sm text-muted-foreground">{t.settings.gmail.syncActive}</p>
-                      </div>
-                    </div>
-                    <Button variant="outline" onClick={handleUnlinkGmail}>
-                      {t.common.unlink}
-                    </Button>
-                  </div>
-
-                  <Alert>
-                    <CheckCircle2 className={LINKED_ICON_CLASS} />
-                    <AlertDescription>{t.settings.gmail.syncInfo}</AlertDescription>
-                  </Alert>
-
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium">{t.settings.gmail.processedTitle}</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm p-2 border rounded">
-                        <span>{t.settings.gmail.processed.electricity}</span>
-                        <span className="font-medium">$4,500</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm p-2 border rounded">
-                        <span>{t.settings.gmail.processed.gas}</span>
-                        <span className="font-medium">$2,300</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm p-2 border rounded">
-                        <span>{t.settings.gmail.processed.internet}</span>
-                        <span className="font-medium">$8,900</span>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+          <GmailCard />
 
           <MercadoPagoCard />
 

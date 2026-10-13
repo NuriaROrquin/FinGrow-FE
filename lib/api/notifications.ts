@@ -1,7 +1,16 @@
 import { api } from "./client"
 import type { PagedResultDto } from "./investments"
 
-export type NotificationType = "TransactionsToReview" | "GoalStalled" | "GoalDeadlineApproaching"
+export type NotificationType =
+  | "TransactionsToReview"
+  | "GoalStalled"
+  | "GoalDeadlineApproaching"
+  | "IntegrationAccessLost"
+  | "BudgetWarning"
+  | "BudgetExceeded"
+
+/** Evento de window que se dispara cuando llega una alerta de presupuesto, para refrescar esa pantalla. */
+export const BUDGET_NOTIFICATION_EVENT = "fingrow:budget-notification"
 
 export const NOTIFICATIONS_PAGE_SIZE = 20
 

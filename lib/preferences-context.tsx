@@ -3,7 +3,13 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react"
 import { useTheme } from "next-themes"
 import { toastApiError } from "@/lib/api/notify"
-import { defaultPreferences, getPreferences, updatePreferences, type Preferences } from "@/lib/api/preferences"
+import {
+  defaultPreferences,
+  getPreferences,
+  updatePreferences,
+  type Language,
+  type Preferences,
+} from "@/lib/api/preferences"
 import { useAuth } from "@/lib/auth-context"
 import { setRegionalPreferences } from "@/lib/format"
 import { es } from "@/lib/i18n/es"
@@ -17,6 +23,8 @@ interface PreferencesContextType {
    */
   isReady: boolean
   savePreferences: (preferences: Preferences) => Promise<void>
+  applicationLanguage: Language | null
+  setApplicationLanguage: (language: Language | null) => void
 }
 
 const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined)
@@ -25,6 +33,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, isHydrated, role } = useAuth()
   const { setTheme } = useTheme()
   const [preferences, setPreferences] = useState<Preferences>(defaultPreferences)
+  const [applicationLanguage, setApplicationLanguage] = useState<Language | null>(null)
 
   // Las preferencias son solo del empleado: la empresa y quien no inició sesión usan los
   // valores por defecto. `readyFor` evita que, justo después del login, el dashboard vea
@@ -37,6 +46,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 
     if (owner === "ninguno") {
       setPreferences(defaultPreferences)
+      setApplicationLanguage(null)
       setReadyFor(owner)
       return
     }
@@ -46,6 +56,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     getPreferences(controller.signal)
       .then((loaded) => {
         setPreferences(loaded)
+        setApplicationLanguage(null)
         setTheme(loaded.theme)
       })
       .catch((error: unknown) => {
@@ -62,11 +73,11 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 
   // Se aplica durante el render y no en un efecto: así los hijos que se dibujan en esta misma
   // pasada ya formatean montos y fechas con las preferencias nuevas.
-  setRegionalPreferences(preferences.language, preferences.dateFormat)
+  setRegionalPreferences(applicationLanguage ?? preferences.language, preferences.dateFormat)
 
   useEffect(() => {
-    document.documentElement.lang = preferences.language
-  }, [preferences.language])
+    document.documentElement.lang = applicationLanguage ?? preferences.language
+  }, [applicationLanguage, preferences.language])
 
   const savePreferences = useCallback(
     async (next: Preferences) => {
@@ -78,7 +89,15 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   )
 
   return (
-    <PreferencesContext.Provider value={{ preferences, isReady: readyFor === owner, savePreferences }}>
+    <PreferencesContext.Provider
+      value={{
+        preferences,
+        isReady: readyFor === owner,
+        savePreferences,
+        applicationLanguage,
+        setApplicationLanguage,
+      }}
+    >
       {children}
     </PreferencesContext.Provider>
   )

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, type FormEvent } from "react"
-import { AlertTriangle, CheckCircle2, Info, LineChart, Unlink } from "lucide-react"
+import { AlertTriangle, CheckCircle2, Info, LineChart, RefreshCw, Unlink } from "lucide-react"
 import { toast } from "sonner"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -25,9 +25,11 @@ import { Separator } from "@/components/ui/separator"
 import { Spinner } from "@/components/ui/spinner"
 import {
   getIntegration,
+  IOL_GRANT_EXPIRED,
   isApiError,
   linkIol,
   NOT_LINKED,
+  syncIol,
   toastApiError,
   unlinkIntegration,
   type Integration,
@@ -45,6 +47,7 @@ export function IolCard() {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [linking, setLinking] = useState(false)
+  const [syncing, setSyncing] = useState(false)
   const [unlinking, setUnlinking] = useState(false)
   const linked = integration?.linked ?? false
   const failed = linked && integration?.status === "Error"
@@ -86,6 +89,32 @@ export function IolCard() {
     }
   }
 
+  const sync = async () => {
+    setSyncing(true)
+    try {
+      const summary = await syncIol()
+      toast.success(t.iol.synced, {
+        description: t.iol.syncDetail(summary.imported, summary.updated, summary.ignored),
+      })
+    } catch (error) {
+      if (isApiError(error) && error.code === IOL_GRANT_EXPIRED) {
+        setIntegration((current) => current && { ...current, status: "Error" })
+        setUsername(integration?.externalAccountId ?? "")
+        toast.error(t.iol.syncFailed, { description: t.iol.relinkToSync })
+        return
+      }
+
+      const reason = isApiError(error) ? t.iol.linkErrors[error.code] : undefined
+      if (reason) {
+        toast.error(t.iol.syncFailed, { description: reason })
+      } else {
+        toastApiError(error, t.iol.syncFailed)
+      }
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   const unlink = async () => {
     setUnlinking(true)
     try {
@@ -100,7 +129,7 @@ export function IolCard() {
     }
   }
 
-  const busy = linking || unlinking
+  const busy = linking || syncing || unlinking
 
   const unlinkButton = (
     <AlertDialog>
@@ -214,7 +243,13 @@ export function IolCard() {
                 {t.iol.linkedSuffix}
               </AlertDescription>
             </Alert>
-            <div className="flex flex-wrap gap-2">{unlinkButton}</div>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={sync} disabled={busy} variant="outline">
+                {syncing ? <Spinner className="mr-2" /> : <RefreshCw className="size-4 mr-2" />}
+                {t.iol.syncNow}
+              </Button>
+              {unlinkButton}
+            </div>
           </div>
         ) : (
           <>
