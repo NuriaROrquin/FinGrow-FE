@@ -114,7 +114,6 @@ export {
 export { type EducationCategory } from "./education"
 export { getMepQuote, type MepQuoteDto } from "./exchange-rates"
 export {
-  changeBudgetCurrency,
   createBudget,
   deleteBudget,
   duplicatePreviousBudget,
