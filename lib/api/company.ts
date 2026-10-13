@@ -1,4 +1,5 @@
 import { api } from "./client"
+import type { Currency } from "./transactions"
 
 export const DEPARTMENT_NAME_MAX_LENGTH = 120
 
@@ -173,3 +174,49 @@ export function updateCompanyProfile(payload: UpdateCompanyProfilePayload): Prom
   return api.put<CompanyProfileDto>("/api/company/profile", payload)
 }
 
+export type CompanyPreferenceTheme = "System" | "Light" | "Dark"
+export type CompanyPreferenceLanguage = "es" | "en" | "pt"
+
+export interface CompanyPreferencesDto {
+  theme: CompanyPreferenceTheme | null
+  language: CompanyPreferenceLanguage | null
+  currency: Currency | null
+  fiscalYearStartMonth: number | null
+}
+
+export interface UpdateCompanyPreferencesPayload {
+  theme: CompanyPreferenceTheme
+  language: CompanyPreferenceLanguage
+  currency: Currency
+  fiscalYearStartMonth: number
+}
+
+export function getCompanyPreferences(signal?: AbortSignal): Promise<CompanyPreferencesDto> {
+  return api
+    .get<CompanyPreferencesDto | {
+      theme: CompanyPreferenceTheme | 0
+      language: CompanyPreferenceLanguage | 0
+      currency: Currency
+      fiscalYearStartMonth: number
+    }>("/api/company/preferences", { signal })
+    .then((data) => {
+      const isUnconfigured = data.theme === 0 || data.language === 0 || data.fiscalYearStartMonth === 0
+
+      if (isUnconfigured) {
+        return {
+          theme: null,
+          language: null,
+          currency: null,
+          fiscalYearStartMonth: null,
+        }
+      }
+
+      return data as CompanyPreferencesDto
+    })
+}
+
+export function updateCompanyPreferences(
+  payload: UpdateCompanyPreferencesPayload,
+): Promise<CompanyPreferencesDto> {
+  return api.put<CompanyPreferencesDto>("/api/company/preferences", payload)
+}

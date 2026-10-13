@@ -1,6 +1,5 @@
 "use client"
 
-import type { Language } from "@/lib/api/preferences"
 import { usePreferences } from "@/lib/preferences-context"
 
 import { en } from "./en"
@@ -18,8 +17,8 @@ const messagesByLanguage: Record<Language, Messages> = { es, en, pt }
  * ```
  */
 export function useMessages(): Messages {
-  const { preferences } = usePreferences()
-  return messagesFor(preferences.language)
+  const { preferences, applicationLanguage } = usePreferences()
+  return messagesFor(applicationLanguage ?? preferences.language)
 }
 
 export function messagesFor(language: Language): Messages {
