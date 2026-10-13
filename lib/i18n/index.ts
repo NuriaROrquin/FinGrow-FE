@@ -1,5 +1,6 @@
 "use client"
 
+import type { Language } from "@/lib/api/preferences"
 import { usePreferences } from "@/lib/preferences-context"
 
 import { en } from "./en"
