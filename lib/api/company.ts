@@ -102,3 +102,74 @@ export function changeEmployeeAccess(employeeId: string, isActive: boolean): Pro
 export function deleteEmployee(employeeId: string): Promise<void> {
   return api.delete(`/api/company/employees/${employeeId}`)
 }
+
+export const COMPANY_INDUSTRIES = [
+  "Tecnología",
+  "Finanzas y seguros",
+  "Comercio",
+  "Industria y manufactura",
+  "Salud",
+  "Educación",
+  "Construcción",
+  "Agricultura y ganadería",
+  "Servicios profesionales",
+  "Otro",
+] as const
+
+export type CompanyIndustry = (typeof COMPANY_INDUSTRIES)[number]
+
+export interface CompanyProfileDto {
+  legalName: string
+  taxId: string
+  email: string
+  industry: string
+  corporatePhone: string | null
+  fiscalAddress: string | null
+  foundedYear: number | null
+  employeeCount: number
+}
+
+export interface UpdateCompanyProfilePayload {
+  legalName: string
+  taxId: string
+  email: string
+  industry: string
+  corporatePhone: string | null
+  fiscalAddress: string | null
+  foundedYear: number | null
+}
+
+export function isValidCuit(cuit: string): boolean {
+  const cleaned = cuit.replace(/[-\s]/g, "")
+  if (!/^\d{11}$/.test(cleaned)) {
+    return false
+  }
+
+  const type = Number(cleaned.slice(0, 2))
+  const validTypes = [20, 23, 24, 27, 30, 33, 34]
+  if (!validTypes.includes(type)) {
+    return false
+  }
+
+  const multipliers = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2]
+  let sum = 0
+  for (let i = 0; i < 10; i++) {
+    sum += Number(cleaned[i]) * multipliers[i]
+  }
+
+  const mod = 11 - (sum % 11)
+  let checkDigit = mod
+  if (mod === 11) checkDigit = 0
+  if (mod === 10) checkDigit = 9
+
+  return Number(cleaned[10]) === checkDigit
+}
+
+export function getCompanyProfile(signal?: AbortSignal): Promise<CompanyProfileDto> {
+  return api.get<CompanyProfileDto>("/api/company/profile", { signal })
+}
+
+export function updateCompanyProfile(payload: UpdateCompanyProfilePayload): Promise<CompanyProfileDto> {
+  return api.put<CompanyProfileDto>("/api/company/profile", payload)
+}
+

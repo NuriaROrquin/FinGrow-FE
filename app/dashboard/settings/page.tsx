@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -14,6 +13,8 @@ import {
   ShieldIcon,
   LockIcon,
   TrashIcon,
+  CheckCircle2,
+  Mail,
   BuildingIcon,
   Send,
   ScanLine,
@@ -23,6 +24,7 @@ import { useAuth } from "@/lib/auth-context"
 import { useMessages } from "@/lib/i18n"
 import { changePassword, PASSWORD_MIN_LENGTH, toastApiError } from "@/lib/api"
 import { ProfileCard } from "@/components/profile/profile-card"
+import { CompanyProfileCard } from "@/components/company/company-profile-card"
 import { TwoFactorCard } from "@/components/security/two-factor-card"
 import { PreferencesCard } from "@/components/preferences/preferences-card"
 import { IolCard } from "@/components/integrations/iol-card"
@@ -100,88 +102,7 @@ export default function SettingsPage() {
 
         {/* Profile Tab */}
         <TabsContent value="profile" className="space-y-4">
-          {role === "empleado" ? (
-            <ProfileCard />
-          ) : (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <BuildingIcon className="size-5" />
-                  <div>
-                    <CardTitle>{t.settings.companyProfile.title}</CardTitle>
-                    <CardDescription>{t.settings.companyProfile.description}</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="companyName">{t.settings.companyProfile.legalName}</Label>
-                  <Input id="companyName" placeholder="Mi Empresa S.A." defaultValue="Mi Empresa S.A." />
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="cuit">{t.settings.companyProfile.taxId}</Label>
-                    <Input id="cuit" placeholder="30-12345678-9" defaultValue="30-12345678-9" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="industry">{t.settings.companyProfile.industry}</Label>
-                    <Select defaultValue="tech">
-                      <SelectTrigger id="industry">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="tech">{t.settings.companyProfile.industries.tech}</SelectItem>
-                        <SelectItem value="finance">{t.settings.companyProfile.industries.finance}</SelectItem>
-                        <SelectItem value="retail">{t.settings.companyProfile.industries.retail}</SelectItem>
-                        <SelectItem value="manufacturing">{t.settings.companyProfile.industries.manufacturing}</SelectItem>
-                        <SelectItem value="services">{t.settings.companyProfile.industries.services}</SelectItem>
-                        <SelectItem value="other">{t.settings.companyProfile.industries.other}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="companyEmail">{t.settings.companyProfile.email}</Label>
-                  <Input
-                    id="companyEmail"
-                    type="email"
-                    placeholder="contacto@miempresa.com"
-                    defaultValue="contacto@miempresa.com"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="companyPhone">{t.settings.companyProfile.phone}</Label>
-                  <Input id="companyPhone" type="tel" placeholder="+54 11 4000-0000" />
-                </div>
-
-                <Separator />
-
-                <div className="space-y-2">
-                  <Label htmlFor="companyAddress">{t.settings.companyProfile.address}</Label>
-                  <Input id="companyAddress" placeholder="Av. Libertador 5000, CABA" />
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="employeeCount">{t.settings.companyProfile.employeeCount}</Label>
-                    <Input id="employeeCount" type="number" placeholder="50" defaultValue="50" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="foundedYear">{t.settings.companyProfile.foundedYear}</Label>
-                    <Input id="foundedYear" type="number" placeholder="2010" />
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button variant="outline">{t.common.cancel}</Button>
-                  <Button>{t.common.saveChanges}</Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {role === "empleado" ? <ProfileCard /> : <CompanyProfileCard />}
         </TabsContent>
 
         {/* Notifications Tab */}

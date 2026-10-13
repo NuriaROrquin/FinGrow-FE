@@ -80,7 +80,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
 
     const isCompanyRoute = pathname.startsWith('/dashboard/company')
-    const isEmployeeRoute = !isCompanyRoute && pathname.startsWith('/dashboard') && pathname !== '/dashboard/settings'
+    const isEmployeeRoute = !isCompanyRoute && pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/settings')
 
     if (role === 'empresa' && isEmployeeRoute) {
       // Si es empresa intentando acceder a rutas de empleado, redirigir
