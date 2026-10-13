@@ -130,7 +130,8 @@ export default function BudgetsPage() {
         )}
       </div>
 
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as BudgetsTab)} className="space-y-4">        <TabsList>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as BudgetsTab)} className="space-y-4">        
+        <TabsList>
           <TabsTrigger value="budgets">Presupuestos</TabsTrigger>
           <TabsTrigger value="savings">Metas de Ahorro</TabsTrigger>
         </TabsList>
