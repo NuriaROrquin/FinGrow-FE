@@ -22,7 +22,12 @@ import { MonthlyBudgetSection } from "@/components/budgets/monthly-budget-sectio
 import { formatAmount } from "@/components/budgets/budget-month"
 import { listGoals, toastApiError, type BudgetDto, type GoalDto } from "@/lib/api"
 
+type BudgetsTab = "budgets" | "savings"
+
+const scrollableGoalGrid = "grid max-h-[560px] gap-4 overflow-y-auto p-1 pr-2 md:grid-cols-2"
+
 export default function BudgetsPage() {
+  const [activeTab, setActiveTab] = useState<BudgetsTab>("budgets")
   const [currentBudget, setCurrentBudget] = useState<BudgetDto | null>(null)
   const [isSavingsDialogOpen, setIsSavingsDialogOpen] = useState(false)
   const [savingsGoals, setSavingsGoals] = useState<GoalDto[]>([])
@@ -70,56 +75,62 @@ export default function BudgetsPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Presupuesto Total</CardDescription>
-            <CardTitle className="text-2xl">
-              {currentBudget ? formatAmount(totalBudget, currentBudget.currency) : "—"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              {currentBudget ? "Suma de los topes del mes" : "Sin presupuesto para el mes"}
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-2">
+        {activeTab === "budgets" ? (
+          <>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Presupuesto Total</CardDescription>
+                <CardTitle className="text-2xl">
+                  {currentBudget ? formatAmount(totalBudget, currentBudget.currency) : "—"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  {currentBudget ? "Suma de los topes del mes" : "Sin presupuesto para el mes"}
+                </p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Categorías con Tope</CardDescription>
-            <CardTitle className="text-2xl">{currentBudget?.limits.length ?? 0}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">En el mes seleccionado</p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Categorías con Tope</CardDescription>
+                <CardTitle className="text-2xl">{currentBudget?.limits.length ?? 0}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">En el mes seleccionado</p>
+              </CardContent>
+            </Card>
+          </>
+        ) : (
+          <>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Metas de Ahorro</CardDescription>
+                <CardTitle className="text-2xl">{goalsInProgress.length}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">Metas activas</p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Metas de Ahorro</CardDescription>
-            <CardTitle className="text-2xl">{goalsInProgress.length}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">Metas activas</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Ahorrado</CardDescription>
-            <CardTitle className="text-2xl text-success">${totalSavingsCurrent.toLocaleString()}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              {(totalSavingsTarget > 0 ? (totalSavingsCurrent / totalSavingsTarget) * 100 : 0).toFixed(1)}% del
-              objetivo
-            </p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Total Ahorrado</CardDescription>
+                <CardTitle className="text-2xl text-success">${totalSavingsCurrent.toLocaleString()}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  {(totalSavingsTarget > 0 ? (totalSavingsCurrent / totalSavingsTarget) * 100 : 0).toFixed(1)}% del
+                  objetivo
+                </p>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
-      <Tabs defaultValue="budgets" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as BudgetsTab)} className="space-y-4">        
         <TabsList>
           <TabsTrigger value="budgets">Presupuestos</TabsTrigger>
           <TabsTrigger value="savings">Metas de Ahorro</TabsTrigger>
@@ -174,7 +185,7 @@ export default function BudgetsPage() {
                     No tenés metas en curso. Creá una nueva con &quot;Agregar Meta&quot;.
                   </p>
                 ) : (
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className={scrollableGoalGrid}>
                     {goalsInProgress.map((goal) => (
                       <InProgressGoalCard
                         key={goal.id}
@@ -194,7 +205,7 @@ export default function BudgetsPage() {
                     <TrophyIcon className="size-4" />
                     Alcanzadas ({achievedGoals.length})
                   </h3>
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className={scrollableGoalGrid}>
                     {achievedGoals.map((goal) => (
                       <AchievedGoalCard
                         key={goal.id}

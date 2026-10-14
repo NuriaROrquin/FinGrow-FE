@@ -31,13 +31,15 @@ pide el código de un solo uso y lo detecta apenas el bot lo valida.
 "Pagué $1500 en el almuerzo con el equipo"
 "Ingreso de $10000 por freelance"
 "Cobré $50000 por proyecto de diseño web"
+"Ayer gasté $2000 en la farmacia"
 ```
 
 El bot (con FinGrow-AI detrás):
 - Detecta si es un ingreso o gasto
 - Extrae el monto y la moneda (pesos salvo que diga dólares, euros o reales)
 - Identifica la categoría y, si lo dice, el medio de pago
-- Registra la fecha actual
+- Registra la fecha que dice el mensaje ("Ayer gasté $500 en el súper"); si no dice ninguna, la de hoy.
+  Con un período vago ("la semana pasada") propone una fecha y la marca como estimada
 - Contesta con lo que entendió y botones para confirmar o descartar. Si el mensaje no dice
   cómo se pagó, los botones son los medios de pago y tocar uno confirma con ese medio
 - Si no encuentra el monto, repregunta en lugar de registrar algo incorrecto
