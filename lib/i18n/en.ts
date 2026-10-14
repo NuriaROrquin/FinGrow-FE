@@ -44,6 +44,14 @@ export const en: Messages = {
     retry: "Retry",
   },
 
+  achievements: {
+    unlocked: "Achievement unlocked",
+    unlockedMany: "Achievements unlocked",
+    earnedCount: (count: number) => `You earned ${count} achievements`,
+    great: "Great",
+    close: "Close",
+  },
+
   settings: {
     title: "Settings",
     subtitleEmployee: "Manage your account and preferences",

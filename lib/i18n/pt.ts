@@ -44,6 +44,14 @@ export const pt: Messages = {
     retry: "Tentar novamente",
   },
 
+  achievements: {
+    unlocked: "Conquista desbloqueada",
+    unlockedMany: "Conquistas desbloqueadas",
+    earnedCount: (count: number) => `Você ganhou ${count} conquistas`,
+    great: "Ótimo",
+    close: "Fechar",
+  },
+
   settings: {
     title: "Configurações",
     subtitleEmployee: "Gerencie sua conta e preferências",
