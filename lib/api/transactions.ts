@@ -240,6 +240,7 @@ export interface PendingTransactionDto {
   updatedAt: string
   aiConfidence: number | null
   aiConfidenceLevel: ConfidenceLevel | null
+  receiptId: string | null
 }
 
 export interface PendingTransactionsResponse {
