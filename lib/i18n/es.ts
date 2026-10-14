@@ -42,6 +42,14 @@ export const es = {
     retry: "Reintentar",
   },
 
+  achievements: {
+    unlocked: "Logro desbloqueado",
+    unlockedMany: "Logros desbloqueados",
+    earnedCount: (count: number) => `Ganaste ${count} logros`,
+    great: "Genial",
+    close: "Cerrar",
+  },
+
   settings: {
     title: "Configuración",
     subtitleEmployee: "Administra tu cuenta y preferencias",

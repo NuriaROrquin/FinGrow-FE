@@ -238,3 +238,11 @@ export {
   type NotificationType,
 } from "./notifications"
 export { connectToNotifications, type NotificationsHubHandlers } from "./notifications-hub"
+export {
+  ACHIEVEMENT_NOTIFICATION_EVENT,
+  celebrateAchievements,
+  listAchievements,
+  listUncelebratedAchievements,
+  type AchievementCode,
+  type AchievementDto,
+} from "./achievements"
