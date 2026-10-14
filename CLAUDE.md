@@ -20,7 +20,7 @@ CI (`.github/workflows/ci.yaml`) corre en cada push a `main` y `dev`: `npm ci`, 
 
 ## Estado actual: casi todo es mock
 
-Salvo el login, WhatsApp y Telegram, no hay llamadas reales a la API. Antes de "arreglar" algo que parece
+Salvo el login, WhatsApp, Telegram y lo que se lista abajo, no hay llamadas reales a la API. Antes de "arreglar" algo que parece
 un bug, revisá si no es simplemente esto:
 
 - **`lib/auth-context.tsx`** (T-05, SCRUM-23; login de empresa: HU-46) mantiene la sesión real:
@@ -69,7 +69,17 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   se confirma con correcciones o se descarta. Los pendientes no aparecen en la tabla general. El
   nivel de confianza (`aiConfidenceLevel`) lo calcula el backend: el front solo lo muestra. Sus
   textos ya están en `lib/i18n` en los tres idiomas.
-- `INTEGRACIONES.md` describe Gmail, Mercado Pago y OCR **en modo demo, con datos simulados**:
+- **Escanear un comprobante (HU-12)** es real: `components/transactions/scan-receipt-dialog.tsx`
+  sube el archivo con `POST /api/receipts` y lo escanea con `POST /api/receipts/{id}/scan`, que
+  devuelve el movimiento ya creado como pendiente. Se abre enseguida en la misma revisión de la
+  bandeja (`usePendingReview` + `PendingReviewDialogs`, `components/transactions/pending-review.tsx`):
+  si se cierra sin confirmar, queda en Pendientes. Antes de subir, `lib/receipt-image.ts` recomprime
+  toda foto a JPEG de hasta 2000 px y 5 MB (el tope de Textract), así que WEBP o HEIC llegan al
+  backend como JPEG; un HEIC que el navegador no puede abrir se avisa. Si no se puede leer, el
+  diálogo ofrece cargarlo a mano con el comprobante ya adjunto (`preloadedReceipt` de
+  `AddTransactionForm`). Con fuente `ReceiptScan`, la confianza es la de la lectura (monto, fecha y
+  comercio), no la de la categoría: `ConfidenceBadge` lo explica con `subject="reading"`.
+- `INTEGRACIONES.md` describe Gmail y Mercado Pago **en modo demo, con datos simulados**:
   no hay credenciales reales conectadas todavía. Las excepciones son WhatsApp (HU-09) y Telegram
   (HU-08): `components/integrations/link-code-integration-card.tsx` es la card genérica de
   vinculación por código (estado real vía `GET /api/integrations/{provider}`, código con
