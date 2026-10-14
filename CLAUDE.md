@@ -53,6 +53,16 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   de sesión. Cada notificación nueva llega con el evento `NotificationReceived`. Al conectarse,
   al perder la conexión y al volver a la pestaña se vuelve a pedir el contador: ese pedido pasa
   por `api`, así que de paso renueva la sesión vencida antes de reconectar.
+- **Logros (T-22, SCRUM-106)**: `components/achievements/achievement-celebrator.tsx`, montado en el
+  layout del dashboard solo para empleados, pide `GET /api/achievements/uncelebrated` al entrar y
+  cada vez que la campanita recibe una notificación `AchievementUnlocked` (la campanita dispara
+  `ACHIEVEMENT_NOTIFICATION_EVENT`: no hay una segunda conexión al hub). Un logro chico sale como
+  toast de sonner con borde dorado, uno importante (`isMajor`) en una celebración central, y varios
+  juntos en un solo toast con todas las medallas. Después confirma con
+  `POST /api/achievements/celebrate` **solo los códigos que mostró**. Cada logro tiene su medalla
+  (`achievement-medal.tsx`): el ícono sale del código, así que un código nuevo en el backend
+  necesita su ícono acá. El dorado son los tokens `--gold` y `--gold-soft` de `globals.css`. Los
+  nombres y descripciones de los logros vienen del backend en castellano.
 - **Bandeja de pendientes (HU-15)**: es la pestaña "Pendientes" de Transacciones
   (`components/transactions/pending-inbox.tsx`, también `/dashboard/transactions?view=pending`).
   Lista lo que propuso un canal automático (`GET /api/transactions/pending`), y cada movimiento
