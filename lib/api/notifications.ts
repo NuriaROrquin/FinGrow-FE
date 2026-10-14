@@ -8,6 +8,7 @@ export type NotificationType =
   | "IntegrationAccessLost"
   | "BudgetWarning"
   | "BudgetExceeded"
+  | "AchievementUnlocked"
 
 /** Evento de window que se dispara cuando llega una alerta de presupuesto, para refrescar esa pantalla. */
 export const BUDGET_NOTIFICATION_EVENT = "fingrow:budget-notification"
