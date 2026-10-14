@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ReceiptField } from "@/components/transactions/receipt-field"
+import { ReceiptField, type UploadedReceipt } from "@/components/transactions/receipt-field"
 import { useToast } from "@/hooks/use-toast"
 import {
   expenseCategoryLabels,
@@ -94,11 +94,13 @@ function getInitialFormValues(transaction: TransactionDto | null | undefined, de
 export function AddTransactionForm({
   mode = "create",
   initialTransaction = null,
+  preloadedReceipt = null,
   onSubmit,
   onClose,
 }: {
   mode?: "create" | "edit"
   initialTransaction?: TransactionDto | null
+  preloadedReceipt?: UploadedReceipt | null
   onSubmit: (payload: CreateTransactionPayload, options: { removeReceipt: boolean }) => Promise<void>
   onClose: () => void
 }) {
@@ -120,7 +122,7 @@ export function AddTransactionForm({
     initialTransaction?.status === "Confirmed" ? "Confirmed" : null,
   )
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [receiptId, setReceiptId] = useState<string | null>(null)
+  const [receiptId, setReceiptId] = useState<string | null>(preloadedReceipt?.id ?? null)
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false)
   const [removesExistingReceipt, setRemovesExistingReceipt] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -142,10 +144,10 @@ export function AddTransactionForm({
     setLockedStatus(initialTransaction?.status === "Confirmed" ? "Confirmed" : null)
     setFieldErrors({})
     setGeneralError(null)
-    setReceiptId(null)
+    setReceiptId(preloadedReceipt?.id ?? null)
     setIsUploadingReceipt(false)
     setRemovesExistingReceipt(false)
-  }, [initialTransaction, preferences.currency])
+  }, [initialTransaction, preloadedReceipt, preferences.currency])
 
   const handleCategoryChange = (nextCategory: string) => {
     setCategory(nextCategory)
@@ -362,8 +364,9 @@ export function AddTransactionForm({
       </div>
 
       <ReceiptField
-        key={initialTransaction?.id ?? "new"}
+        key={initialTransaction?.id ?? preloadedReceipt?.id ?? "new"}
         existingReceiptId={mode === "edit" ? initialTransaction?.receiptId ?? null : null}
+        uploaded={mode === "create" ? preloadedReceipt : null}
         onChange={setReceiptId}
         onRemoveExisting={() => setRemovesExistingReceipt(true)}
         onUploadingChange={setIsUploadingReceipt}
