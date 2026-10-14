@@ -27,7 +27,7 @@ import { PreferencesCard } from "@/components/preferences/preferences-card"
 import { IolCard } from "@/components/integrations/iol-card"
 import { GmailCard } from "@/components/integrations/gmail-card"
 import { MercadoPagoCard } from "@/components/integrations/mercado-pago-card"
-import { TelegramCard } from "@/components/integrations/telegram-card"
+import { TELEGRAM_BOT_USERNAME, TelegramCard } from "@/components/integrations/telegram-card"
 import { WhatsAppCard } from "@/components/integrations/whatsapp-card"
 import { useEffect, useState, type FormEvent } from "react"
 import { toast as sonnerToast } from "sonner"
@@ -269,10 +269,19 @@ export default function SettingsPage() {
                     {t.settings.ocr.scanNow}
                   </a>
                 </Button>
-                <Button variant="outline" disabled>
-                  <Send className="size-4 mr-2" />
-                  {t.settings.ocr.sendByTelegram}
-                </Button>
+                {TELEGRAM_BOT_USERNAME ? (
+                  <Button variant="outline" asChild>
+                    <a href={`https://t.me/${TELEGRAM_BOT_USERNAME}`} target="_blank" rel="noopener noreferrer">
+                      <Send className="size-4 mr-2" />
+                      {t.settings.ocr.sendByTelegram}
+                    </a>
+                  </Button>
+                ) : (
+                  <Button variant="outline" disabled>
+                    <Send className="size-4 mr-2" />
+                    {t.settings.ocr.sendByTelegram}
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
