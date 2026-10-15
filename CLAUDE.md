@@ -63,16 +63,27 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   (`achievement-medal.tsx`): el ícono sale del código, así que un código nuevo en el backend
   necesita su ícono acá. El dorado son los tokens `--gold` y `--gold-soft` de `globals.css`. Los
   nombres y descripciones de los logros vienen del backend en castellano.
-- **Hitos y recomendaciones (HU-44)**: en la pestaña Resumen de Reportes,
+- **Reportes: evolución mensual (HU-41)**. `app/dashboard/reports/page.tsx` arranca en los últimos 6
+  meses (contando el mes en curso) y tiene un solo selector de moneda: período y moneda los siguen las
+  cards de arriba, el gráfico, los meses destacados y la sección de HU-44. Todo sale de
+  `GET /api/reports/monthly-summary` (`getMonthlySummary`), que ya viene recortado por el backend (sin
+  los meses antes del primer movimiento del empleado ni el mes en curso vacío; cualquier otro mes vacío
+  viene en cero):
+  no filtres meses en el front ni recalcules totales, promedio o meses destacados, porque dejarían de
+  coincidir con el gráfico. Las cards son `report-summary-cards.tsx`, el gráfico
+  `monthly-evolution-chart.tsx` (ingresos y gastos en barras, ahorro en línea) y el mes con mayor
+  ingreso, el de mayor gasto y el mejor mes de ahorro `monthly-highlights-card.tsx`, sin umbral de
+  historial. Las flechas de `components/period-filter.tsx` mueven la ventana entera (6 meses → los 6
+  anteriores). La pestaña Análisis de Gastos (HU-42) sigue con datos mock.
+- **Hitos y recomendaciones (HU-44)**: debajo del gráfico de Resumen,
   `components/reports/financial-insights-section.tsx` pide `GET /api/reports/insights` con el
-  período de la página y su propio selector de moneda, y arma dos cards: Resumen Financiero
-  (`financial-summary-card.tsx`, hitos calculados por el backend y logros del período) y Análisis y
-  Recomendaciones (`financial-recommendations-card.tsx`, tres recomendaciones de FinGrow-AI). Sin 2
-  meses con actividad suficiente muestra cuánto falta, con los números que manda el backend. El link
-  de cada recomendación sale de `action`, una lista cerrada; la IA nunca manda URLs. La aclaración
-  de que no es asesoramiento financiero certificado va fija al pie de la card de recomendaciones: no
-  la saques. `GET /api/reports/monthly-summary` (`getMonthlySummary`) es la base para conectar los
-  gráficos de Resumen y Análisis de Gastos (HU-41 y HU-42), que siguen con datos mock.
+  período y la moneda de la página y arma dos cards: Hitos Alcanzados (`financial-summary-card.tsx`,
+  los logros del período, sin umbral) y Análisis y Recomendaciones (`financial-recommendations-card.tsx`,
+  tres recomendaciones de FinGrow-AI). Las recomendaciones necesitan 2 meses con actividad suficiente:
+  sin eso, esa card muestra cuánto falta, con los números que manda el backend. Los `highlights` de
+  `/insights` ya no se muestran: los meses destacados son de HU-41. El link de cada recomendación sale
+  de `action`, una lista cerrada; la IA nunca manda URLs. La aclaración de que no es asesoramiento
+  financiero certificado va fija al pie de la card de recomendaciones: no la saques.
 - **Bandeja de pendientes (HU-15)**: es la pestaña "Pendientes" de Transacciones
   (`components/transactions/pending-inbox.tsx`, también `/dashboard/transactions?view=pending`).
   Lista lo que propuso un canal automático (`GET /api/transactions/pending`), y cada movimiento
