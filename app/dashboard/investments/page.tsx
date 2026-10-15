@@ -40,6 +40,7 @@ import {
 import { AddInvestmentForm } from "@/components/investments/add-investment-form"
 import { InvestmentRowActions } from "@/components/investments/investment-row-actions"
 import { LearnByAssetTypeCard } from "@/components/investments/learn-by-asset-type-card"
+import { PortfolioEvolutionCard } from "@/components/investments/portfolio-evolution-card"
 import { RelatedEducationDialog } from "@/components/investments/related-education-dialog"
 import {
   InvestmentFiltersBar,
@@ -74,7 +75,14 @@ import {
   type PortfolioSummaryDto,
 } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
-import { formatDate, formatDateTime, formatMoney, formatNumber } from "@/lib/format"
+import {
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  formatNumber,
+  formatSignedMoney,
+  formatSignedPercentage,
+} from "@/lib/format"
 import { useMessages } from "@/lib/i18n"
 
 const investmentTypeColors: Record<InvestmentType, string> = {
@@ -119,15 +127,6 @@ type MepStatus = "loading" | "ready" | "unavailable"
 interface LearningState {
   type: InvestmentType
   open: boolean
-}
-
-function formatSignedMoney(amount: number, currency: Currency): string {
-  return `${amount < 0 ? "-" : "+"}${formatMoney(Math.abs(amount), currency)}`
-}
-
-function formatPercentage(value: number): string {
-  const formatted = formatNumber(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-  return `${value < 0 ? "" : "+"}${formatted}%`
 }
 
 function listCurrencies(currencies: Currency[]): string {
@@ -704,7 +703,7 @@ export default function InvestmentsPage() {
                   <TrendingDownIcon className="size-4" />
                 )}
                 <span>
-                  {formatPercentage(entry.quotedReturnPercentage)} en {entry.currency}
+                  {formatSignedPercentage(entry.quotedReturnPercentage)} en {entry.currency}
                 </span>
               </div>
             ))}
@@ -730,6 +729,8 @@ export default function InvestmentsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <PortfolioEvolutionCard currencies={summary ? currencies : null} refreshKey={summaryVersion} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
@@ -908,7 +909,7 @@ export default function InvestmentsPage() {
                         )}
                         <span className="font-semibold">
                           {formatSignedMoney(investment.returnAmount, investment.currency)} (
-                          {formatPercentage(investment.returnPercentage)})
+                          {formatSignedPercentage(investment.returnPercentage)})
                         </span>
                       </div>
                     ) : (

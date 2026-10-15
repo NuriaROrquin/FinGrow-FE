@@ -176,6 +176,31 @@ export function getPortfolioSummary(signal?: AbortSignal): Promise<PortfolioSumm
   return api.get<PortfolioSummaryDto>("/api/investments/summary", { signal })
 }
 
+export type PortfolioEvolutionRange = "OneMonth" | "ThreeMonths" | "SixMonths" | "OneYear" | "All"
+
+export type PortfolioEvolutionInterval = "Day" | "Week"
+
+export interface PortfolioEvolutionPointDto {
+  date: string
+  value: number
+  investedAmount: number
+}
+
+export interface PortfolioEvolutionDto {
+  currency: Currency
+  interval: PortfolioEvolutionInterval
+  historyStartsOn: string | null
+  points: PortfolioEvolutionPointDto[]
+}
+
+export function getPortfolioEvolution(
+  currency: Currency,
+  range: PortfolioEvolutionRange,
+  signal?: AbortSignal,
+): Promise<PortfolioEvolutionDto> {
+  return api.get<PortfolioEvolutionDto>("/api/investments/evolution", { query: { currency, range }, signal })
+}
+
 export type InvestmentSortField = "PurchasedOn" | "AssetName" | "InvestedAmount" | "CurrentValue" | "ReturnPercentage"
 
 export type SortDirection = "Ascending" | "Descending"
