@@ -222,7 +222,23 @@ export {
   type QuoteMarket,
   type SortDirection,
 } from "./investments"
-export { getSavingsVsGoals, type SavingsVsGoalsDto, type SavingsVsGoalsMonthDto } from "./reports"
+export {
+  getFinancialInsights,
+  getMonthlySummary,
+  getSavingsVsGoals,
+  type CategoryAmountDto,
+  type FinancialHighlightsDto,
+  type FinancialInsightsDto,
+  type FinancialRecommendationDto,
+  type InsightsEligibilityDto,
+  type MonthAmountDto,
+  type MonthlySummaryDto,
+  type MonthlySummaryMonthDto,
+  type RecommendationAction,
+  type RecommendationKind,
+  type SavingsVsGoalsDto,
+  type SavingsVsGoalsMonthDto,
+} from "./reports"
 export { canQuoteIn, getSecurityPrice, searchSecurityPrices, type SecurityPriceDto } from "./security-prices"
 export {
   getDashboardSummary,
