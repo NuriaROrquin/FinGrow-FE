@@ -3,15 +3,11 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { FinancialRecommendationsCard } from "@/components/reports/financial-recommendations-card"
 import { FinancialSummaryCard } from "@/components/reports/financial-summary-card"
 import { getFinancialInsights, toastApiError, type FinancialInsightsDto, type InsightsEligibilityDto } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
-import { usePreferences } from "@/lib/preferences-context"
-
-const currencies: Currency[] = ["ARS", "USD", "EUR", "BRL"]
 
 function plural(count: number, singular: string, pluralForm: string): string {
   return `${count} ${count === 1 ? singular : pluralForm}`
@@ -36,14 +32,14 @@ function NotEnoughHistory({ eligibility }: { eligibility: InsightsEligibilityDto
   const missingMonths = Math.max(0, eligibility.requiredActiveMonths - eligibility.activeMonths)
 
   return (
-    <Card className="md:col-span-2">
+    <Card>
       <CardHeader>
-        <CardTitle>Hitos y Recomendaciones</CardTitle>
+        <CardTitle>Análisis y Recomendaciones</CardTitle>
         <CardDescription>Todavía no tenemos suficiente historial para analizar tus finanzas</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm">
-          Para ver tus hitos y recomendaciones necesitás{" "}
+          Para ver tus recomendaciones necesitás{" "}
           {plural(eligibility.requiredActiveMonths, "mes", "meses")} con al menos{" "}
           {eligibility.requiredTransactions} movimientos confirmados y algún ingreso. Te{" "}
           {missingMonths === 1 ? "falta" : "faltan"} {plural(missingMonths, "mes", "meses")}.
@@ -66,9 +62,13 @@ function NotEnoughHistory({ eligibility }: { eligibility: InsightsEligibilityDto
   )
 }
 
-export function FinancialInsightsSection({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
-  const { preferences } = usePreferences()
-  const [currency, setCurrency] = useState<Currency>(preferences.currency)
+interface FinancialInsightsSectionProps {
+  dateFrom: string
+  dateTo: string
+  currency: Currency
+}
+
+export function FinancialInsightsSection({ dateFrom, dateTo, currency }: FinancialInsightsSectionProps) {
   const [insights, setInsights] = useState<FinancialInsightsDto | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -92,23 +92,9 @@ export function FinancialInsightsSection({ dateFrom, dateTo }: { dateFrom: strin
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold">Hitos y Recomendaciones</h2>
-          <p className="text-sm text-muted-foreground">Lo que lograste en el período y qué podés hacer con tu plata</p>
-        </div>
-        <Select value={currency} onValueChange={(value) => setCurrency(value as Currency)}>
-          <SelectTrigger className="w-[100px] no-print" aria-label="Moneda de los hitos y recomendaciones">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {currencies.map((option) => (
-              <SelectItem key={option} value={option}>
-                {option}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div>
+        <h2 className="text-lg font-semibold">Hitos y Recomendaciones</h2>
+        <p className="text-sm text-muted-foreground">Lo que lograste en el período y qué podés hacer con tu plata</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -121,21 +107,19 @@ export function FinancialInsightsSection({ dateFrom, dateTo }: { dateFrom: strin
           <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground md:col-span-2">
             No se pudieron cargar los hitos y recomendaciones.
           </p>
-        ) : !insights.eligibility.isEligible || !insights.highlights ? (
-          <NotEnoughHistory eligibility={insights.eligibility} />
         ) : (
           <>
-            <FinancialSummaryCard
-              highlights={insights.highlights}
-              achievements={insights.achievements}
-              currency={insights.currency}
-            />
-            <FinancialRecommendationsCard
-              recommendations={insights.recommendations}
-              available={insights.recommendationsAvailable}
-              hasMovements={insights.highlights.hasMovements}
-              currency={insights.currency}
-            />
+            <FinancialSummaryCard achievements={insights.achievements} />
+            {insights.eligibility.isEligible && insights.highlights ? (
+              <FinancialRecommendationsCard
+                recommendations={insights.recommendations}
+                available={insights.recommendationsAvailable}
+                hasMovements={insights.highlights.hasMovements}
+                currency={insights.currency}
+              />
+            ) : (
+              <NotEnoughHistory eligibility={insights.eligibility} />
+            )}
           </>
         )}
       </div>

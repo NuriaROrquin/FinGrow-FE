@@ -7,19 +7,22 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts"
 import { DownloadIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { useState } from "react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useEffect, useState } from "react"
 import { FinancialInsightsSection } from "@/components/reports/financial-insights-section"
+import { MonthlyEvolutionChart } from "@/components/reports/monthly-evolution-chart"
+import { MonthlyHighlightsCard } from "@/components/reports/monthly-highlights-card"
+import { ReportSummaryCards } from "@/components/reports/report-summary-cards"
 import { SavingsVsGoalsReport } from "@/components/reports/savings-vs-goals-report"
-import { PeriodFilter, getCurrentMonthStart, getInclusiveMonthCount, getToday } from "@/components/period-filter"
+import { PeriodFilter, getInclusiveMonthCount, getLastMonthsStart, getToday } from "@/components/period-filter"
+import { getMonthlySummary, toastApiError, type MonthlySummaryDto } from "@/lib/api"
+import type { Currency } from "@/lib/api/transactions"
+import { usePreferences } from "@/lib/preferences-context"
 
-const monthlyIncomeExpense = [
-	{ month: "Ene", income: 500000, expense: 240000, savings: 260000 },
-	{ month: "Feb", income: 500000, expense: 139800, savings: 360200 },
-	{ month: "Mar", income: 520000, expense: 380000, savings: 140000 },
-	{ month: "Abr", income: 520000, expense: 390800, savings: 129200 },
-	{ month: "May", income: 550000, expense: 480000, savings: 70000 },
-	{ month: "Jun", income: 550000, expense: 380000, savings: 170000 },
-]
+// HU-41: la vista por defecto son los últimos seis meses, contando el mes en curso.
+const DEFAULT_MONTHS = 6
+
+const currencies: Currency[] = ["ARS", "USD", "EUR", "BRL"]
 
 const categoryBreakdown = [
 	{ category: "Comida", amount: 120000, percentage: 24 },
@@ -31,18 +34,6 @@ const categoryBreakdown = [
 ]
 
 const chartConfig = {
-	income: {
-		label: "Ingresos",
-		color: "hsl(var(--chart-2))",
-	},
-	expense: {
-		label: "Gastos",
-		color: "hsl(var(--chart-1))",
-	},
-	savings: {
-		label: "Ahorros",
-		color: "hsl(var(--chart-3))",
-	},
 	amount: {
 		label: "Monto",
 		color: "hsl(var(--chart-1))",
@@ -50,14 +41,31 @@ const chartConfig = {
 }
 
 export default function ReportsPage() {
-	const totalIncome = monthlyIncomeExpense.reduce((sum, m) => sum + m.income, 0)
-	const totalExpense = monthlyIncomeExpense.reduce((sum, m) => sum + m.expense, 0)
-	const totalSavings = monthlyIncomeExpense.reduce((sum, m) => sum + m.savings, 0)
-	const avgMonthlySavings = totalSavings / monthlyIncomeExpense.length
-
+	const { preferences } = usePreferences()
+	const [currency, setCurrency] = useState<Currency>(preferences.currency)
 	const [isExporting, setIsExporting] = useState(false)
-	const [dateFrom, setDateFrom] = useState(() => getCurrentMonthStart())
+	const [dateFrom, setDateFrom] = useState(() => getLastMonthsStart(DEFAULT_MONTHS))
 	const [dateTo, setDateTo] = useState(() => getToday())
+	const [summary, setSummary] = useState<MonthlySummaryDto | null>(null)
+	const [isSummaryLoading, setIsSummaryLoading] = useState(true)
+
+	useEffect(() => {
+		const controller = new AbortController()
+		setIsSummaryLoading(true)
+
+		getMonthlySummary(currency, dateFrom, dateTo, controller.signal)
+			.then(setSummary)
+			.catch((error: unknown) => {
+				if (error instanceof DOMException && error.name === "AbortError") return
+				setSummary(null)
+				toastApiError(error, "No se pudo cargar el resumen mensual.")
+			})
+			.finally(() => {
+				if (!controller.signal.aborted) setIsSummaryLoading(false)
+			})
+
+		return () => controller.abort()
+	}, [currency, dateFrom, dateTo])
 
 	const handleExportPDF = () => {
 		setIsExporting(true)
@@ -114,6 +122,18 @@ export default function ReportsPage() {
 							setDateTo(nextDateTo)
 						}}
 					/>
+					<Select value={currency} onValueChange={(value) => setCurrency(value as Currency)}>
+						<SelectTrigger className="w-[100px]" aria-label="Moneda del reporte">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{currencies.map((option) => (
+								<SelectItem key={option} value={option}>
+									{option}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
 					<Button onClick={handleExportPDF} disabled={isExporting}>
 						<DownloadIcon className="size-4" />
 						{isExporting ? "Preparando..." : "Exportar PDF"}
@@ -123,56 +143,7 @@ export default function ReportsPage() {
 
 			{/* Contenedor para exportar */}
 			<div id="report-content">
-				{/* Summary Cards */}
-				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-					<Card>
-						<CardHeader className="pb-2">
-							<CardDescription>Ingresos Totales</CardDescription>
-							<CardTitle className="text-2xl text-success">
-								${totalIncome.toLocaleString()}
-							</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<p className="text-sm text-muted-foreground">Últimos 6 meses</p>
-						</CardContent>
-					</Card>
-
-					<Card>
-						<CardHeader className="pb-2">
-							<CardDescription>Gastos Totales</CardDescription>
-							<CardTitle className="text-2xl">
-								${totalExpense.toLocaleString()}
-							</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<p className="text-sm text-muted-foreground">Últimos 6 meses</p>
-						</CardContent>
-					</Card>
-
-					<Card>
-						<CardHeader className="pb-2">
-							<CardDescription>Ahorros Totales</CardDescription>
-							<CardTitle className="text-2xl text-success">
-								${totalSavings.toLocaleString()}
-							</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<p className="text-sm text-muted-foreground">Últimos 6 meses</p>
-						</CardContent>
-					</Card>
-
-					<Card>
-						<CardHeader className="pb-2">
-							<CardDescription>Ahorro Mensual Promedio</CardDescription>
-							<CardTitle className="text-2xl">
-								${avgMonthlySavings.toLocaleString()}
-							</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<p className="text-sm text-muted-foreground">Por mes</p>
-						</CardContent>
-					</Card>
-				</div>
+				<ReportSummaryCards summary={summary} isLoading={isSummaryLoading} />
 
 				{/* Report Tabs */}
 				<Tabs defaultValue="overview" className="space-y-4 mt-8">
@@ -184,55 +155,14 @@ export default function ReportsPage() {
 
 					{/* Overview Tab */}
 					<TabsContent value="overview" className="space-y-4">
-						<Card>
-							<CardHeader>
-								<CardTitle>Ingresos vs Gastos</CardTitle>
-								<CardDescription>Comparación mensual de ingresos y gastos</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<ChartContainer config={chartConfig} className="h-[400px] w-full">
-									<BarChart
-										data={monthlyIncomeExpense}
-										margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-									>
-										<CartesianGrid
-											strokeDasharray="3 3"
-											stroke="#e5e7eb"
-											opacity={0.5}
-										/>
-										<XAxis
-											dataKey="month"
-											tick={{ fill: "#6b7280", fontSize: 12 }}
-											axisLine={{ stroke: "#e5e7eb" }}
-										/>
-										<YAxis
-											tick={{ fill: "#6b7280", fontSize: 12 }}
-											axisLine={{ stroke: "#e5e7eb" }}
-										/>
-										<ChartTooltip
-											content={<ChartTooltipContent />}
-											cursor={{ fill: "rgba(139, 92, 246, 0.1)" }}
-										/>
-										<Bar
-											dataKey="income"
-											fill="#a78bfa"
-											radius={[8, 8, 0, 0]}
-											animationDuration={800}
-											animationBegin={0}
-										/>
-										<Bar
-											dataKey="expense"
-											fill="#8b5cf6"
-											radius={[8, 8, 0, 0]}
-											animationDuration={800}
-											animationBegin={100}
-										/>
-									</BarChart>
-								</ChartContainer>
-							</CardContent>
-						</Card>
+						<div className="grid gap-4 lg:grid-cols-3">
+							<div className="lg:col-span-2">
+								<MonthlyEvolutionChart summary={summary} isLoading={isSummaryLoading} />
+							</div>
+							<MonthlyHighlightsCard summary={summary} isLoading={isSummaryLoading} />
+						</div>
 
-						<FinancialInsightsSection dateFrom={dateFrom} dateTo={dateTo} />
+						<FinancialInsightsSection dateFrom={dateFrom} dateTo={dateTo} currency={currency} />
 					</TabsContent>
 
 					{/* Spending Analysis Tab */}
