@@ -232,6 +232,7 @@ export {
   type FinancialRecommendationDto,
   type InsightsEligibilityDto,
   type MonthAmountDto,
+  type MonthHighlightsDto,
   type MonthlySummaryDto,
   type MonthlySummaryMonthDto,
   type RecommendationAction,

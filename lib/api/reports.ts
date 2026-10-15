@@ -47,6 +47,17 @@ export interface MonthlySummaryMonthDto {
   hasMovements: boolean
 }
 
+export interface MonthHighlightsDto {
+  highestIncomeMonth: MonthAmountDto | null
+  highestExpenseMonth: MonthAmountDto | null
+  bestSavingsMonth: MonthAmountDto | null
+}
+
+/**
+ * `months` no trae los meses anteriores al primer movimiento del empleado en la moneda (en todo su historial)
+ * ni el mes en curso todavía vacío (HU-41): cualquier otro mes vacío viene en cero. Totales, promedio y
+ * `highlights` salen de esos mismos meses.
+ */
 export interface MonthlySummaryDto {
   currency: Currency
   from: string
@@ -55,7 +66,9 @@ export interface MonthlySummaryDto {
   totalIncome: number
   totalExpenses: number
   totalSavings: number
+  averageMonthlySavings: number | null
   expensesByCategory: CategoryAmountDto[]
+  highlights: MonthHighlightsDto
 }
 
 export function getMonthlySummary(
