@@ -33,6 +33,15 @@ export function formatNumber(value: number, options?: Intl.NumberFormatOptions):
   return value.toLocaleString(locale, options)
 }
 
+export function formatSignedMoney(amount: number, currency: Currency): string {
+  return `${amount < 0 ? "-" : "+"}${formatMoney(Math.abs(amount), currency)}`
+}
+
+export function formatSignedPercentage(value: number): string {
+  const formatted = formatNumber(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return `${value < 0 ? "" : "+"}${formatted}%`
+}
+
 /** Fecha numérica en el formato elegido: `04/10/2026`, `10/04/2026` o `2026-10-04`. */
 export function formatDate(value: Date | string): string {
   return formatPattern(toDate(value), datePattern)

@@ -8,6 +8,7 @@ import {
   CheckCheckIcon,
   CircleAlertIcon,
   InboxIcon,
+  MedalIcon,
   PlugZapIcon,
   TargetIcon,
   TriangleAlertIcon,
@@ -19,6 +20,7 @@ import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Spinner } from "@/components/ui/spinner"
 import {
+  ACHIEVEMENT_NOTIFICATION_EVENT,
   BUDGET_NOTIFICATION_EVENT,
   connectToNotifications,
   getUnreadNotificationCount,
@@ -40,11 +42,13 @@ const iconByType: Record<NotificationType, LucideIcon> = {
   IntegrationAccessLost: PlugZapIcon,
   BudgetWarning: TriangleAlertIcon,
   BudgetExceeded: CircleAlertIcon,
+  AchievementUnlocked: MedalIcon,
 }
 
 const unreadStyleByType: Partial<Record<NotificationType, string>> = {
   BudgetWarning: "bg-orange-500/15 text-orange-600",
   BudgetExceeded: "bg-red-500/15 text-red-600",
+  AchievementUnlocked: "bg-gold-soft text-gold",
 }
 
 const hrefByType: Partial<Record<NotificationType, string>> = {
@@ -98,6 +102,9 @@ export function NotificationBell() {
           const show = notification.type === "BudgetExceeded" ? toast.error : toast.warning
           show(notification.title, { description: notification.body })
           window.dispatchEvent(new Event(BUDGET_NOTIFICATION_EVENT))
+        }
+        if (notification.type === "AchievementUnlocked") {
+          window.dispatchEvent(new Event(ACHIEVEMENT_NOTIFICATION_EVENT))
         }
         setUnread((current) => current + 1)
         setNotifications((current) =>

@@ -42,6 +42,7 @@ import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { NotificationBell } from "@/components/notifications/notification-bell"
+import { AchievementCelebrator } from "@/components/achievements/achievement-celebrator"
 import { usePreferences } from "@/lib/preferences-context"
 import { useMessages, type Messages } from "@/lib/i18n"
 import { useEffect } from "react"
@@ -252,6 +253,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
         <main className="w-full min-w-0 overflow-x-hidden p-6">{children}</main>
+        {role === "empleado" && <AchievementCelebrator />}
       </SidebarInset>
     </SidebarProvider>
   )

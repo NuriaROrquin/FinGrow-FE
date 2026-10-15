@@ -70,15 +70,21 @@ export {
   COMPANY_INDUSTRIES,
   EMPLOYEE_EMAIL_MAX_LENGTH,
   getCompanyProfile,
+  getCompanyPreferences,
   isValidCuit,
   listDepartments,
   listEmployees,
   updateCompanyProfile,
+  updateCompanyPreferences,
   updateDepartment,
   updateEmployee,
   type CompanyEmployeeDto,
   type CompanyIndustry,
   type CompanyProfileDto,
+  type CompanyPreferencesDto,
+  type CompanyPreferenceLanguage,
+  type CompanyPreferenceTheme,
+  type UpdateCompanyPreferencesPayload,
   type CreatedEmployeeDto,
   type CreateEmployeePayload,
   type DepartmentDto,
@@ -121,7 +127,6 @@ export {
 export { type EducationCategory } from "./education"
 export { getMepQuote, type MepQuoteDto } from "./exchange-rates"
 export {
-  changeBudgetCurrency,
   createBudget,
   deleteBudget,
   duplicatePreviousBudget,
@@ -178,13 +183,18 @@ export {
   type MercadoPagoSyncSummary,
 } from "./integrations"
 export {
+  ANNUAL_RATE_MAX,
   ASSET_NAME_MAX_LENGTH,
   FUND_NAME_MAX_LENGTH,
   SYMBOL_MAX_LENGTH,
+  TERM_DAYS_MAX,
+  accruesInterest,
   createInvestment,
   formatQuantity,
+  getPortfolioEvolution,
   getPortfolioSummary,
   deleteInvestment,
+  hasTerm,
   investmentSortFieldLabels,
   investmentTypeLabels,
   isPricedPerNominal,
@@ -204,6 +214,10 @@ export {
   type InvestmentType,
   type LastPurchaseDto,
   type PagedResultDto,
+  type PortfolioEvolutionDto,
+  type PortfolioEvolutionInterval,
+  type PortfolioEvolutionPointDto,
+  type PortfolioEvolutionRange,
   type PortfolioSummaryDto,
   type QuoteMarket,
   type SortDirection,
@@ -233,3 +247,11 @@ export {
   type NotificationType,
 } from "./notifications"
 export { connectToNotifications, type NotificationsHubHandlers } from "./notifications-hub"
+export {
+  ACHIEVEMENT_NOTIFICATION_EVENT,
+  celebrateAchievements,
+  listAchievements,
+  listUncelebratedAchievements,
+  type AchievementCode,
+  type AchievementDto,
+} from "./achievements"

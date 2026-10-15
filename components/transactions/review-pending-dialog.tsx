@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ConfidenceBadge } from "@/components/transactions/confidence-badge"
+import { ReceiptPreview } from "@/components/transactions/receipt-preview"
 import {
   expenseCategoryLabels,
   incomeCategoryLabels,
@@ -76,6 +77,7 @@ export function ReviewPendingDialog({
   const categoryLabels: Record<string, string> = values.type === "Expense" ? expenseCategoryLabels : incomeCategoryLabels
   const sourceLabel = t.sources[transaction.source] ?? transaction.source
   const keepsAiSuggestion = values.type === transaction.type && values.category === transaction.category
+  const isScanned = transaction.source === "ReceiptScan"
 
   const update = (changes: Partial<FormValues>, clearedField?: FieldName) => {
     setValues((current) => (current ? { ...current, ...changes } : current))
@@ -124,6 +126,17 @@ export function ReviewPendingDialog({
           <DialogTitle>{t.reviewTitle}</DialogTitle>
           <DialogDescription>{t.reviewDescription(sourceLabel)}</DialogDescription>
         </DialogHeader>
+
+        {isScanned && (
+          <div className="space-y-2 rounded-md border border-border/70 bg-muted/30 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-sm font-medium text-foreground">{t.readFromReceipt}</span>
+              <ConfidenceBadge level={transaction.aiConfidenceLevel} type={transaction.type} subject="reading" />
+            </div>
+            <p className="text-xs text-muted-foreground">{t.readingHelp}</p>
+            {transaction.receiptId && <ReceiptPreview receiptId={transaction.receiptId} />}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <Tabs
@@ -202,7 +215,7 @@ export function ReviewPendingDialog({
                     {t.aiSuggested}
                   </span>
                 )}
-                <ConfidenceBadge level={transaction.aiConfidenceLevel} type={transaction.type} />
+                {!isScanned && <ConfidenceBadge level={transaction.aiConfidenceLevel} type={transaction.type} />}
               </div>
             )}
           </div>

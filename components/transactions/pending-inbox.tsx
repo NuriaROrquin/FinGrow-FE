@@ -1,36 +1,15 @@
 "use client"
 
-import { useState } from "react"
 import { CheckCircle2, Inbox, Trash2 } from "lucide-react"
-import { toast } from "sonner"
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ConfidenceBadge } from "@/components/transactions/confidence-badge"
-import { ReviewPendingDialog } from "@/components/transactions/review-pending-dialog"
+import { PendingReviewDialogs, usePendingReview } from "@/components/transactions/pending-review"
 import { getCategoryIcon } from "@/components/transactions/transaction-icons"
 import type { PendingTransactionsState } from "@/components/transactions/use-pending-transactions"
-import { isApiError } from "@/lib/api/errors"
-import { toastApiError } from "@/lib/api/notify"
-import {
-  confirmTransaction,
-  discardTransaction,
-  expenseCategoryLabels,
-  incomeCategoryLabels,
-  type ConfirmTransactionPayload,
-  type PendingTransactionDto,
-} from "@/lib/api/transactions"
+import { expenseCategoryLabels, incomeCategoryLabels, type PendingTransactionDto } from "@/lib/api/transactions"
 import { formatDate, formatMoney } from "@/lib/format"
 import { useMessages } from "@/lib/i18n"
 
@@ -43,10 +22,6 @@ function categoryLabel(transaction: PendingTransactionDto): string {
   return labels[transaction.category] ?? transaction.category
 }
 
-function wasAlreadyReviewed(error: unknown): boolean {
-  return isApiError(error) && (error.status === 404 || error.status === 409)
-}
-
 export function PendingInbox({
   pending,
   onConfirmed,
@@ -56,63 +31,9 @@ export function PendingInbox({
   onConfirmed: () => void
   className?: string
 }) {
-  const messages = useMessages()
-  const t = messages.pendingInbox
-  const [reviewing, setReviewing] = useState<PendingTransactionDto | null>(null)
-  const [toDiscard, setToDiscard] = useState<PendingTransactionDto | null>(null)
-  const [isConfirming, setIsConfirming] = useState(false)
-  const [isDiscarding, setIsDiscarding] = useState(false)
-
+  const t = useMessages().pendingInbox
   const { items, isLoading, hasError, reload, remove } = pending
-
-  const handleConfirm = async (transaction: PendingTransactionDto, payload: ConfirmTransactionPayload) => {
-    if (isConfirming) return
-    setIsConfirming(true)
-
-    try {
-      await confirmTransaction(transaction.id, payload)
-      remove(transaction.id)
-      setReviewing(null)
-      onConfirmed()
-      toast.success(t.confirmedToast, { description: t.confirmedToastDescription })
-    } catch (error) {
-      if (wasAlreadyReviewed(error)) {
-        remove(transaction.id)
-        setReviewing(null)
-        onConfirmed()
-        toast.info(t.alreadyReviewed)
-      } else {
-        toastApiError(error, t.confirmFailed)
-      }
-    } finally {
-      setIsConfirming(false)
-    }
-  }
-
-  const handleDiscard = async () => {
-    if (!toDiscard || isDiscarding) return
-    setIsDiscarding(true)
-
-    try {
-      await discardTransaction(toDiscard.id)
-      remove(toDiscard.id)
-      setToDiscard(null)
-      setReviewing(null)
-      toast.success(t.discardedToast, { description: t.discardedToastDescription })
-    } catch (error) {
-      if (wasAlreadyReviewed(error)) {
-        remove(toDiscard.id)
-        setToDiscard(null)
-        setReviewing(null)
-        onConfirmed()
-        toast.info(t.alreadyReviewed)
-      } else {
-        toastApiError(error, t.discardFailed)
-      }
-    } finally {
-      setIsDiscarding(false)
-    }
-  }
+  const review = usePendingReview({ onRemoved: remove, onConfirmed })
 
   return (
     <Card className={className}>
@@ -177,7 +98,11 @@ export function PendingInbox({
                           </div>
                         </TableCell>
                         <TableCell className={cellClassName}>
-                          <ConfidenceBadge level={transaction.aiConfidenceLevel} type={transaction.type} />
+                          <ConfidenceBadge
+                            level={transaction.aiConfidenceLevel}
+                            type={transaction.type}
+                            subject={transaction.source === "ReceiptScan" ? "reading" : "category"}
+                          />
                         </TableCell>
                         <TableCell className={`${cellClassName} text-muted-foreground`}>
                           {t.sources[transaction.source] ?? transaction.source}
@@ -197,7 +122,7 @@ export function PendingInbox({
                               size="sm"
                               className="gap-1"
                               aria-label={t.reviewAria(transaction.description)}
-                              onClick={() => setReviewing(transaction)}
+                              onClick={() => review.open(transaction)}
                             >
                               <CheckCircle2 className="size-4" aria-hidden="true" />
                               {t.review}
@@ -208,7 +133,7 @@ export function PendingInbox({
                               className="size-8 text-muted-foreground hover:text-rose-500 dark:hover:text-rose-300"
                               aria-label={t.discardAria(transaction.description)}
                               title={t.discard}
-                              onClick={() => setToDiscard(transaction)}
+                              onClick={() => review.requestDiscard(transaction)}
                             >
                               <Trash2 className="size-4" aria-hidden="true" />
                             </Button>
@@ -225,41 +150,7 @@ export function PendingInbox({
         )}
       </CardContent>
 
-      <ReviewPendingDialog
-        key={reviewing?.id ?? "closed"}
-        transaction={reviewing}
-        isSubmitting={isConfirming}
-        onConfirm={handleConfirm}
-        onDiscard={setToDiscard}
-        onClose={() => setReviewing(null)}
-      />
-
-      <AlertDialog
-        open={toDiscard !== null}
-        onOpenChange={(open) => {
-          if (!open && !isDiscarding) setToDiscard(null)
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t.discardTitle}</AlertDialogTitle>
-            <AlertDialogDescription>{toDiscard ? t.discardWarning(toDiscard.description) : ""}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDiscarding}>{messages.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={isDiscarding}
-              onClick={(event) => {
-                event.preventDefault()
-                void handleDiscard()
-              }}
-            >
-              {isDiscarding ? t.discarding : t.discardConfirm}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <PendingReviewDialogs review={review} />
     </Card>
   )
 }

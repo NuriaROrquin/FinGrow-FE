@@ -42,6 +42,22 @@ export function isQuoted(type: InvestmentType): boolean {
   return quoteMarketOf(type) !== null
 }
 
+export const ANNUAL_RATE_MAX = 999.99
+
+export const TERM_DAYS_MAX = 3650
+
+const accruingTypes: InvestmentType[] = ["FixedTermDeposit", "Repo", "RemuneratedAccount"]
+
+const termTypes: InvestmentType[] = ["FixedTermDeposit", "Repo"]
+
+export function accruesInterest(type: InvestmentType): boolean {
+  return accruingTypes.includes(type)
+}
+
+export function hasTerm(type: InvestmentType): boolean {
+  return termTypes.includes(type)
+}
+
 export const pricedPerNominalTypes: InvestmentType[] = ["Bond", "CorporateBond", "TreasuryBill"]
 
 export function isPricedPerNominal(type: InvestmentType): boolean {
@@ -106,6 +122,9 @@ export interface InvestmentDto {
   quantity: number | null
   createdAt: string
   source: InvestmentSource
+  annualRate: number | null
+  termDays: number | null
+  maturesOn: string | null
 }
 
 export interface CreateInvestmentPayload {
@@ -116,6 +135,8 @@ export interface CreateInvestmentPayload {
   purchasedOn: string
   symbol: string | null
   quantity: number | null
+  annualRate: number | null
+  termDays: number | null
 }
 
 export interface CurrencyPortfolioDto {
@@ -153,6 +174,31 @@ export interface PortfolioSummaryDto {
 
 export function getPortfolioSummary(signal?: AbortSignal): Promise<PortfolioSummaryDto> {
   return api.get<PortfolioSummaryDto>("/api/investments/summary", { signal })
+}
+
+export type PortfolioEvolutionRange = "OneMonth" | "ThreeMonths" | "SixMonths" | "OneYear" | "All"
+
+export type PortfolioEvolutionInterval = "Day" | "Week"
+
+export interface PortfolioEvolutionPointDto {
+  date: string
+  value: number
+  investedAmount: number
+}
+
+export interface PortfolioEvolutionDto {
+  currency: Currency
+  interval: PortfolioEvolutionInterval
+  historyStartsOn: string | null
+  points: PortfolioEvolutionPointDto[]
+}
+
+export function getPortfolioEvolution(
+  currency: Currency,
+  range: PortfolioEvolutionRange,
+  signal?: AbortSignal,
+): Promise<PortfolioEvolutionDto> {
+  return api.get<PortfolioEvolutionDto>("/api/investments/evolution", { query: { currency, range }, signal })
 }
 
 export type InvestmentSortField = "PurchasedOn" | "AssetName" | "InvestedAmount" | "CurrentValue" | "ReturnPercentage"

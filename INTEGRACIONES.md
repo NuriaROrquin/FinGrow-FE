@@ -15,7 +15,7 @@ pide el código de un solo uso y lo detecta apenas el bot lo valida.
 - ✅ Vinculación de cuenta mediante código único (vence a los 10 minutos)
 - ✅ Estado real y desvinculación desde la misma card
 - ✅ Registro de transacciones mediante lenguaje natural (HU-13)
-- ⏳ Procesamiento de tickets con OCR desde Telegram
+- ✅ Escaneo de tickets: mandale al bot una foto o un PDF de una página (HU-12)
 - ⏳ Recepción de notificaciones y consulta de balance
 
 #### Cómo usar:
@@ -31,13 +31,15 @@ pide el código de un solo uso y lo detecta apenas el bot lo valida.
 "Pagué $1500 en el almuerzo con el equipo"
 "Ingreso de $10000 por freelance"
 "Cobré $50000 por proyecto de diseño web"
+"Ayer gasté $2000 en la farmacia"
 ```
 
 El bot (con FinGrow-AI detrás):
 - Detecta si es un ingreso o gasto
 - Extrae el monto y la moneda (pesos salvo que diga dólares, euros o reales)
 - Identifica la categoría y, si lo dice, el medio de pago
-- Registra la fecha actual
+- Registra la fecha que dice el mensaje ("Ayer gasté $500 en el súper"); si no dice ninguna, la de hoy.
+  Con un período vago ("la semana pasada") propone una fecha y la marca como estimada
 - Contesta con lo que entendió y botones para confirmar o descartar. Si el mensaje no dice
   cómo se pagó, los botones son los medios de pago y tocar uno confirma con ese medio
 - Si no encuentra el monto, repregunta en lugar de registrar algo incorrecto
@@ -75,30 +77,34 @@ columna **Origen** muestra "Telegram".
 
 ---
 
-### 3. Procesamiento OCR de Tickets
+### 3. Escaneo de comprobantes (OCR)
 
-**Ubicación**: Transacciones > Escanear Ticket
+**Ubicación**: Transacciones > Escanear comprobante (también `/dashboard/transactions?mode=ocr`)
+
+Es una integración **real** (HU-12): la foto se guarda como comprobante en FinGrow-BE, que se la
+manda a FinGrow-AI. Ahí la lee Amazon Textract (`AnalyzeExpense`) y Claude limpia el nombre del
+comercio y elige la categoría. El frontend nunca habla con FinGrow-AI ni con Textract.
 
 #### Características:
-- ✅ Extracción automática de datos
-- ✅ Reconocimiento de monto y comercio
-- ✅ Detección de categoría
-- ✅ Confianza del resultado (%)
-- ✅ Edición antes de guardar
+- ✅ Subir una foto o un PDF de una página, arrastrarlo o sacar la foto con la cámara
+- ✅ Monto, fecha, comercio, categoría y medio de pago precargados
+- ✅ Nivel de confianza de la lectura (alta, media o baja)
+- ✅ Revisión inmediata: se puede corregir cualquier campo antes de confirmar
+- ✅ Si no se puede leer, mensaje claro y carga manual con la imagen ya adjunta
 
 #### Cómo usar:
 1. Ve a **Transacciones**
-2. Haz clic en **Escanear Ticket**
-3. Sube una foto del ticket o factura
-4. Haz clic en **Procesar con OCR**
-5. Revisa y edita los datos extraídos
-6. Guarda la transacción
+2. Haz clic en **Escanear comprobante**
+3. Sube una foto o un PDF, o usa la cámara
+4. Haz clic en **Escanear**
+5. Revisa lo que se leyó, corrige lo que haga falta y **Confirma**
+
+Si cerrás la revisión sin confirmar, el movimiento queda en la pestaña **Pendientes**.
 
 #### Formatos soportados:
-- 📄 Tickets de compras
-- 🧾 Facturas impresas
-- 📱 Capturas de pantalla
-- 🖼️ Imágenes JPG, PNG, WEBP
+- 🖼️ Fotos JPG, PNG, WEBP y HEIC (HEIC solo en navegadores que lo abren, como Safari)
+- 📄 PDF de una sola página
+- Hasta 5 MB: las fotos se recomprimen en el navegador a JPEG de hasta 2000 px antes de subirse
 
 ---
 
@@ -154,10 +160,10 @@ María vincula su Gmail y la plataforma detecta automáticamente:
 - Factura de MetroGAS: $23.000
 
 ### Caso 3: Escaneo de tickets
-Pedro toma fotos de sus tickets de compras y los procesa con OCR:
-- Supermercado Día: $1,250.50
-- Farmacia: $890
-- Estación de servicio: $3,500
+Pedro le saca una foto al ticket del súper desde Transacciones. La app le muestra
+"Supermercado Día, $1.250,50, Alimentos, Débito" con confianza alta; corrige la fecha y confirma.
+El ticket de la farmacia se lo manda por foto al bot de Telegram, que le contesta con lo que leyó
+y los botones para confirmar o descartar.
 
 ---
 
@@ -174,16 +180,15 @@ TELEGRAM_WEBHOOK_URL=your_webhook_url
 # Gmail API
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
-
-# OCR Service
-OCR_API_KEY=your_ocr_api_key
-OCR_API_URL=your_ocr_api_url
 ```
+
+El OCR no se configura en el frontend: las credenciales de Textract (`OCR_PROVIDER`,
+`OCR_AWS_REGION`, `OCR_AWS_ACCESS_KEY_ID`, `OCR_AWS_SECRET_ACCESS_KEY`) van en FinGrow-AI.
 
 ### Tecnologías sugeridas para producción:
 - **Telegram Bot**: node-telegram-bot-api
 - **Gmail API**: googleapis
-- **OCR**: Google Vision API, Tesseract.js, AWS Textract
+- **OCR**: Amazon Textract (`AnalyzeExpense`), en FinGrow-AI
 - **NLP**: OpenAI GPT-4, Anthropic Claude, Google PaLM
 
 ---
@@ -222,17 +227,17 @@ Crea transacción automáticamente
 
 ### OCR → Plataforma
 ```
-Usuario sube imagen
+Usuario sube o fotografía el comprobante (recomprimido a JPEG si es foto)
     ↓
-Envía a servicio OCR
+POST /api/receipts: FinGrow-BE lo guarda en el almacenamiento
     ↓
-Extrae texto del ticket
+POST /api/receipts/{id}/scan: FinGrow-BE se lo manda a FinGrow-AI
     ↓
-Procesa datos con IA
+Textract lee monto, fecha y comercio; Claude elige la categoría
     ↓
-Identifica monto y comercio
+FinGrow-BE crea el movimiento como pendiente, con el comprobante asociado
     ↓
-Usuario confirma y guarda
+Usuario revisa, corrige y confirma (o lo deja en Pendientes)
 ```
 
 ---
@@ -248,7 +253,7 @@ Usuario confirma y guarda
 
 ### Página de Transacciones
 - **Botones principales**:
-  - Escanear Ticket (OCR)
+  - Escanear comprobante (OCR)
   - Mensaje Telegram (NLP)
   - Agregar Transacción (Manual)
 - **Modales interactivos**: Diálogos con feedback en tiempo real

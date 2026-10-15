@@ -62,15 +62,6 @@ export function setBudgetLimit(
   return api.put<BudgetDto>(`/api/budgets/${year}/${month}/limits`, payload, { signal })
 }
 
-export function changeBudgetCurrency(
-  year: number,
-  month: number,
-  currency: Currency,
-  signal?: AbortSignal,
-): Promise<BudgetDto> {
-  return api.put<BudgetDto>(`/api/budgets/${year}/${month}/currency`, { currency }, { signal })
-}
-
 export function removeBudgetLimit(
   year: number,
   month: number,
