@@ -115,6 +115,7 @@ export {
   courseLevelLabels,
   courseProgressStatusLabels,
   getCourse,
+  getLearningProgress,
   listCourses,
   rateCourse,
   type CourseDetailDto,
@@ -122,6 +123,7 @@ export {
   type CourseLevel,
   type CourseProgressStatus,
   type CourseSummaryDto,
+  type LearningProgressDto,
   type LessonDto,
 } from "./courses"
 export { type EducationCategory } from "./education"
