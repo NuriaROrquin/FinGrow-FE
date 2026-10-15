@@ -56,6 +56,7 @@ import {
   getMepQuote,
   getPortfolioSummary,
   IOL_GRANT_EXPIRED,
+  accruesInterest,
   isApiError,
   formatQuantity,
   investmentTypeLabels,
@@ -137,6 +138,28 @@ function pluralizeAssets(count: number): string {
   return `${count} ${count === 1 ? "activo" : "activos"}`
 }
 
+function isValuedAtMaturity(investment: InvestmentDto): boolean {
+  return investment.maturesOn !== null && investment.valuedOn >= investment.maturesOn
+}
+
+function rateDetail(investment: InvestmentDto): string | null {
+  if (investment.annualRate === null) {
+    return null
+  }
+
+  const rate = `TNA ${formatNumber(investment.annualRate, { maximumFractionDigits: 2 })}%`
+
+  if (investment.maturesOn === null) {
+    return rate
+  }
+
+  return `${rate} · ${isValuedAtMaturity(investment) ? "venció" : "vence"} el ${formatDate(investment.maturesOn)}`
+}
+
+function unvaluedLabel(investment: InvestmentDto): string {
+  return accruesInterest(investment.type) && investment.annualRate === null ? "Falta la TNA" : "Sin cotizar"
+}
+
 function convertWithMep(amount: number, from: Currency, to: Currency, quote: MepQuoteDto | null): number | null {
   if (from === to) {
     return amount
@@ -176,13 +199,13 @@ function valuationStatus(summary: PortfolioSummaryDto): string {
     return "Sin cotizaciones de mercado todavía: se muestra el capital invertido."
   }
 
-  const oldest = summary.oldestQuotedOn ? formatDate(summary.oldestQuotedOn) : ""
+  const valuedOn = summary.oldestQuotedOn ? `valuado al ${formatDate(summary.oldestQuotedOn)}` : "valuado al vencimiento"
 
   if (summary.unquotedCount > 0) {
-    return `${pluralizeAssets(summary.unquotedCount)} sin cotizar, al costo. El resto, valuado al ${oldest}.`
+    return `${pluralizeAssets(summary.unquotedCount)} sin cotizar, al costo. El resto, ${valuedOn}.`
   }
 
-  return `Valuado al ${oldest}`
+  return `${valuedOn.charAt(0).toUpperCase()}${valuedOn.slice(1)}`
 }
 
 function heldTypesOf(groups: AllocationGroupDto[], slices: AllocationSlice[]): InvestmentType[] {
@@ -851,6 +874,9 @@ export default function InvestmentsPage() {
                         {investment.symbol} · {formatQuantity(investment.quantity, investment.type)}
                       </div>
                     )}
+                    {rateDetail(investment) && (
+                      <div className="text-xs text-muted-foreground">{rateDetail(investment)}</div>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="text-xs">
@@ -865,6 +891,9 @@ export default function InvestmentsPage() {
                     <div className="font-semibold">{formatMoney(investment.currentValue, investment.currency)}</div>
                     {!investment.hasMarketValuation && (
                       <div className="text-xs text-muted-foreground">al costo</div>
+                    )}
+                    {isValuedAtMaturity(investment) && (
+                      <div className="text-xs text-muted-foreground">al vencimiento</div>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
@@ -883,7 +912,7 @@ export default function InvestmentsPage() {
                         </span>
                       </div>
                     ) : (
-                      <span className="text-sm text-muted-foreground">Sin cotizar</span>
+                      <span className="text-sm text-muted-foreground">{unvaluedLabel(investment)}</span>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
