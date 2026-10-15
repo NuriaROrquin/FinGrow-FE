@@ -183,13 +183,17 @@ export {
   type MercadoPagoSyncSummary,
 } from "./integrations"
 export {
+  ANNUAL_RATE_MAX,
   ASSET_NAME_MAX_LENGTH,
   FUND_NAME_MAX_LENGTH,
   SYMBOL_MAX_LENGTH,
+  TERM_DAYS_MAX,
+  accruesInterest,
   createInvestment,
   formatQuantity,
   getPortfolioSummary,
   deleteInvestment,
+  hasTerm,
   investmentSortFieldLabels,
   investmentTypeLabels,
   isPricedPerNominal,
