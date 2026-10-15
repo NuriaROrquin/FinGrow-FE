@@ -68,16 +68,16 @@ export function LinkCodeIntegrationCard({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {icon}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="shrink-0">{icon}</span>
             <div>
               <CardTitle>{name}</CardTitle>
               <CardDescription>{description}</CardDescription>
             </div>
           </div>
           {linked && (
-            <Badge variant="default" className="gap-1">
+            <Badge variant="default" className="shrink-0 gap-1">
               <CheckCircle2 className="size-3" />
               {t.common.linked}
             </Badge>
@@ -92,7 +92,7 @@ export function LinkCodeIntegrationCard({
         ) : linked && linkCode === null ? (
           <div className="space-y-4">
             <Alert>
-              <CheckCircle2 className="h-4 w-4" />
+              <CheckCircle2 className={LINKED_ICON_CLASS} />
               <AlertDescription>{linkedDescription(integration)}</AlertDescription>
             </Alert>
             <div className="flex flex-wrap gap-2">
@@ -170,8 +170,8 @@ export function LinkCodeIntegrationCard({
           <h4 className="text-sm font-medium">{t.linkCode.whatCanYouDo(name)}</h4>
           <ul className="space-y-1 text-sm text-muted-foreground">
             {features.map((feature) => (
-              <li key={feature} className="flex items-center gap-2">
-                <CheckCircle2 className="size-3" /> {feature}
+              <li key={feature} className="flex items-start gap-2">
+                <CheckCircle2 className="mt-1 size-3 shrink-0" /> {feature}
               </li>
             ))}
           </ul>
@@ -180,6 +180,9 @@ export function LinkCodeIntegrationCard({
     </Card>
   )
 }
+
+// Alert pinta sus iconos con el color del texto ([&>svg]:text-current): sin el "!" el verde no se aplica.
+export const LINKED_ICON_CLASS = "h-4 w-4 text-green-600! dark:text-green-400!"
 
 export function formatLinkedDate(iso: string): string {
   return formatDateText(iso, { day: "numeric", month: "long", year: "numeric" })

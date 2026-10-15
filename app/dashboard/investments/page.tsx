@@ -11,10 +11,12 @@ import {
   TrendingDownIcon,
   PlusIcon,
   InfoIcon,
+  RefreshCwIcon,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Spinner } from "@/components/ui/spinner"
 import {
   Dialog,
   DialogContent,
@@ -38,6 +40,7 @@ import {
 import { AddInvestmentForm } from "@/components/investments/add-investment-form"
 import { InvestmentRowActions } from "@/components/investments/investment-row-actions"
 import { LearnByAssetTypeCard } from "@/components/investments/learn-by-asset-type-card"
+import { PortfolioEvolutionCard } from "@/components/investments/portfolio-evolution-card"
 import { RelatedEducationDialog } from "@/components/investments/related-education-dialog"
 import {
   InvestmentFiltersBar,
@@ -50,11 +53,16 @@ import {
 import {
   createInvestment,
   deleteInvestment,
+  getIntegration,
   getMepQuote,
   getPortfolioSummary,
+  IOL_GRANT_EXPIRED,
+  accruesInterest,
+  isApiError,
   formatQuantity,
   investmentTypeLabels,
   listInvestments,
+  syncIol,
   toastApiError,
   updateInvestment,
   type AllocationGroupDto,
@@ -67,7 +75,15 @@ import {
   type PortfolioSummaryDto,
 } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
-import { formatDate, formatDateTime, formatMoney, formatNumber } from "@/lib/format"
+import {
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  formatNumber,
+  formatSignedMoney,
+  formatSignedPercentage,
+} from "@/lib/format"
+import { useMessages } from "@/lib/i18n"
 
 const investmentTypeColors: Record<InvestmentType, string> = {
   Stock: "#3b5998",
@@ -113,21 +129,34 @@ interface LearningState {
   open: boolean
 }
 
-function formatSignedMoney(amount: number, currency: Currency): string {
-  return `${amount < 0 ? "-" : "+"}${formatMoney(Math.abs(amount), currency)}`
-}
-
-function formatPercentage(value: number): string {
-  const formatted = formatNumber(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-  return `${value < 0 ? "" : "+"}${formatted}%`
-}
-
 function listCurrencies(currencies: Currency[]): string {
   return currencies.join(" y ")
 }
 
 function pluralizeAssets(count: number): string {
   return `${count} ${count === 1 ? "activo" : "activos"}`
+}
+
+function isValuedAtMaturity(investment: InvestmentDto): boolean {
+  return investment.maturesOn !== null && investment.valuedOn >= investment.maturesOn
+}
+
+function rateDetail(investment: InvestmentDto): string | null {
+  if (investment.annualRate === null) {
+    return null
+  }
+
+  const rate = `TNA ${formatNumber(investment.annualRate, { maximumFractionDigits: 2 })}%`
+
+  if (investment.maturesOn === null) {
+    return rate
+  }
+
+  return `${rate} · ${isValuedAtMaturity(investment) ? "venció" : "vence"} el ${formatDate(investment.maturesOn)}`
+}
+
+function unvaluedLabel(investment: InvestmentDto): string {
+  return accruesInterest(investment.type) && investment.annualRate === null ? "Falta la TNA" : "Sin cotizar"
 }
 
 function convertWithMep(amount: number, from: Currency, to: Currency, quote: MepQuoteDto | null): number | null {
@@ -169,13 +198,13 @@ function valuationStatus(summary: PortfolioSummaryDto): string {
     return "Sin cotizaciones de mercado todavía: se muestra el capital invertido."
   }
 
-  const oldest = summary.oldestQuotedOn ? formatDate(summary.oldestQuotedOn) : ""
+  const valuedOn = summary.oldestQuotedOn ? `valuado al ${formatDate(summary.oldestQuotedOn)}` : "valuado al vencimiento"
 
   if (summary.unquotedCount > 0) {
-    return `${pluralizeAssets(summary.unquotedCount)} sin cotizar, al costo. El resto, valuado al ${oldest}.`
+    return `${pluralizeAssets(summary.unquotedCount)} sin cotizar, al costo. El resto, ${valuedOn}.`
   }
 
-  return `Valuado al ${oldest}`
+  return `${valuedOn.charAt(0).toUpperCase()}${valuedOn.slice(1)}`
 }
 
 function heldTypesOf(groups: AllocationGroupDto[], slices: AllocationSlice[]): InvestmentType[] {
@@ -323,6 +352,7 @@ function CurrencyPicker({
 }
 
 export default function InvestmentsPage() {
+  const t = useMessages()
   const [page, setPage] = useState<PagedResultDto<InvestmentDto> | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [filterValues, setFilterValues] = useState<InvestmentFilterValues>(defaultInvestmentFilters)
@@ -340,6 +370,8 @@ export default function InvestmentsPage() {
   const [mepQuote, setMepQuote] = useState<MepQuoteDto | null>(null)
   const [mepStatus, setMepStatus] = useState<MepStatus>("loading")
   const [learning, setLearning] = useState<LearningState | null>(null)
+  const [iolLinked, setIolLinked] = useState(false)
+  const [isSyncingIol, setIsSyncingIol] = useState(false)
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => setAppliedFilters(filterValues), 300)
@@ -395,7 +427,43 @@ export default function InvestmentsPage() {
     return () => controller.abort()
   }, [])
 
+  // Sin IOL vinculado el botón de sincronizar no se muestra; si no se puede consultar, tampoco.
+  useEffect(() => {
+    const controller = new AbortController()
+
+    getIntegration("iol", controller.signal)
+      .then((integration) => setIolLinked(integration.linked))
+      .catch(() => setIolLinked(false))
+
+    return () => controller.abort()
+  }, [])
+
   const refreshSummary = () => setSummaryVersion((version) => version + 1)
+
+  const syncIolPortfolio = async () => {
+    setIsSyncingIol(true)
+    try {
+      const result = await syncIol()
+      refreshList()
+      refreshSummary()
+      toast.success(t.iol.synced, {
+        description: t.iol.syncDetail(result.imported, result.updated, result.ignored),
+      })
+    } catch (error) {
+      const reason = isApiError(error)
+        ? error.code === IOL_GRANT_EXPIRED
+          ? t.iol.relinkInSettings
+          : t.iol.linkErrors[error.code]
+        : undefined
+      if (reason) {
+        toast.error(t.iol.syncFailed, { description: reason })
+      } else {
+        toastApiError(error, t.iol.syncFailed)
+      }
+    } finally {
+      setIsSyncingIol(false)
+    }
+  }
 
   const openLearning = (type: InvestmentType) => setLearning({ type, open: true })
 
@@ -490,35 +558,43 @@ export default function InvestmentsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-balance">Inversiones</h1>
           <p className="text-muted-foreground mt-1">Gestioná y seguí el rendimiento de tus inversiones</p>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={handleDialogChange}>
-          <DialogTrigger asChild>
-            <Button>
-              <PlusIcon className="size-4" />
-              Agregar Inversión
+        <div className="flex flex-wrap gap-2">
+          {iolLinked && (
+            <Button variant="outline" onClick={syncIolPortfolio} disabled={isSyncingIol}>
+              {isSyncingIol ? <Spinner /> : <RefreshCwIcon className="size-4" />}
+              {t.iol.syncInvestments}
             </Button>
-          </DialogTrigger>
-          <DialogContent className="max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingInvestment ? "Editar inversión" : "Agregar Nueva Inversión"}</DialogTitle>
-              <DialogDescription>
-                {editingInvestment
-                  ? "Corregí los datos de la inversión seleccionada"
-                  : "Registrá una nueva inversión en tu portafolio"}
-              </DialogDescription>
-            </DialogHeader>
-            <AddInvestmentForm
-              key={editingInvestment?.id ?? "new"}
-              initialInvestment={editingInvestment}
-              onSubmit={handleSubmit}
-              onClose={() => handleDialogChange(false)}
-            />
-          </DialogContent>
-        </Dialog>
+          )}
+          <Dialog open={isAddDialogOpen} onOpenChange={handleDialogChange}>
+            <DialogTrigger asChild>
+              <Button>
+                <PlusIcon className="size-4" />
+                Agregar Inversión
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{editingInvestment ? "Editar inversión" : "Agregar Nueva Inversión"}</DialogTitle>
+                <DialogDescription>
+                  {editingInvestment
+                    ? "Corregí los datos de la inversión seleccionada"
+                    : "Registrá una nueva inversión en tu portafolio"}
+                </DialogDescription>
+              </DialogHeader>
+              <AddInvestmentForm
+                key={editingInvestment?.id ?? "new"}
+                initialInvestment={editingInvestment}
+                onSubmit={handleSubmit}
+                onClose={() => handleDialogChange(false)}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
 
         <AlertDialog
           open={investmentToDelete !== null}
@@ -533,6 +609,8 @@ export default function InvestmentsPage() {
                 {investmentToDelete
                   ? `Vas a eliminar "${investmentToDelete.assetName}" por ${formatMoney(investmentToDelete.investedAmount, investmentToDelete.currency)} invertidos. Esta acción no se puede deshacer.`
                   : ""}
+                {investmentToDelete?.source === "Iol" &&
+                  " Si la seguís teniendo en IOL, vuelve a aparecer en la próxima sincronización."}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -625,7 +703,7 @@ export default function InvestmentsPage() {
                   <TrendingDownIcon className="size-4" />
                 )}
                 <span>
-                  {formatPercentage(entry.quotedReturnPercentage)} en {entry.currency}
+                  {formatSignedPercentage(entry.quotedReturnPercentage)} en {entry.currency}
                 </span>
               </div>
             ))}
@@ -651,6 +729,8 @@ export default function InvestmentsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <PortfolioEvolutionCard currencies={summary ? currencies : null} refreshKey={summaryVersion} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
@@ -782,11 +862,21 @@ export default function InvestmentsPage() {
               {rows.map((investment) => (
                 <TableRow key={investment.id}>
                   <TableCell>
-                    <div className="font-medium">{investment.assetName}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{investment.assetName}</span>
+                      {investment.source === "Iol" && (
+                        <Badge variant="secondary" className="text-xs" title="Importada de InvertirOnline">
+                          IOL
+                        </Badge>
+                      )}
+                    </div>
                     {investment.symbol && investment.quantity != null && (
                       <div className="text-xs text-muted-foreground">
                         {investment.symbol} · {formatQuantity(investment.quantity, investment.type)}
                       </div>
+                    )}
+                    {rateDetail(investment) && (
+                      <div className="text-xs text-muted-foreground">{rateDetail(investment)}</div>
                     )}
                   </TableCell>
                   <TableCell>
@@ -803,6 +893,9 @@ export default function InvestmentsPage() {
                     {!investment.hasMarketValuation && (
                       <div className="text-xs text-muted-foreground">al costo</div>
                     )}
+                    {isValuedAtMaturity(investment) && (
+                      <div className="text-xs text-muted-foreground">al vencimiento</div>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     {investment.hasMarketValuation ? (
@@ -816,11 +909,11 @@ export default function InvestmentsPage() {
                         )}
                         <span className="font-semibold">
                           {formatSignedMoney(investment.returnAmount, investment.currency)} (
-                          {formatPercentage(investment.returnPercentage)})
+                          {formatSignedPercentage(investment.returnPercentage)})
                         </span>
                       </div>
                     ) : (
-                      <span className="text-sm text-muted-foreground">Sin cotizar</span>
+                      <span className="text-sm text-muted-foreground">{unvaluedLabel(investment)}</span>
                     )}
                   </TableCell>
                   <TableCell className="text-right">

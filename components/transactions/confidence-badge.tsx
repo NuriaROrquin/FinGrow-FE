@@ -18,12 +18,16 @@ const levelIcons = {
   Low: ShieldAlert,
 } as const
 
+export type ConfidenceSubject = "category" | "reading"
+
 export function ConfidenceBadge({
   level,
   type,
+  subject = "category",
 }: {
   level: ConfidenceLevel | null
   type: TransactionType
+  subject?: ConfidenceSubject
 }) {
   const t = useMessages().pendingInbox
 
@@ -44,7 +48,10 @@ export function ConfidenceBadge({
 
   const Icon = levelIcons[level]
   const label = { High: t.confidenceHigh, Medium: t.confidenceMedium, Low: t.confidenceLow }[level]
-  const help = { High: t.confidenceHelpHigh, Medium: t.confidenceHelpMedium, Low: t.confidenceHelpLow }[level]
+  const help =
+    subject === "reading"
+      ? { High: t.confidenceHelpReadingHigh, Medium: t.confidenceHelpReadingMedium, Low: t.confidenceHelpReadingLow }[level]
+      : { High: t.confidenceHelpHigh, Medium: t.confidenceHelpMedium, Low: t.confidenceHelpLow }[level]
 
   return (
     <Badge variant="outline" className={`gap-1 rounded-full font-medium ${levelClassNames[level]}`} title={help}>

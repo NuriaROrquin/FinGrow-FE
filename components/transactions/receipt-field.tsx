@@ -27,14 +27,21 @@ import {
 
 type UploadState = "idle" | "uploading" | "uploaded" | "error"
 
+export interface UploadedReceipt {
+  id: string
+  file: File
+}
+
 export function ReceiptField({
   existingReceiptId = null,
+  uploaded = null,
   onChange,
   onRemoveExisting,
   onUploadingChange,
   disabled = false,
 }: {
   existingReceiptId?: string | null
+  uploaded?: UploadedReceipt | null
   onChange: (receiptId: string | null) => void
   onRemoveExisting?: () => void
   onUploadingChange: (uploading: boolean) => void
@@ -45,9 +52,11 @@ export function ReceiptField({
   const [keepsExisting, setKeepsExisting] = useState(existingReceiptId !== null)
   const [isConfirmingRemoval, setIsConfirmingRemoval] = useState(false)
   const [isOpening, setIsOpening] = useState(false)
-  const [file, setFile] = useState<File | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [state, setState] = useState<UploadState>("idle")
+  const [file, setFile] = useState<File | null>(uploaded?.file ?? null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(() =>
+    uploaded?.file.type.startsWith("image/") ? URL.createObjectURL(uploaded.file) : null,
+  )
+  const [state, setState] = useState<UploadState>(uploaded ? "uploaded" : "idle")
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
 

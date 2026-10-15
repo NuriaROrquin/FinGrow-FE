@@ -4,7 +4,6 @@ import type React from "react"
 
 import { useState, useRef, useEffect, useLayoutEffect } from "react"
 import { useSearchParams } from "next/navigation"
-import Image from "next/image"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,7 +15,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import {
   AlertDialog,
@@ -48,16 +46,12 @@ import {
   ArrowDownIcon,
   ScanLine,
   Send,
-  Upload,
-  Camera,
   CheckCircle2,
   Check,
   ChevronsUpDown,
   Info,
   ScaleIcon,
   Clock,
-  Sparkles,
-  Video,
   ChevronLeft,
   ChevronRight,
   Trash2,
@@ -77,6 +71,7 @@ import {
   transactionStatusLabels,
   type Currency,
   type PaymentMethod,
+  type PendingTransactionDto,
   type TransactionDto,
   type TransactionListStatus,
   type TransactionSummaryResponse,
@@ -87,6 +82,9 @@ import {
 import { AddTransactionForm } from "@/components/transactions/add-transaction-form"
 import { TransactionActionsMenu } from "@/components/transactions/transaction-actions-menu"
 import { PendingInbox } from "@/components/transactions/pending-inbox"
+import { PendingReviewDialogs, usePendingReview } from "@/components/transactions/pending-review"
+import type { UploadedReceipt } from "@/components/transactions/receipt-field"
+import { ScanReceiptDialog } from "@/components/transactions/scan-receipt-dialog"
 import { usePendingTransactions } from "@/components/transactions/use-pending-transactions"
 import { TELEGRAM_BOT_USERNAME } from "@/components/integrations/telegram-card"
 import { getCategoryIcon, getPaymentMethodIcon } from "@/components/transactions/transaction-icons"
@@ -166,23 +164,10 @@ export default function TransactionsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
-  const [isOcrDialogOpen, setIsOcrDialogOpen] = useState(false)
-  const [ocrImage, setOcrImage] = useState<string | null>(null)
-  const [ocrProcessing, setOcrProcessing] = useState(false)
-  const [ocrResult, setOcrResult] = useState<{
-    amount: number
-    description: string
-    category: string
-    date: string
-    confidence: number
-  } | null>(null)
-  const [useCameraMode, setUseCameraMode] = useState(false)
-  const [stream, setStream] = useState<MediaStream | null>(null)
+  const [isScanDialogOpen, setIsScanDialogOpen] = useState(false)
+  const [preloadedReceipt, setPreloadedReceipt] = useState<UploadedReceipt | null>(null)
   const summaryRequestKey = useRef<string | null>(null)
   const scrollPositionRef = useRef<number | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
   const { toast } = useToast()
 
   useLayoutEffect(() => {
@@ -227,11 +212,9 @@ export default function TransactionsPage() {
       })
   }, [dateFrom, dateTo, summaryRefreshKey, toast])
 
-  // Detectar parámetro mode=ocr en la URL
   useEffect(() => {
-    const mode = searchParams.get('mode')
-    if (mode === 'ocr') {
-      setIsOcrDialogOpen(true)
+    if (searchParams.get("mode") === "ocr") {
+      setIsScanDialogOpen(true)
     }
   }, [searchParams])
 
@@ -293,19 +276,8 @@ export default function TransactionsPage() {
     toast,
   ])
 
-  // Limpiar stream de cámara al cerrar modal
   useEffect(() => {
-    if (!isOcrDialogOpen) {
-      stopCamera()
-      setUseCameraMode(false)
-      setOcrImage(null)
-      setOcrResult(null)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOcrDialogOpen])
-
-  useEffect(() => {
-    if (isAddDialogOpen || isOcrDialogOpen) {
+    if (isAddDialogOpen || isScanDialogOpen) {
       return
     }
 
@@ -317,7 +289,7 @@ export default function TransactionsPage() {
     return () => {
       window.cancelAnimationFrame(frameId)
     }
-  }, [isAddDialogOpen, isOcrDialogOpen])
+  }, [isAddDialogOpen, isScanDialogOpen])
 
   const transactions = transactionsResponse.items
   const filteredTransactions = transactions
@@ -357,10 +329,12 @@ export default function TransactionsPage() {
   const closeTransactionDialog = () => {
     setIsAddDialogOpen(false)
     setEditingTransaction(null)
+    setPreloadedReceipt(null)
   }
 
-  const openCreateTransactionDialog = () => {
+  const openCreateTransactionDialog = (receipt: UploadedReceipt | null = null) => {
     setEditingTransaction(null)
+    setPreloadedReceipt(receipt)
     setIsAddDialogOpen(true)
   }
 
@@ -425,6 +399,13 @@ export default function TransactionsPage() {
   const handlePendingConfirmed = () => {
     setSummaryRefreshKey((key) => key + 1)
     setListRefreshKey((key) => key + 1)
+  }
+
+  const scanReview = usePendingReview({ onRemoved: pending.remove, onConfirmed: handlePendingConfirmed })
+
+  const handleReceiptProposed = (proposal: PendingTransactionDto) => {
+    pending.reload()
+    scanReview.open(proposal)
   }
 
   const handleTransactionDialogChange = (nextOpen: boolean) => {
@@ -499,112 +480,6 @@ export default function TransactionsPage() {
     }
   }
 
-  const startCamera = async () => {
-    try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
-      })
-      setStream(mediaStream)
-      setUseCameraMode(true)
-
-      // Esperar a que el componente se monte antes de asignar el stream
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream
-          // Asegurar que el video se reproduzca
-          videoRef.current.play().catch(err => {
-            console.error('Error playing video:', err)
-          })
-        }
-      }, 100)
-
-      toast({
-        title: "Cámara activada",
-        description: "Posiciona el ticket y toma una foto",
-      })
-    } catch (error) {
-      toast({
-        title: "Error al acceder a la cámara",
-        description: "Verifica los permisos de tu navegador",
-        variant: "destructive",
-      })
-      console.error('Error accessing camera:', error)
-    }
-  }
-
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop())
-      setStream(null)
-    }
-    setUseCameraMode(false)
-  }
-
-  const capturePhoto = () => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current
-      const canvas = canvasRef.current
-      canvas.width = video.videoWidth
-      canvas.height = video.videoHeight
-      const ctx = canvas.getContext('2d')
-      if (ctx) {
-        ctx.drawImage(video, 0, 0)
-        const imageData = canvas.toDataURL('image/jpeg')
-        setOcrImage(imageData)
-        stopCamera()
-        setUseCameraMode(false)
-        toast({
-          title: "Foto capturada",
-          description: "Ahora procesa la imagen con OCR",
-        })
-      }
-    }
-  }
-
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setOcrImage(reader.result as string)
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-
-  const processOCR = () => {
-    setOcrProcessing(true)
-    // Simular procesamiento OCR
-    setTimeout(() => {
-      setOcrResult({
-        amount: 1250.50,
-        description: "Supermercado Día",
-        category: "Comida",
-        date: new Date().toISOString().split("T")[0],
-        confidence: 95,
-      })
-      setOcrProcessing(false)
-      toast({
-        title: "¡Ticket procesado!",
-        description: "Los datos han sido extraídos exitosamente",
-      })
-    }, 2000)
-  }
-
-  const saveOcrTransaction = () => {
-    toast({
-      title: "Transacción guardada",
-      description: "La transacción ha sido agregada exitosamente",
-    })
-    setIsOcrDialogOpen(false)
-    setOcrImage(null)
-    setOcrResult(null)
-  }
-
   return (
     <div className="flex w-full max-w-full flex-col space-y-6 overflow-x-hidden pr-1 sm:pr-2">
       <div className="contents">
@@ -614,170 +489,16 @@ export default function TransactionsPage() {
         </div>
 
           <div className="order-4 grid w-full grid-cols-1 gap-2 py-3 sm:grid-cols-2 lg:grid-cols-3">
-            <Dialog open={isOcrDialogOpen} onOpenChange={setIsOcrDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="w-full">
-                  <ScanLine className="size-4" />
-                  Escanear Ticket
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                  <DialogTitle>Escanear Ticket con OCR</DialogTitle>
-                  <DialogDescription>Sube una foto o usa la cámara para escanear tu ticket</DialogDescription>
-                </DialogHeader>
-
-                <div className="space-y-4">
-                  {!ocrImage && !useCameraMode ? (
-                    <div className="space-y-4">
-                      <div className="border-2 border-dashed rounded-lg p-8 text-center">
-                        <input
-                          type="file"
-                          ref={fileInputRef}
-                          onChange={handleImageUpload}
-                          accept="image/*"
-                          className="hidden"
-                        />
-                        <Camera className="size-12 mx-auto text-muted-foreground mb-4" />
-                        <p className="text-sm text-muted-foreground mb-4">
-                          Arrastra una imagen o usa una de las opciones
-                        </p>
-                        <div className="flex gap-2 justify-center">
-                          <Button onClick={() => fileInputRef.current?.click()} variant="outline">
-                            <Upload className="size-4 mr-2" />
-                            Subir Imagen
-                          </Button>
-                          <Button onClick={startCamera}>
-                            <Video className="size-4 mr-2" />
-                            Usar Cámara
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : useCameraMode ? (
-                    <div className="space-y-4">
-                      <div className="relative rounded-lg overflow-hidden border">
-                        <video
-                          ref={videoRef}
-                          autoPlay
-                          playsInline
-                          className="w-full max-h-[400px] object-contain"
-                        />
-                        <canvas ref={canvasRef} className="hidden" />
-                      </div>
-                      <div className="flex gap-2">
-                        <Button onClick={capturePhoto} className="flex-1">
-                          <Camera className="size-4 mr-2" />
-                          Tomar Foto
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            stopCamera()
-                            setUseCameraMode(false)
-                          }}
-                          className="flex-1"
-                        >
-                          Cancelar
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {ocrImage && (
-                        <div className="relative rounded-lg overflow-hidden border">
-                          <Image src={ocrImage} alt="Ticket" width={600} height={300} className="w-full max-h-[300px] object-contain" />
-                        </div>
-                      )}
-
-                      {!ocrResult && !ocrProcessing && (
-                        <Button onClick={processOCR} className="w-full">
-                          <Sparkles className="size-4 mr-2" />
-                          Procesar con OCR
-                        </Button>
-                      )}
-
-                      {ocrProcessing && (
-                        <Alert>
-                          <Sparkles className="h-4 w-4 animate-pulse" />
-                          <AlertDescription>
-                            Procesando imagen... Esto puede tomar unos segundos.
-                          </AlertDescription>
-                        </Alert>
-                      )}
-
-                      {ocrResult && (
-                        <div className="space-y-4">
-                          <Alert>
-                            <CheckCircle2 className="h-4 w-4" />
-                            <AlertDescription>
-                              Datos extraídos con {ocrResult.confidence}% de confianza
-                            </AlertDescription>
-                          </Alert>
-
-                          <div className="grid gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="ocr-amount">Monto</Label>
-                              <Input
-                                id="ocr-amount"
-                                type="number"
-                                defaultValue={ocrResult.amount}
-                                step="0.01"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="ocr-description">Descripción</Label>
-                              <Input
-                                id="ocr-description"
-                                defaultValue={ocrResult.description}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="ocr-category">Categoría</Label>
-                              <Select defaultValue={ocrResult.category}>
-                                <SelectTrigger id="ocr-category">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Comida">Comida</SelectItem>
-                                  <SelectItem value="Transporte">Transporte</SelectItem>
-                                  <SelectItem value="Servicios">Servicios</SelectItem>
-                                  <SelectItem value="Entretenimiento">Entretenimiento</SelectItem>
-                                  <SelectItem value="Otros">Otros</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="ocr-date">Fecha</Label>
-                              <Input
-                                id="ocr-date"
-                                type="date"
-                                defaultValue={ocrResult.date}
-                              />
-                            </div>
-                          </div>
-
-                          <div className="flex gap-2">
-                            <Button onClick={saveOcrTransaction} className="flex-1">
-                              Guardar Transacción
-                            </Button>
-                            <Button
-                              variant="outline"
-                              onClick={() => {
-                                setOcrImage(null)
-                                setOcrResult(null)
-                              }}
-                            >
-                              Nueva Imagen
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
+            <Button variant="outline" className="w-full" onClick={() => setIsScanDialogOpen(true)}>
+              <ScanLine className="size-4" />
+              {t.receiptScan.button}
+            </Button>
+            <ScanReceiptDialog
+              open={isScanDialogOpen}
+              onOpenChange={setIsScanDialogOpen}
+              onProposed={handleReceiptProposed}
+              onManualEntry={openCreateTransactionDialog}
+            />
 
             {TELEGRAM_BOT_USERNAME && (
               <Button variant="outline" className="w-full" asChild>
@@ -789,7 +510,7 @@ export default function TransactionsPage() {
             )}
 
             <Dialog open={isAddDialogOpen} onOpenChange={handleTransactionDialogChange}>
-              <Button className="w-full" onClick={openCreateTransactionDialog}>
+              <Button className="w-full" onClick={() => openCreateTransactionDialog()}>
                 <PlusIcon className="size-4" />
                 Agregar Transacción
               </Button>
@@ -803,6 +524,7 @@ export default function TransactionsPage() {
                 <AddTransactionForm
                   mode={editingTransaction ? "edit" : "create"}
                   initialTransaction={editingTransaction}
+                  preloadedReceipt={editingTransaction ? null : preloadedReceipt}
                   onSubmit={async (payload, { removeReceipt }) => {
                     if (editingTransaction) {
                       let updated = await updateTransaction(editingTransaction.id, payload)
@@ -1355,6 +1077,8 @@ export default function TransactionsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <PendingReviewDialogs review={scanReview} />
     </div>
   )
 }

@@ -3,7 +3,9 @@
 import type React from "react"
 
 import { useEffect, useState } from "react"
-import { format } from "date-fns"
+import { addDays, format, parseISO } from "date-fns"
+import { Info } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,12 +13,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Spinner } from "@/components/ui/spinner"
 import { SecurityCombobox, type SecurityOption } from "@/components/investments/security-combobox"
 import {
+  ANNUAL_RATE_MAX,
   ASSET_NAME_MAX_LENGTH,
   FUND_NAME_MAX_LENGTH,
   SYMBOL_MAX_LENGTH,
+  TERM_DAYS_MAX,
+  accruesInterest,
   canQuoteIn,
   formatQuantity,
   getSecurityPrice,
+  hasTerm,
   investmentTypeLabels,
   isApiError,
   isPricedPerNominal,
@@ -30,7 +36,7 @@ import {
   type SecurityPriceDto,
 } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
-import { formatDateText, formatMoney } from "@/lib/format"
+import { formatDate, formatDateText, formatMoney } from "@/lib/format"
 
 const QUOTE_DEBOUNCE_MS = 400
 
@@ -88,6 +94,40 @@ const quoteHelp: Record<QuoteMarket, string> = {
 
 function todayForDateInput(): string {
   return format(new Date(), "yyyy-MM-dd")
+}
+
+const DAYS_PER_YEAR = 365
+
+const DAYS_PER_MONTH = 30
+
+function accrualPreview(
+  type: InvestmentType,
+  capital: number,
+  annualRate: number,
+  termDays: number,
+  purchasedOn: string,
+  currency: Currency,
+): string | null {
+  if (!(capital > 0) || !(annualRate > 0)) {
+    return null
+  }
+
+  const dailyRate = annualRate / 100 / DAYS_PER_YEAR
+
+  if (!hasTerm(type)) {
+    const monthlyInterest = capital * ((1 + dailyRate) ** DAYS_PER_MONTH - 1)
+
+    return `Con esta TNA, ${formatMoney(capital, currency)} rinden unos ${formatMoney(monthlyInterest, currency)} por mes.`
+  }
+
+  if (!Number.isInteger(termDays) || termDays < 1 || purchasedOn === "") {
+    return null
+  }
+
+  const interest = roundToCents(capital * dailyRate * termDays)
+  const maturesOn = addDays(parseISO(purchasedOn), termDays)
+
+  return `Vence el ${formatDate(maturesOn)}: cobrás ${formatMoney(capital + interest, currency)}, ${formatMoney(interest, currency)} de interés.`
 }
 
 function quantityLabel(type: InvestmentType | "", symbol: string): string {
@@ -153,6 +193,7 @@ export function AddInvestmentForm({
   onClose: () => void
 }) {
   const isEditing = Boolean(initialInvestment)
+  const isImported = initialInvestment?.source === "Iol"
   const [type, setType] = useState<InvestmentType | "">(initialInvestment?.type ?? "")
   const [assetName, setAssetName] = useState(initialInvestment?.assetName ?? "")
   const [assetNameTouched, setAssetNameTouched] = useState(isEditing)
@@ -162,6 +203,10 @@ export function AddInvestmentForm({
   const [purchasedOn, setPurchasedOn] = useState(initialInvestment?.purchasedOn ?? todayForDateInput())
   const [symbol, setSymbol] = useState(initialInvestment?.symbol ?? "")
   const [quantity, setQuantity] = useState(initialInvestment?.quantity != null ? String(initialInvestment.quantity) : "")
+  const [annualRate, setAnnualRate] = useState(
+    initialInvestment?.annualRate != null ? String(initialInvestment.annualRate) : "",
+  )
+  const [termDays, setTermDays] = useState(initialInvestment?.termDays != null ? String(initialInvestment.termDays) : "")
   const [quote, setQuote] = useState<{ key: string; result: QuoteResult } | null>(null)
   const [search, setSearch] = useState<SearchState | null>(null)
   const [trackingError, setTrackingError] = useState<string | null>(null)
@@ -173,11 +218,14 @@ export function AddInvestmentForm({
   const normalizedSymbol = normalizeSymbol(symbol, market)
   const isValidTicker = normalizedSymbol.length <= SYMBOL_MAX_LENGTH && SYMBOL_PATTERN.test(normalizedSymbol)
   const currencyIsQuotable = market !== null && canQuoteIn(market, currency)
+  const accrues = type !== "" && accruesInterest(type)
+  const withTerm = type !== "" && hasTerm(type)
 
   const quoteKeyFor = (tickerSymbol: string) => `${market}:${tickerSymbol}:${currency}`
-  const quoteKey = canBeQuoted && !isFund && isValidTicker && currencyIsQuotable ? quoteKeyFor(normalizedSymbol) : null
+  const quoteKey =
+    !isImported && canBeQuoted && !isFund && isValidTicker && currencyIsQuotable ? quoteKeyFor(normalizedSymbol) : null
 
-  const searchScope = canBeQuoted && currencyIsQuotable ? `${market}:${isFund ? "" : currency}` : null
+  const searchScope = !isImported && canBeQuoted && currencyIsQuotable ? `${market}:${isFund ? "" : currency}` : null
   const searchMinLength = isFund ? FUND_SEARCH_MIN_LENGTH : TICKER_SEARCH_MIN_LENGTH
   const searchKey =
     searchScope !== null && normalizedSymbol.length >= searchMinLength && (isFund || isValidTicker)
@@ -353,6 +401,8 @@ export function AddInvestmentForm({
         purchasedOn,
         symbol: trimmedSymbol || null,
         quantity: trimmedQuantity ? Number(trimmedQuantity) : null,
+        annualRate: accrues ? Number(annualRate) : null,
+        termDays: withTerm ? Number(termDays) : null,
       })
       onClose()
     } catch (error) {
@@ -367,7 +417,12 @@ export function AddInvestmentForm({
       <div className="grid grid-cols-3 gap-2">
         <div className="col-span-2 space-y-2">
           <Label htmlFor="investment-type">Tipo de activo</Label>
-          <Select value={type} onValueChange={(value) => handleTypeChange(value as InvestmentType)} required>
+          <Select
+            value={type}
+            onValueChange={(value) => handleTypeChange(value as InvestmentType)}
+            disabled={isImported}
+            required
+          >
             <SelectTrigger id="investment-type" className="w-full">
               <SelectValue placeholder="Seleccioná el tipo" />
             </SelectTrigger>
@@ -382,7 +437,7 @@ export function AddInvestmentForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="investment-currency">Moneda</Label>
-          <Select value={currency} onValueChange={(value) => setCurrency(value as Currency)}>
+          <Select value={currency} onValueChange={(value) => setCurrency(value as Currency)} disabled={isImported}>
             <SelectTrigger id="investment-currency" className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -397,7 +452,22 @@ export function AddInvestmentForm({
         </div>
       </div>
 
-      {canBeQuoted && (
+      {isImported ? (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            {type !== "" && symbol !== "" && quantity !== "" && (
+              <p className="font-medium text-foreground">
+                {symbol} · {formatQuantity(Number(quantity), type)}
+              </p>
+            )}
+            <p>
+              Esta inversión la trae IOL: el tipo, la moneda, la cantidad, el capital y la fecha se actualizan solos en
+              cada sincronización. Acá solo podés cambiarle el nombre.
+            </p>
+          </AlertDescription>
+        </Alert>
+      ) : canBeQuoted && (
         <section aria-labelledby="investment-quote-title" className="space-y-3 rounded-md border p-3">
           <div>
             <p id="investment-quote-title" className="text-sm font-medium">
@@ -511,6 +581,67 @@ export function AddInvestmentForm({
         </section>
       )}
 
+      {!isImported && accrues && (
+        <section aria-labelledby="investment-rate-title" className="space-y-3 rounded-md border p-3">
+          <div>
+            <p id="investment-rate-title" className="text-sm font-medium">
+              Tasa pactada
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {withTerm
+                ? "Con la TNA y el plazo calculamos cuánto vale hoy y cuánto cobrás al vencimiento."
+                : "Con la TNA calculamos cuánto vale hoy, con los intereses que se suman todos los días."}
+            </p>
+          </div>
+
+          <div className={withTerm ? "grid grid-cols-2 gap-2" : "grid grid-cols-1 gap-3"}>
+            <div className="space-y-2">
+              <Label htmlFor="investment-rate">TNA (%)</Label>
+              <Input
+                id="investment-rate"
+                type="number"
+                inputMode="decimal"
+                placeholder="ej. 32.5"
+                step="0.01"
+                min="0.01"
+                max={ANNUAL_RATE_MAX}
+                value={annualRate}
+                onChange={(e) => setAnnualRate(e.target.value)}
+                required
+              />
+            </div>
+            {withTerm && (
+              <div className="space-y-2">
+                <Label htmlFor="investment-term">Plazo (días)</Label>
+                <Input
+                  id="investment-term"
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="ej. 30"
+                  step="1"
+                  min="1"
+                  max={TERM_DAYS_MAX}
+                  value={termDays}
+                  onChange={(e) => setTermDays(e.target.value)}
+                  required
+                />
+              </div>
+            )}
+          </div>
+
+          <p className="text-sm text-muted-foreground" aria-live="polite">
+            {accrualPreview(
+              type,
+              Number(effectiveInvestedAmount),
+              Number(annualRate),
+              Number(termDays),
+              purchasedOn,
+              currency,
+            ) ?? (withTerm ? "Cargá la TNA y el plazo para ver cuánto cobrás." : "Cargá la TNA para ver cuánto rinde.")}
+          </p>
+        </section>
+      )}
+
       <div className="space-y-2">
         <Label htmlFor="investment-asset">Nombre del activo</Label>
         <Input
@@ -534,6 +665,7 @@ export function AddInvestmentForm({
           min="0.01"
           value={effectiveInvestedAmount}
           onChange={(e) => handleInvestedAmountChange(e.target.value)}
+          disabled={isImported}
           required
         />
         {isAmountCalculated && quotedPrice && (
@@ -549,13 +681,14 @@ export function AddInvestmentForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="investment-date">Fecha de compra</Label>
+        <Label htmlFor="investment-date">{accrues ? "Fecha de inicio" : "Fecha de compra"}</Label>
         <Input
           id="investment-date"
           type="date"
           max={todayForDateInput()}
           value={purchasedOn}
           onChange={(e) => setPurchasedOn(e.target.value)}
+          disabled={isImported}
           required
         />
       </div>

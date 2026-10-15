@@ -20,7 +20,7 @@ CI (`.github/workflows/ci.yaml`) corre en cada push a `main` y `dev`: `npm ci`, 
 
 ## Estado actual: casi todo es mock
 
-Salvo el login, WhatsApp y Telegram, no hay llamadas reales a la API. Antes de "arreglar" algo que parece
+Salvo el login, WhatsApp, Telegram y lo que se lista abajo, no hay llamadas reales a la API. Antes de "arreglar" algo que parece
 un bug, revisá si no es simplemente esto:
 
 - **`lib/auth-context.tsx`** (T-05, SCRUM-23; login de empresa: HU-46) mantiene la sesión real:
@@ -57,13 +57,43 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   de sesión. Cada notificación nueva llega con el evento `NotificationReceived`. Al conectarse,
   al perder la conexión y al volver a la pestaña se vuelve a pedir el contador: ese pedido pasa
   por `api`, así que de paso renueva la sesión vencida antes de reconectar.
+- **Logros (T-22, SCRUM-106)**: `components/achievements/achievement-celebrator.tsx`, montado en el
+  layout del dashboard solo para empleados, pide `GET /api/achievements/uncelebrated` al entrar y
+  cada vez que la campanita recibe una notificación `AchievementUnlocked` (la campanita dispara
+  `ACHIEVEMENT_NOTIFICATION_EVENT`: no hay una segunda conexión al hub). Un logro chico sale como
+  toast de sonner con borde dorado, uno importante (`isMajor`) en una celebración central, y varios
+  juntos en un solo toast con todas las medallas. Después confirma con
+  `POST /api/achievements/celebrate` **solo los códigos que mostró**. Cada logro tiene su medalla
+  (`achievement-medal.tsx`): el ícono sale del código, así que un código nuevo en el backend
+  necesita su ícono acá. El dorado son los tokens `--gold` y `--gold-soft` de `globals.css`. Los
+  nombres y descripciones de los logros vienen del backend en castellano.
+- **Hitos y recomendaciones (HU-44)**: en la pestaña Resumen de Reportes,
+  `components/reports/financial-insights-section.tsx` pide `GET /api/reports/insights` con el
+  período de la página y su propio selector de moneda, y arma dos cards: Resumen Financiero
+  (`financial-summary-card.tsx`, hitos calculados por el backend y logros del período) y Análisis y
+  Recomendaciones (`financial-recommendations-card.tsx`, tres recomendaciones de FinGrow-AI). Sin 2
+  meses con actividad suficiente muestra cuánto falta, con los números que manda el backend. El link
+  de cada recomendación sale de `action`, una lista cerrada; la IA nunca manda URLs. La aclaración
+  de que no es asesoramiento financiero certificado va fija al pie de la card de recomendaciones: no
+  la saques. `GET /api/reports/monthly-summary` (`getMonthlySummary`) es la base para conectar los
+  gráficos de Resumen y Análisis de Gastos (HU-41 y HU-42), que siguen con datos mock.
 - **Bandeja de pendientes (HU-15)**: es la pestaña "Pendientes" de Transacciones
   (`components/transactions/pending-inbox.tsx`, también `/dashboard/transactions?view=pending`).
   Lista lo que propuso un canal automático (`GET /api/transactions/pending`), y cada movimiento
   se confirma con correcciones o se descarta. Los pendientes no aparecen en la tabla general. El
   nivel de confianza (`aiConfidenceLevel`) lo calcula el backend: el front solo lo muestra. Sus
   textos ya están en `lib/i18n` en los tres idiomas.
-- `INTEGRACIONES.md` describe Gmail, Mercado Pago y OCR **en modo demo, con datos simulados**:
+- **Escanear un comprobante (HU-12)** es real: `components/transactions/scan-receipt-dialog.tsx`
+  sube el archivo con `POST /api/receipts` y lo escanea con `POST /api/receipts/{id}/scan`, que
+  devuelve el movimiento ya creado como pendiente. Se abre enseguida en la misma revisión de la
+  bandeja (`usePendingReview` + `PendingReviewDialogs`, `components/transactions/pending-review.tsx`):
+  si se cierra sin confirmar, queda en Pendientes. Antes de subir, `lib/receipt-image.ts` recomprime
+  toda foto a JPEG de hasta 2000 px y 5 MB (el tope de Textract), así que WEBP o HEIC llegan al
+  backend como JPEG; un HEIC que el navegador no puede abrir se avisa. Si no se puede leer, el
+  diálogo ofrece cargarlo a mano con el comprobante ya adjunto (`preloadedReceipt` de
+  `AddTransactionForm`). Con fuente `ReceiptScan`, la confianza es la de la lectura (monto, fecha y
+  comercio), no la de la categoría: `ConfidenceBadge` lo explica con `subject="reading"`.
+- `INTEGRACIONES.md` describe Gmail y Mercado Pago **en modo demo, con datos simulados**:
   no hay credenciales reales conectadas todavía. Las excepciones son WhatsApp (HU-09) y Telegram
   (HU-08): `components/integrations/link-code-integration-card.tsx` es la card genérica de
   vinculación por código (estado real vía `GET /api/integrations/{provider}`, código con

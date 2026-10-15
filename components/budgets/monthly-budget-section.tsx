@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
-  ArrowLeftRightIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   CopyIcon,
@@ -31,6 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  BUDGET_NOTIFICATION_EVENT,
   deleteBudget,
   duplicatePreviousBudget,
   getBudget,
@@ -43,7 +43,6 @@ import {
   expenseCategoryLabels,
   type ExpenseCategory,
 } from "@/lib/api/transactions";
-import { BudgetCurrencyForm } from "./budget-currency-form";
 import { BudgetLimitCard } from "./budget-limit-card";
 import { BudgetLimitForm } from "./budget-limit-form";
 import {
@@ -78,7 +77,6 @@ export function MonthlyBudgetSection({
   const [categoryToRemove, setCategoryToRemove] =
     useState<ExpenseCategory | null>(null);
   const [isDeleteBudgetOpen, setIsDeleteBudgetOpen] = useState(false);
-  const [isCurrencyOpen, setIsCurrencyOpen] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
 
   const previousPeriod = shiftMonth(period, -1);
@@ -129,6 +127,11 @@ export function MonthlyBudgetSection({
 
   const reload = () => setReloadKey((key) => key + 1);
 
+  useEffect(() => {
+    const onBudgetAlert = () => setReloadKey((key) => key + 1);
+    window.addEventListener(BUDGET_NOTIFICATION_EVENT, onBudgetAlert);
+    return () => window.removeEventListener(BUDGET_NOTIFICATION_EVENT, onBudgetAlert);
+  }, []);
   const handleDuplicate = async () => {
     setIsDuplicating(true);
     try {
@@ -229,10 +232,6 @@ export function MonthlyBudgetSection({
                 Agregar Categoría
               </Button>
             )}
-            <Button variant="outline" onClick={() => setIsCurrencyOpen(true)}>
-              <ArrowLeftRightIcon className="size-4" />
-              Cambiar Moneda
-            </Button>
             <Button
               variant="outline"
               className="text-destructive hover:text-destructive"
@@ -357,28 +356,6 @@ export function MonthlyBudgetSection({
               onSaved={setBudget}
               onBudgetMissing={reload}
               onClose={() => setLimitEditor(null)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isCurrencyOpen} onOpenChange={setIsCurrencyOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Cambiar moneda</DialogTitle>
-            <DialogDescription>
-              Elegí la moneda del presupuesto de{" "}
-              <span className="capitalize">{periodLabel}</span>. Se aplica a
-              todas sus categorías.
-            </DialogDescription>
-          </DialogHeader>
-          {isCurrencyOpen && budget && (
-            <BudgetCurrencyForm
-              period={period}
-              currentCurrency={budget.currency}
-              onSaved={setBudget}
-              onBudgetMissing={reload}
-              onClose={() => setIsCurrencyOpen(false)}
             />
           )}
         </DialogContent>

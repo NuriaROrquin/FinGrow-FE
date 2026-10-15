@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts"
-import { DownloadIcon, TrendingUpIcon, TrendingDownIcon, DollarSignIcon } from "lucide-react"
+import { DownloadIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useState } from "react"
+import { FinancialInsightsSection } from "@/components/reports/financial-insights-section"
 import { SavingsVsGoalsReport } from "@/components/reports/savings-vs-goals-report"
 import { PeriodFilter, getCurrentMonthStart, getInclusiveMonthCount, getToday } from "@/components/period-filter"
 
@@ -231,81 +232,7 @@ export default function ReportsPage() {
 							</CardContent>
 						</Card>
 
-						<div className="grid gap-4 md:grid-cols-2">
-							<Card>
-								<CardHeader>
-									<CardTitle>Resumen Financiero</CardTitle>
-									<CardDescription>Métricas clave del período</CardDescription>
-								</CardHeader>
-								<CardContent>
-									<div className="space-y-4">
-										<div className="flex items-center justify-between p-3 rounded-lg bg-success/10 border border-success/20">
-											<div className="flex items-center gap-3">
-												<TrendingUpIcon className="size-5 text-success" />
-												<div>
-													<p className="font-medium">Mes con Mayor Ingreso</p>
-													<p className="text-sm text-muted-foreground">
-														Mayo y Junio
-													</p>
-												</div>
-											</div>
-											<span className="font-semibold text-success">$5,500</span>
-										</div>
-
-										<div className="flex items-center justify-between p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-											<div className="flex items-center gap-3">
-												<TrendingDownIcon className="size-5 text-destructive" />
-												<div>
-													<p className="font-medium">Mes con Mayor Gasto</p>
-													<p className="text-sm text-muted-foreground">Mayo</p>
-												</div>
-											</div>
-											<span className="font-semibold text-destructive">$4,800</span>
-										</div>
-
-										<div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20">
-											<div className="flex items-center gap-3">
-												<DollarSignIcon className="size-5 text-primary" />
-												<div>
-													<p className="font-medium">Mejor Mes de Ahorro</p>
-													<p className="text-sm text-muted-foreground">Febrero</p>
-												</div>
-											</div>
-											<span className="font-semibold text-primary">$3,602</span>
-										</div>
-									</div>
-								</CardContent>
-							</Card>
-
-							<Card>
-								<CardHeader>
-									<CardTitle>Análisis y Recomendaciones</CardTitle>
-									<CardDescription>Basado en tus datos financieros</CardDescription>
-								</CardHeader>
-								<CardContent>
-									<div className="space-y-3">
-										<div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
-											<p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-												Tu tasa de ahorro es del 32% - por encima del 20% recomendado
-											</p>
-										</div>
-
-										<div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
-											<p className="text-sm font-medium text-amber-900 dark:text-amber-100">
-												Mayo tuvo gastos inusualmente altos. Revisa los gastos discrecionales.
-											</p>
-										</div>
-
-										<div className="p-3 rounded-lg bg-success/10 border border-success/20">
-											<p className="text-sm font-medium">
-												Se detectó crecimiento constante de ingresos. Considera aumentar
-												contribuciones de jubilación.
-											</p>
-										</div>
-									</div>
-								</CardContent>
-							</Card>
-						</div>
+						<FinancialInsightsSection dateFrom={dateFrom} dateTo={dateTo} />
 					</TabsContent>
 
 					{/* Spending Analysis Tab */}

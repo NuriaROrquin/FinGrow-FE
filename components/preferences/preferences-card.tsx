@@ -2,7 +2,6 @@
 
 import { useEffect, useState, type FormEvent } from "react"
 import { DollarSignIcon, PaletteIcon } from "lucide-react"
-import { useTheme } from "next-themes"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,11 +13,12 @@ import type { Currency } from "@/lib/api/transactions"
 import { useAuth } from "@/lib/auth-context"
 import { messagesFor, useMessages } from "@/lib/i18n"
 import { usePreferences } from "@/lib/preferences-context"
+import { CompanyPreferencesCard } from "./company-preferences-card"
 
 export function PreferencesCard() {
   const { role } = useAuth()
 
-  return role === "empleado" ? <EmployeePreferencesForm /> : <CompanyThemeCard />
+  return role === "empleado" ? <EmployeePreferencesForm /> : <CompanyPreferencesCard />
 }
 
 function EmployeePreferencesForm() {
@@ -134,29 +134,6 @@ function EmployeePreferencesForm() {
         </CardContent>
       </Card>
     </form>
-  )
-}
-
-/** La empresa no tiene preferencias guardadas: el tema queda solo en este navegador. */
-function CompanyThemeCard() {
-  const { theme, setTheme } = useTheme()
-  const t = useMessages()
-
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <PaletteIcon className="size-5" />
-          <div>
-            <CardTitle>{t.preferences.appearance}</CardTitle>
-            <CardDescription>{t.preferences.appearanceDescription}</CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <ThemeSelect value={(theme as ThemePreference | undefined) ?? "system"} onChange={setTheme} />
-      </CardContent>
-    </Card>
   )
 }
 
