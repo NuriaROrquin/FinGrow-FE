@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -27,7 +28,10 @@ type BudgetsTab = "budgets" | "savings"
 const scrollableGoalGrid = "grid max-h-[560px] gap-4 overflow-y-auto p-1 pr-2 md:grid-cols-2"
 
 export default function BudgetsPage() {
-  const [activeTab, setActiveTab] = useState<BudgetsTab>("budgets")
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState<BudgetsTab>(() =>
+    searchParams.get("tab") === "savings" ? "savings" : "budgets",
+  )
   const [currentBudget, setCurrentBudget] = useState<BudgetDto | null>(null)
   const [isSavingsDialogOpen, setIsSavingsDialogOpen] = useState(false)
   const [savingsGoals, setSavingsGoals] = useState<GoalDto[]>([])
