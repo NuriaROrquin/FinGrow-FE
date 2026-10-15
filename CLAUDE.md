@@ -63,6 +63,16 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   (`achievement-medal.tsx`): el ícono sale del código, así que un código nuevo en el backend
   necesita su ícono acá. El dorado son los tokens `--gold` y `--gold-soft` de `globals.css`. Los
   nombres y descripciones de los logros vienen del backend en castellano.
+- **Hitos y recomendaciones (HU-44)**: en la pestaña Resumen de Reportes,
+  `components/reports/financial-insights-section.tsx` pide `GET /api/reports/insights` con el
+  período de la página y su propio selector de moneda, y arma dos cards: Resumen Financiero
+  (`financial-summary-card.tsx`, hitos calculados por el backend y logros del período) y Análisis y
+  Recomendaciones (`financial-recommendations-card.tsx`, tres recomendaciones de FinGrow-AI). Sin 2
+  meses con actividad suficiente muestra cuánto falta, con los números que manda el backend. El link
+  de cada recomendación sale de `action`, una lista cerrada; la IA nunca manda URLs. La aclaración
+  de que no es asesoramiento financiero certificado va fija al pie de la card de recomendaciones: no
+  la saques. `GET /api/reports/monthly-summary` (`getMonthlySummary`) es la base para conectar los
+  gráficos de Resumen y Análisis de Gastos (HU-41 y HU-42), que siguen con datos mock.
 - **Bandeja de pendientes (HU-15)**: es la pestaña "Pendientes" de Transacciones
   (`components/transactions/pending-inbox.tsx`, también `/dashboard/transactions?view=pending`).
   Lista lo que propuso un canal automático (`GET /api/transactions/pending`), y cada movimiento
