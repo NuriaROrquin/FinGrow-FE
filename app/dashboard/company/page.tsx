@@ -16,6 +16,7 @@ import {
   BuildingIcon,
 } from "lucide-react"
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
+import { ParticipationCards } from "@/components/company/participation-cards"
 
 const employeeEngagement = [
   { month: "Ene", active: 145, enrolled: 180 },
@@ -66,8 +67,6 @@ const chartConfig = {
 }
 
 export default function CompanyDashboardPage() {
-  const totalEmployees = 205
-  const activeUsers = 178
   const avgHealthScore = 73
   const completedCourses = 342
 
@@ -86,29 +85,7 @@ export default function CompanyDashboardPage() {
 
       {/* Key Metrics */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total de Empleados</CardDescription>
-            <CardTitle className="text-2xl">{totalEmployees}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <UsersIcon className="size-4" />
-              <span>{activeUsers} usuarios activos</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Tasa de Participación</CardDescription>
-            <CardTitle className="text-2xl">{((activeUsers / totalEmployees) * 100).toFixed(1)}%</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Progress value={(activeUsers / totalEmployees) * 100} className="h-2" />
-            <p className="text-sm text-muted-foreground mt-2">Objetivo: 85%</p>
-          </CardContent>
-        </Card>
+        <ParticipationCards />
 
         <Card>
           <CardHeader className="pb-2">

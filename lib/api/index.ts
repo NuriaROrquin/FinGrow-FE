@@ -69,6 +69,7 @@ export {
   DEPARTMENT_NAME_MAX_LENGTH,
   COMPANY_INDUSTRIES,
   EMPLOYEE_EMAIL_MAX_LENGTH,
+  getCompanyParticipation,
   getCompanyProfile,
   getCompanyPreferences,
   isValidCuit,
@@ -79,6 +80,7 @@ export {
   updateDepartment,
   updateEmployee,
   type CompanyEmployeeDto,
+  type CompanyParticipationDto,
   type CompanyIndustry,
   type CompanyProfileDto,
   type CompanyPreferencesDto,
@@ -115,6 +117,7 @@ export {
   courseLevelLabels,
   courseProgressStatusLabels,
   getCourse,
+  getLearningProgress,
   listCourses,
   rateCourse,
   type CourseDetailDto,
@@ -122,6 +125,7 @@ export {
   type CourseLevel,
   type CourseProgressStatus,
   type CourseSummaryDto,
+  type LearningProgressDto,
   type LessonDto,
 } from "./courses"
 export { type EducationCategory } from "./education"

@@ -36,8 +36,12 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   pedirla. El switch de estado activa o desactiva el acceso (HU-55): desactivar conserva los
   datos, eliminar los borra. El responsable de un departamento (HU-52) es un empleado activo de
   la empresa elegido con `components/company/manager-picker.tsx`; si después pierde el acceso,
-  sigue figurando como "(sin acceso)" hasta que se cambie. El panel principal de la empresa
-  (`/dashboard/company`) sigue con métricas mock.
+  sigue figurando como "(sin acceso)" hasta que se cambie. En el panel principal de la empresa
+  (`/dashboard/company`) solo son reales las tarjetas de total de empleados y tasa de
+  participación (HU-56, `components/company/participation-cards.tsx`,
+  `GET /api/company/metrics/participation`); el resto sigue mock. Cuando el backend manda
+  `isParticipationHidden`, la tasa no se muestra ni se calcula en el front: es la protección
+  de anonimato para grupos chicos.
 - **Educación** (artículos y cursos) usa la API real. La pantalla de Inversiones abre el contenido
   de cada tipo de activo (HU-35, `components/investments/related-education-dialog.tsx`) y todo
   artículo o curso con `isInvestmentContent` muestra `components/education/investment-disclaimer.tsx`:
