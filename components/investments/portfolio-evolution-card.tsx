@@ -88,6 +88,7 @@ export function PortfolioEvolutionCard({
   const [chosenCurrency, setChosenCurrency] = useState<Currency | "">("")
   const [evolution, setEvolution] = useState<PortfolioEvolutionDto | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [loadFailed, setLoadFailed] = useState(false)
 
   const currency = currencies?.includes(chosenCurrency as Currency) ? (chosenCurrency as Currency) : currencies?.[0]
 
@@ -98,9 +99,13 @@ export function PortfolioEvolutionCard({
     setIsLoading(true)
 
     getPortfolioEvolution(currency, range, controller.signal)
-      .then(setEvolution)
+      .then((loaded) => {
+        setEvolution(loaded)
+        setLoadFailed(false)
+      })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return
+        setLoadFailed(true)
         toastApiError(error, "No se pudo cargar la evolución de tu portafolio.")
       })
       .finally(() => {
@@ -116,6 +121,10 @@ export function PortfolioEvolutionCard({
   const renderContent = () => {
     if (currencies !== null && currencies.length === 0) {
       return <p className="text-sm text-muted-foreground">Todavía no registraste inversiones</p>
+    }
+
+    if (loadFailed && !isLoading) {
+      return <p className="text-sm text-muted-foreground">No pudimos cargar la evolución. Probá de nuevo en un rato.</p>
     }
 
     if (currencies === null || !evolution) {
