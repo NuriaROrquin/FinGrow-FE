@@ -34,6 +34,12 @@ export function getToday(): string {
   return formatDateInput(new Date())
 }
 
+/** Primer día del mes que abre una ventana de `count` meses que termina en el mes en curso. */
+export function getLastMonthsStart(count: number): string {
+  const now = new Date()
+  return formatDateInput(new Date(now.getFullYear(), now.getMonth() - (count - 1), 1))
+}
+
 function getMonthEnd(date: Date): string {
   return formatDateInput(new Date(date.getFullYear(), date.getMonth() + 1, 0))
 }
@@ -47,6 +53,21 @@ export function getInclusiveMonthCount(dateFrom: string, dateTo: string): number
   )
 }
 
+function formatPeriodLabel(dateFrom: string, dateTo: string): string {
+  const from = parseDateInput(dateFrom)
+  const to = parseDateInput(dateTo)
+
+  if (getInclusiveMonthCount(dateFrom, dateTo) === 1) {
+    return formatDateText(from, { month: "long", year: "numeric" })
+  }
+
+  if (from.getFullYear() === to.getFullYear()) {
+    return `${formatDateText(from, { month: "long" })} – ${formatDateText(to, { month: "long", year: "numeric" })}`
+  }
+
+  return `${formatDateText(from, { month: "short", year: "numeric" })} – ${formatDateText(to, { month: "short", year: "numeric" })}`
+}
+
 type PeriodFilterProps = {
   dateFrom: string
   dateTo: string
@@ -57,14 +78,16 @@ export function PeriodFilter({ dateFrom, dateTo, onChange }: PeriodFilterProps) 
   const [customDateFrom, setCustomDateFrom] = useState(dateFrom)
   const [customDateTo, setCustomDateTo] = useState(dateTo)
   const [isCustomPeriodOpen, setIsCustomPeriodOpen] = useState(false)
-  const periodLabel = formatDateText(parseDateInput(dateFrom), { month: "long", year: "numeric" })
+  const periodLabel = formatPeriodLabel(dateFrom, dateTo)
 
+  // Las flechas mueven la ventana entera: con un rango de 6 meses van a los 6 anteriores o siguientes.
   const changePeriod = (offset: number) => {
+    const monthCount = getInclusiveMonthCount(dateFrom, dateTo)
     const currentPeriod = parseDateInput(dateFrom)
-    const nextPeriod = new Date(currentPeriod.getFullYear(), currentPeriod.getMonth() + offset, 1)
+    const nextPeriod = new Date(currentPeriod.getFullYear(), currentPeriod.getMonth() + offset * monthCount, 1)
     onChange({
       dateFrom: formatDateInput(nextPeriod),
-      dateTo: getMonthEnd(nextPeriod),
+      dateTo: getMonthEnd(new Date(nextPeriod.getFullYear(), nextPeriod.getMonth() + monthCount - 1, 1)),
     })
   }
 
@@ -88,7 +111,7 @@ export function PeriodFilter({ dateFrom, dateTo, onChange }: PeriodFilterProps) 
         >
           <ChevronLeft className="size-4" />
         </Button>
-        <div className="min-w-48 rounded-md border border-border/60 bg-card px-3 py-2 text-center text-sm font-medium capitalize">
+        <div className="min-w-48 rounded-md border border-border/60 bg-card px-3 py-2 text-center text-sm font-medium first-letter:uppercase">
           {periodLabel}
         </div>
         <Button
