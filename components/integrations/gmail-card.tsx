@@ -33,6 +33,7 @@ import {
 } from "@/lib/api"
 import { useMessages } from "@/lib/i18n"
 
+import { LastSync } from "./last-sync"
 import { formatLinkedDate, LINKED_ICON_CLASS } from "./link-code-integration-card"
 
 const PROVIDER = "gmail"
@@ -161,7 +162,7 @@ export function GmailCard() {
             {failed ? (
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>{t.gmail.failed}</AlertDescription>
+                <AlertDescription>{integration.errorReason ?? t.gmail.failed}</AlertDescription>
               </Alert>
             ) : (
               <Alert>
@@ -175,6 +176,7 @@ export function GmailCard() {
                 </AlertDescription>
               </Alert>
             )}
+            <LastSync lastSyncedAt={integration.lastSyncedAt} />
             <div className="flex flex-wrap gap-2">
               {!failed && (
                 <Button onClick={sync} disabled={busy} variant="outline">

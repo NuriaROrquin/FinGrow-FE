@@ -8,6 +8,10 @@ export const en: Messages = {
     open: "Open",
     unlink: "Unlink",
     saveChanges: "Save Changes",
+    lastSync: (date: string) => `Last sync: ${date}`,
+    neverSynced: "Not synced yet",
+    lastActivity: (date: string) => `Last activity: ${date}`,
+    neverActive: "No messages received yet",
   },
 
   nav: {
@@ -324,6 +328,9 @@ export const en: Messages = {
     linkedOn: (date: string) => ` on ${date}`,
     linkedSuffix: ". New transactions are fetched every hour and show up as pending in Transactions.",
     syncNow: "Sync now",
+    failedBadge: "Error",
+    failed:
+      "We lost access to your Mercado Pago account, probably because you removed the permission or it expired. Authorize again to keep importing your transactions.",
     reauthorize: "Authorize again",
     unlinkTitle: "Unlink Mercado Pago?",
     unlinkWarning:

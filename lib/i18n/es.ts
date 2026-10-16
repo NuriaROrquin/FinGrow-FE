@@ -6,6 +6,10 @@ export const es = {
     open: "Abrir",
     unlink: "Desvincular",
     saveChanges: "Guardar Cambios",
+    lastSync: (date: string) => `Última sincronización: ${date}`,
+    neverSynced: "Todavía no se sincronizó",
+    lastActivity: (date: string) => `Última actividad: ${date}`,
+    neverActive: "Todavía no recibimos mensajes",
   },
 
   nav: {
@@ -325,6 +329,9 @@ export const es = {
     linkedOn: (date: string) => ` el ${date}`,
     linkedSuffix: ". Los movimientos nuevos se traen cada hora y aparecen como pendientes en Transacciones.",
     syncNow: "Sincronizar ahora",
+    failedBadge: "Con error",
+    failed:
+      "Perdimos el acceso a tu cuenta de Mercado Pago, probablemente porque quitaste el permiso o venció. Volvé a autorizar para seguir importando tus movimientos.",
     reauthorize: "Volver a autorizar",
     unlinkTitle: "¿Desvincular Mercado Pago?",
     unlinkWarning:
