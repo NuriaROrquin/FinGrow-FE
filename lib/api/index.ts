@@ -227,10 +227,15 @@ export {
   type SortDirection,
 } from "./investments"
 export {
+  getExpenseBreakdown,
   getFinancialInsights,
   getMonthlySummary,
   getSavingsVsGoals,
   type CategoryAmountDto,
+  type CategoryExpenseDto,
+  type ExpenseBreakdownDto,
+  type ExpenseComparisonDto,
+  type ExpenseTotalDto,
   type FinancialHighlightsDto,
   type FinancialInsightsDto,
   type FinancialRecommendationDto,

@@ -83,6 +83,50 @@ export function getMonthlySummary(
   })
 }
 
+export interface ExpenseComparisonDto {
+  previousAmount: number
+  variationAmount: number
+  variationPercent: number | null
+  isNew: boolean
+}
+
+export interface CategoryExpenseDto {
+  category: ExpenseCategory
+  amount: number
+  percentage: number
+  comparison: ExpenseComparisonDto | null
+}
+
+export interface ExpenseTotalDto {
+  amount: number
+  comparison: ExpenseComparisonDto | null
+}
+
+export interface ExpenseBreakdownDto {
+  currency: Currency
+  from: string
+  to: string
+  previousFrom: string
+  previousTo: string
+  hasPreviousPeriod: boolean
+  categories: CategoryExpenseDto[]
+  consumption: ExpenseTotalDto
+  savings: ExpenseTotalDto
+  total: ExpenseTotalDto
+}
+
+export function getExpenseBreakdown(
+  currency: Currency,
+  from: string,
+  to: string,
+  signal?: AbortSignal,
+): Promise<ExpenseBreakdownDto> {
+  return api.get<ExpenseBreakdownDto>("/api/reports/expense-breakdown", {
+    query: { currency, from, to },
+    signal,
+  })
+}
+
 export type RecommendationKind = "Positive" | "Warning" | "Tip"
 
 export type RecommendationAction = "None" | "Budgets" | "Goals" | "Transactions" | "Education"
