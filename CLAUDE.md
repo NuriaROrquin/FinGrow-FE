@@ -78,7 +78,20 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   `monthly-evolution-chart.tsx` (ingresos y gastos en barras, ahorro en línea) y el mes con mayor
   ingreso, el de mayor gasto y el mejor mes de ahorro `monthly-highlights-card.tsx`, sin umbral de
   historial. Las flechas de `components/period-filter.tsx` mueven la ventana entera (6 meses → los 6
-  anteriores). La pestaña Análisis de Gastos (HU-42) sigue con datos mock.
+  anteriores).
+- **Reportes: análisis de gastos (HU-42)**. La pestaña Análisis de Gastos es
+  `components/reports/expense-breakdown-section.tsx`, que pide `GET /api/reports/expense-breakdown`
+  con el período y la moneda de la página. El backend manda todo calculado: montos, porcentajes con un
+  decimal, el período anterior (misma cantidad de meses, justo antes) y la variación de cada categoría.
+  No recalcules nada en el front. Ahorro e Inversión no entra en el ranking ni en la base de los
+  porcentajes, porque es ahorro y no gasto. Va aparte, en la conciliación al pie de
+  `expense-category-details.tsx`: gastos de consumo (100 %) + ahorro e inversión = total, que es igual
+  a "Gastos Totales". En la comparación su variación tiene el sentido invertido: que suba es bueno
+  (`favorable="increase"` de `expense-variation.tsx`). El switch "Comparar con período anterior" muestra
+  la variación, marca "Nueva" una categoría sin gasto antes y suma al final las que bajaron a cero
+  (−100 %). Sin historia antes de que termine el período anterior (`hasPreviousPeriod`), el switch
+  muestra "Sin período anterior para mostrar". Sus textos están en `lib/i18n` (`expenseBreakdown`); los
+  nombres de las categorías salen de `expenseCategoryLabels`, que todavía no pasa por i18n.
 - **Hitos y recomendaciones (HU-44)**: debajo del gráfico de Resumen,
   `components/reports/financial-insights-section.tsx` pide `GET /api/reports/insights` con el
   período y la moneda de la página y arma dos cards: Hitos Alcanzados (`financial-summary-card.tsx`,
