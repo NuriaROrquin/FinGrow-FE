@@ -578,6 +578,28 @@ export const es = {
     alreadyScanned: "Este comprobante ya se escaneó. Si descartaste la propuesta, cargalo a mano.",
     scanFailed: "No pudimos escanear el comprobante. Intentá de nuevo.",
   },
+
+  expenseBreakdown: {
+    loadFailed: "No se pudo cargar el análisis de gastos.",
+    empty: (currency: string) => `No hay gastos confirmados en ${currency} en este período.`,
+    chartTitle: "Gastos por Categoría",
+    chartDescription: (currency: string) => `Dónde va tu dinero en ${currency}, sin contar ahorro e inversión`,
+    chartEmpty: "En este período solo hay movimientos de ahorro e inversión.",
+    chartAmount: "Monto",
+    detailsTitle: "Detalles por Categoría",
+    detailsDescription: "De mayor a menor, sobre tus gastos de consumo",
+    compare: "Comparar con período anterior",
+    comparedWith: (from: string, to: string) => `Comparado con ${from} – ${to}`,
+    noPreviousPeriod: "Sin período anterior para mostrar",
+    newCategory: "Nueva",
+    noChange: "Sin cambios",
+    consumption: "Gastos de consumo",
+    consumptionHint: "Base de los porcentajes",
+    savings: "Ahorro e Inversión",
+    savingsHint: "Es ahorro: no entra en el ranking",
+    total: "Total",
+    totalHint: "Igual a Gastos Totales",
+  },
 }
 
 export type Messages = typeof es
