@@ -53,7 +53,7 @@ export function getInclusiveMonthCount(dateFrom: string, dateTo: string): number
   )
 }
 
-function formatPeriodLabel(dateFrom: string, dateTo: string): string {
+export function formatPeriodLabel(dateFrom: string, dateTo: string): string {
   const from = parseDateInput(dateFrom)
   const to = parseDateInput(dateTo)
 
