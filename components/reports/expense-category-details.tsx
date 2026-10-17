@@ -1,6 +1,6 @@
 "use client"
 
-import { useId, useState, type ReactNode } from "react"
+import { useId, type ReactNode } from "react"
 import { PiggyBankIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,6 +13,7 @@ import { formatDate, formatMoney } from "@/lib/format"
 import { useMessages } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { ExpenseVariation, formatShare, type FavorableDirection } from "./expense-variation"
+import { useIsReportExport } from "./report-export-context"
 
 function CategoryRow({
   category,
@@ -87,12 +88,14 @@ function TotalRow({
 
 interface ExpenseCategoryDetailsProps {
   breakdown: ExpenseBreakdownDto
+  isComparing: boolean
+  onComparingChange: (isComparing: boolean) => void
 }
 
-export function ExpenseCategoryDetails({ breakdown }: ExpenseCategoryDetailsProps) {
+export function ExpenseCategoryDetails({ breakdown, isComparing, onComparingChange }: ExpenseCategoryDetailsProps) {
   const t = useMessages().expenseBreakdown
+  const isExport = useIsReportExport()
   const switchId = useId()
-  const [isComparing, setIsComparing] = useState(false)
   const showsComparison = isComparing && breakdown.hasPreviousPeriod
   const categories = showsComparison
     ? breakdown.categories
@@ -109,10 +112,12 @@ export function ExpenseCategoryDetails({ breakdown }: ExpenseCategoryDetailsProp
               : t.detailsDescription}
           </CardDescription>
         </div>
-        <div className="flex items-center gap-2 no-print">
-          <Switch id={switchId} checked={isComparing} onCheckedChange={setIsComparing} />
-          <Label htmlFor={switchId}>{t.compare}</Label>
-        </div>
+        {!isExport && (
+          <div className="flex items-center gap-2">
+            <Switch id={switchId} checked={isComparing} onCheckedChange={onComparingChange} />
+            <Label htmlFor={switchId}>{t.compare}</Label>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         {isComparing && !breakdown.hasPreviousPeriod && (

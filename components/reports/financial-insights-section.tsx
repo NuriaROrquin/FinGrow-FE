@@ -1,13 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { FinancialRecommendationsCard } from "@/components/reports/financial-recommendations-card"
 import { FinancialSummaryCard } from "@/components/reports/financial-summary-card"
-import { getFinancialInsights, toastApiError, type FinancialInsightsDto, type InsightsEligibilityDto } from "@/lib/api"
-import type { Currency } from "@/lib/api/transactions"
+import type { FinancialInsightsDto, InsightsEligibilityDto } from "@/lib/api"
 
 function plural(count: number, singular: string, pluralForm: string): string {
   return `${count} ${count === 1 ? singular : pluralForm}`
@@ -63,33 +61,11 @@ function NotEnoughHistory({ eligibility }: { eligibility: InsightsEligibilityDto
 }
 
 interface FinancialInsightsSectionProps {
-  dateFrom: string
-  dateTo: string
-  currency: Currency
+  insights: FinancialInsightsDto | null
+  isLoading: boolean
 }
 
-export function FinancialInsightsSection({ dateFrom, dateTo, currency }: FinancialInsightsSectionProps) {
-  const [insights, setInsights] = useState<FinancialInsightsDto | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const controller = new AbortController()
-    setIsLoading(true)
-
-    getFinancialInsights(currency, dateFrom, dateTo, controller.signal)
-      .then(setInsights)
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError") return
-        setInsights(null)
-        toastApiError(error, "No se pudieron cargar los hitos y recomendaciones.")
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setIsLoading(false)
-      })
-
-    return () => controller.abort()
-  }, [currency, dateFrom, dateTo])
-
+export function FinancialInsightsSection({ insights, isLoading }: FinancialInsightsSectionProps) {
   return (
     <div className="space-y-4">
       <div>
