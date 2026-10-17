@@ -8,6 +8,7 @@ import { expenseCategoryLabels } from "@/lib/api/transactions"
 import { formatMoney, formatNumber } from "@/lib/format"
 import { useMessages } from "@/lib/i18n"
 import { formatShare } from "./expense-variation"
+import { useIsReportExport } from "./report-export-context"
 
 const BAR_HEIGHT = 44
 const MIN_CHART_HEIGHT = 160
@@ -18,6 +19,7 @@ interface ExpenseCategoryChartProps {
 
 export function ExpenseCategoryChart({ breakdown }: ExpenseCategoryChartProps) {
   const t = useMessages().expenseBreakdown
+  const isExport = useIsReportExport()
   const chartConfig = { amount: { label: t.chartAmount, color: "var(--destructive)" } } satisfies ChartConfig
   const chartData = breakdown.categories
     .filter((category) => category.amount > 0)
@@ -67,7 +69,13 @@ export function ExpenseCategoryChart({ breakdown }: ExpenseCategoryChartProps) {
                   />
                 }
               />
-              <Bar dataKey="amount" fill="var(--color-amount)" radius={[0, 4, 4, 0]} maxBarSize={28} />
+              <Bar
+                dataKey="amount"
+                fill="var(--color-amount)"
+                radius={[0, 4, 4, 0]}
+                maxBarSize={28}
+                isAnimationActive={!isExport}
+              />
             </BarChart>
           </ChartContainer>
         )}

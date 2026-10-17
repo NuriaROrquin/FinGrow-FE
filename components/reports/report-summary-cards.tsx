@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import type { MonthlySummaryDto } from "@/lib/api"
 import { formatMoney } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { useIsReportExport } from "./report-export-context"
 
 function monthsLabel(count: number): string {
   return count === 1 ? "En 1 mes con datos" : `En ${count} meses con datos`
@@ -40,6 +41,8 @@ interface ReportSummaryCardsProps {
 }
 
 export function ReportSummaryCards({ summary, isLoading }: ReportSummaryCardsProps) {
+  const isExport = useIsReportExport()
+
   if (isLoading && !summary) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -60,7 +63,7 @@ export function ReportSummaryCards({ summary, isLoading }: ReportSummaryCardsPro
       }))
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className={cn("grid gap-4", isExport ? "grid-cols-2" : "md:grid-cols-2 lg:grid-cols-4")}>
       {cards.map((card) => (
         <Card key={card.label}>
           <CardHeader className="pb-2">
