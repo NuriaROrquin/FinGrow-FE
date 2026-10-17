@@ -57,6 +57,14 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   de sesión. Cada notificación nueva llega con el evento `NotificationReceived`. Al conectarse,
   al perder la conexión y al volver a la pestaña se vuelve a pedir el contador: ese pedido pasa
   por `api`, así que de paso renueva la sesión vencida antes de reconectar.
+- **Preferencias de notificaciones del empleado (HU-05)**: la pestaña Notificaciones de Configuración
+  es `components/notifications/notification-preferences.tsx` y usa la API real
+  (`/api/notifications/types` y `/api/notifications/channels`). Conviven dos niveles: el **tipo**
+  de alerta decide si existe (apagado, no llega a ningún canal ni a la bandeja) y el **canal**
+  decide por dónde viaja (la app es fija; Telegram y correo se apagan). Cada switch guarda al
+  instante y vuelve atrás si falla. Los 7 tipos son los de `NotificationType`: uno nuevo en el
+  backend necesita su texto en `settings.notifications.alertTypes` de los tres idiomas. La
+  pestaña de la empresa sigue siendo mock: la empresa no tiene preferencias en el backend.
 - **Logros (T-22, SCRUM-106)**: `components/achievements/achievement-celebrator.tsx`, montado en el
   layout del dashboard solo para empleados, pide `GET /api/achievements/uncelebrated` al entrar y
   cada vez que la campanita recibe una notificación `AchievementUnlocked` (la campanita dispara

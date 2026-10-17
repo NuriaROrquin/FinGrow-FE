@@ -157,6 +157,60 @@ export const en: Messages = {
       email: "Email Notifications",
       emailHint: "Get notifications by email",
       save: "Save Preferences",
+      alertTypes: {
+        title: "Which alerts you want to receive",
+        description: "If you turn an alert type off, it won't reach you through any channel or show up in your inbox.",
+        TransactionsToReview: {
+          label: "Transactions to review",
+          hint: "When an integration or the bot proposes new transactions",
+        },
+        GoalStalled: {
+          label: "Stalled goal",
+          hint: "When a savings goal hasn't moved in a while",
+        },
+        GoalDeadlineApproaching: {
+          label: "Goal deadline approaching",
+          hint: "When a goal's deadline is getting close",
+        },
+        BudgetWarning: {
+          label: "Budget running low",
+          hint: "When you get close to a category limit",
+        },
+        BudgetExceeded: {
+          label: "Budget exceeded",
+          hint: "When you go over a category limit",
+        },
+        IntegrationAccessLost: {
+          label: "Integration lost access",
+          hint: "When Gmail or IOL can no longer sync and need to be authorized again",
+        },
+        AchievementUnlocked: {
+          label: "Achievements unlocked",
+          hint: "When you earn a new medal",
+        },
+      },
+      channels: {
+        title: "Where to receive them",
+        description: "The channel decides where an alert travels; the type decides whether it reaches you.",
+        InApp: {
+          label: "In the app",
+          hint: "Always on: it's the history of all your alerts",
+        },
+        Telegram: {
+          label: "Telegram",
+          hint: "Get alerts in your Telegram chat",
+        },
+        Email: {
+          label: "Email",
+          hint: "Get alerts in your inbox",
+        },
+        alwaysOn: "Always on",
+        notConnected: "Link your chat under Integrations to receive them here.",
+      },
+      loading: "Loading your preferences...",
+      loadFailed: "We couldn't load your notification preferences.",
+      retry: "Retry",
+      saveFailed: "We couldn't save the change.",
     },
     ocr: {
       title: "OCR Processing",

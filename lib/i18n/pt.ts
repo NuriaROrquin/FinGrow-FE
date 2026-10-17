@@ -157,6 +157,60 @@ export const pt: Messages = {
       email: "Notificações por E-mail",
       emailHint: "Receba notificações por e-mail",
       save: "Salvar Preferências",
+      alertTypes: {
+        title: "Quais alertas você quer receber",
+        description: "Se você desligar um tipo de alerta, ele não chega por nenhum canal nem fica na sua caixa de entrada.",
+        TransactionsToReview: {
+          label: "Movimentos para revisar",
+          hint: "Quando uma integração ou o bot propõe novos movimentos",
+        },
+        GoalStalled: {
+          label: "Meta parada",
+          hint: "Quando uma meta de economia está há tempo sem avançar",
+        },
+        GoalDeadlineApproaching: {
+          label: "Meta perto do prazo",
+          hint: "Quando o prazo de uma meta está chegando",
+        },
+        BudgetWarning: {
+          label: "Orçamento quase esgotado",
+          hint: "Quando você se aproxima do limite de uma categoria",
+        },
+        BudgetExceeded: {
+          label: "Orçamento excedido",
+          hint: "Quando você ultrapassa o limite de uma categoria",
+        },
+        IntegrationAccessLost: {
+          label: "Integração sem acesso",
+          hint: "Quando o Gmail ou a IOL deixam de sincronizar e é preciso autorizar de novo",
+        },
+        AchievementUnlocked: {
+          label: "Conquistas desbloqueadas",
+          hint: "Quando você ganha uma medalha nova",
+        },
+      },
+      channels: {
+        title: "Por onde receber",
+        description: "O canal decide por onde viaja um alerta; o tipo, se ele chega até você.",
+        InApp: {
+          label: "No app",
+          hint: "Sempre ativo: é o histórico de todos os seus alertas",
+        },
+        Telegram: {
+          label: "Telegram",
+          hint: "Receba os alertas no seu chat do Telegram",
+        },
+        Email: {
+          label: "E-mail",
+          hint: "Receba os alertas no seu e-mail",
+        },
+        alwaysOn: "Sempre ativo",
+        notConnected: "Vincule seu chat em Integrações para receber por aqui.",
+      },
+      loading: "Carregando suas preferências...",
+      loadFailed: "Não conseguimos carregar suas preferências de notificações.",
+      retry: "Tentar de novo",
+      saveFailed: "Não conseguimos salvar a alteração.",
     },
     ocr: {
       title: "Processamento OCR",

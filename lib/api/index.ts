@@ -264,13 +264,20 @@ export {
 } from "./dashboard"
 export {
   BUDGET_NOTIFICATION_EVENT,
+  changeNotificationChannel,
+  changeNotificationTypePreference,
   getUnreadNotificationCount,
+  listNotificationChannels,
   listNotifications,
+  listNotificationTypePreferences,
   markAllNotificationsAsRead,
   markNotificationAsRead,
   NOTIFICATIONS_PAGE_SIZE,
+  type NotificationChannel,
+  type NotificationChannelDto,
   type NotificationDto,
   type NotificationType,
+  type NotificationTypePreferenceDto,
 } from "./notifications"
 export { connectToNotifications, type NotificationsHubHandlers } from "./notifications-hub"
 export {

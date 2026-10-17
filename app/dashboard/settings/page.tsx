@@ -23,6 +23,7 @@ import { changePassword, PASSWORD_MIN_LENGTH, toastApiError } from "@/lib/api"
 import { ProfileCard } from "@/components/profile/profile-card"
 import { CompanyProfileCard } from "@/components/company/company-profile-card"
 import { TwoFactorCard } from "@/components/security/two-factor-card"
+import { NotificationPreferences } from "@/components/notifications/notification-preferences"
 import { PreferencesCard } from "@/components/preferences/preferences-card"
 import { IolCard } from "@/components/integrations/iol-card"
 import { GmailCard } from "@/components/integrations/gmail-card"
@@ -104,124 +105,74 @@ export default function SettingsPage() {
 
         {/* Notifications Tab */}
         <TabsContent value="notifications" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <BellIcon className="size-5" />
-                <div>
-                  <CardTitle>{t.settings.notifications.title}</CardTitle>
-                  <CardDescription>{t.settings.notifications.description}</CardDescription>
+          {role === "empleado" ? (
+            <NotificationPreferences />
+          ) : (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <BellIcon className="size-5" />
+                  <div>
+                    <CardTitle>{t.settings.notifications.title}</CardTitle>
+                    <CardDescription>{t.settings.notifications.description}</CardDescription>
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {role === "empleado" ? (
-                <>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>{t.settings.notifications.budgetAlerts}</Label>
-                      <p className="text-sm text-muted-foreground">{t.settings.notifications.budgetAlertsHint}</p>
-                    </div>
-                    <Switch defaultChecked />
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>{t.settings.notifications.wellbeing}</Label>
+                    <p className="text-sm text-muted-foreground">{t.settings.notifications.wellbeingHint}</p>
                   </div>
-
-                  <Separator />
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>{t.settings.notifications.transactions}</Label>
-                      <p className="text-sm text-muted-foreground">{t.settings.notifications.transactionsHint}</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>{t.settings.notifications.goals}</Label>
-                      <p className="text-sm text-muted-foreground">{t.settings.notifications.goalsHint}</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>{t.settings.notifications.investments}</Label>
-                      <p className="text-sm text-muted-foreground">{t.settings.notifications.investmentsHint}</p>
-                    </div>
-                    <Switch />
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>{t.settings.notifications.education}</Label>
-                      <p className="text-sm text-muted-foreground">{t.settings.notifications.educationHint}</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>{t.settings.notifications.wellbeing}</Label>
-                      <p className="text-sm text-muted-foreground">{t.settings.notifications.wellbeingHint}</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>{t.settings.notifications.newEmployees}</Label>
-                      <p className="text-sm text-muted-foreground">{t.settings.notifications.newEmployeesHint}</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>{t.settings.notifications.monthlyReports}</Label>
-                      <p className="text-sm text-muted-foreground">{t.settings.notifications.monthlyReportsHint}</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>{t.settings.notifications.participation}</Label>
-                      <p className="text-sm text-muted-foreground">{t.settings.notifications.participationHint}</p>
-                    </div>
-                    <Switch />
-                  </div>
-                </>
-              )}
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>{t.settings.notifications.email}</Label>
-                  <p className="text-sm text-muted-foreground">{t.settings.notifications.emailHint}</p>
+                  <Switch defaultChecked />
                 </div>
-                <Switch defaultChecked />
-              </div>
 
-              <div className="flex justify-end gap-2 pt-4">
-                <Button>{t.settings.notifications.save}</Button>
-              </div>
-            </CardContent>
-          </Card>
+                <Separator />
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>{t.settings.notifications.newEmployees}</Label>
+                    <p className="text-sm text-muted-foreground">{t.settings.notifications.newEmployeesHint}</p>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
+
+                <Separator />
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>{t.settings.notifications.monthlyReports}</Label>
+                    <p className="text-sm text-muted-foreground">{t.settings.notifications.monthlyReportsHint}</p>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
+
+                <Separator />
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>{t.settings.notifications.participation}</Label>
+                    <p className="text-sm text-muted-foreground">{t.settings.notifications.participationHint}</p>
+                  </div>
+                  <Switch />
+                </div>
+
+                <Separator />
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>{t.settings.notifications.email}</Label>
+                    <p className="text-sm text-muted-foreground">{t.settings.notifications.emailHint}</p>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button>{t.settings.notifications.save}</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Integrations Tab */}

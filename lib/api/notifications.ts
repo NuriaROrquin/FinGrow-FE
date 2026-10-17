@@ -49,3 +49,41 @@ export async function markAllNotificationsAsRead(signal?: AbortSignal): Promise<
   const { marked } = await api.post<{ marked: number }>("/api/notifications/read-all", undefined, { signal })
   return marked
 }
+
+export type NotificationChannel = "InApp" | "Telegram" | "Email"
+
+export interface NotificationChannelDto {
+  channel: NotificationChannel
+  isEnabled: boolean
+  isConfigurable: boolean
+  isConnected: boolean
+}
+
+export interface NotificationTypePreferenceDto {
+  type: NotificationType
+  isEnabled: boolean
+}
+
+export function listNotificationChannels(signal?: AbortSignal): Promise<NotificationChannelDto[]> {
+  return api.get<NotificationChannelDto[]>("/api/notifications/channels", { signal })
+}
+
+export function changeNotificationChannel(
+  channel: NotificationChannel,
+  isEnabled: boolean,
+  signal?: AbortSignal,
+): Promise<NotificationChannelDto> {
+  return api.put<NotificationChannelDto>(`/api/notifications/channels/${channel}`, { isEnabled }, { signal })
+}
+
+export function listNotificationTypePreferences(signal?: AbortSignal): Promise<NotificationTypePreferenceDto[]> {
+  return api.get<NotificationTypePreferenceDto[]>("/api/notifications/types", { signal })
+}
+
+export function changeNotificationTypePreference(
+  type: NotificationType,
+  isEnabled: boolean,
+  signal?: AbortSignal,
+): Promise<NotificationTypePreferenceDto> {
+  return api.put<NotificationTypePreferenceDto>(`/api/notifications/types/${type}`, { isEnabled }, { signal })
+}
