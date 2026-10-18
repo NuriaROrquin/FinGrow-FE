@@ -20,6 +20,7 @@ import {
   type CompanyNotificationTypePreferenceDto,
 } from "@/lib/api"
 import { useMessages } from "@/lib/i18n"
+import { es } from "@/lib/i18n/es"
 
 const orderedTypes: CompanyNotificationType[] = [
   "FinancialWellbeingLow",
@@ -46,6 +47,7 @@ function isThresholdType(type: CompanyNotificationType): type is "FinancialWellb
 
 export function CompanyNotificationPreferences() {
   const t = useMessages()
+  const companyMessages = t.settings.notifications.company ?? es.settings.notifications.company
   const [preferences, setPreferences] = useState<CompanyNotificationTypePreferenceDto[] | null>(null)
   const [confirmed, setConfirmed] = useState<CompanyNotificationTypePreferenceDto[] | null>(null)
   const [failed, setFailed] = useState(false)
@@ -60,10 +62,10 @@ export function CompanyNotificationPreferences() {
       setConfirmed(sorted)
     } catch (error) {
       if (signal?.aborted) return
-      toastApiError(error, t.settings.notifications.company.loadFailed)
+      toastApiError(error, companyMessages.loadFailed)
       setFailed(true)
     }
-  }, [t])
+  }, [companyMessages])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -117,10 +119,10 @@ export function CompanyNotificationPreferences() {
       setConfirmed((current) =>
         current?.map((preference) => saved.find((item) => item.type === preference.type) ?? preference) ?? null,
       )
-      toast.success(t.settings.notifications.company.saved)
+      toast.success(companyMessages.saved)
     } catch (error) {
       setPreferences(confirmed)
-      toastApiError(error, t.settings.notifications.company.saveFailed)
+      toastApiError(error, companyMessages.saveFailed)
     } finally {
       changed.forEach((preference) => setBusy(preference.type, false))
     }
@@ -140,7 +142,7 @@ export function CompanyNotificationPreferences() {
     return (
       <Card>
         <CardContent className="flex items-center justify-between gap-4 py-6">
-          <p className="text-sm text-muted-foreground">{t.settings.notifications.company.loadFailed}</p>
+          <p className="text-sm text-muted-foreground">{companyMessages.loadFailed}</p>
           <Button variant="outline" size="sm" onClick={() => void load()}>
             {t.settings.notifications.retry}
           </Button>
@@ -154,7 +156,7 @@ export function CompanyNotificationPreferences() {
       <Card>
         <CardContent className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
           <Spinner />
-          {t.settings.notifications.company.loading}
+          {companyMessages.loading}
         </CardContent>
       </Card>
     )
@@ -166,14 +168,15 @@ export function CompanyNotificationPreferences() {
         <div className="flex items-center gap-3">
           <BellRingIcon className="size-5" />
           <div>
-            <CardTitle>{t.settings.notifications.company.title}</CardTitle>
-            <CardDescription>{t.settings.notifications.company.description}</CardDescription>
+            <CardTitle>{companyMessages.title}</CardTitle>
+            <CardDescription>{companyMessages.description}</CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {preferences.map((preference, index) => {
-          const text = t.settings.notifications.company.types[preference.type]
+          const text = companyMessages.types[preference.type]
+          const metric = isThresholdType(preference.type) ? companyMessages.types[preference.type] : null
           const Icon = icons[preference.type]
           const id = `company-notification-${preference.type}`
           const isSaving = saving.size > 0
@@ -189,7 +192,7 @@ export function CompanyNotificationPreferences() {
                   <div className="space-y-1">
                     <Label htmlFor={id}>{text.label}</Label>
                     <p className="text-sm text-muted-foreground">{text.description}</p>
-                    {isThresholdType(preference.type) && <p className="text-xs text-muted-foreground">{text.shortHelp}</p>}
+                    {metric && <p className="text-xs text-muted-foreground">{metric.shortHelp}</p>}
                   </div>
                 </div>
                 <Switch
@@ -200,20 +203,20 @@ export function CompanyNotificationPreferences() {
                 />
               </div>
 
-              {isThresholdType(preference.type) && (
+              {metric && isThresholdType(preference.type) && (
                 <MetricHelp
                   type={preference.type}
-                  helpTitle={text.helpTitle}
-                  help={text.help}
-                  privacyNote={text.privacyNote}
-                  formula={"formula" in text ? text.formula : undefined}
-                  factors={"factors" in text ? text.factors : undefined}
+                  helpTitle={metric.helpTitle}
+                  help={metric.help}
+                  privacyNote={metric.privacyNote}
+                  formula={"formula" in metric ? metric.formula : undefined}
+                  factors={"factors" in metric ? metric.factors : undefined}
                 />
               )}
 
-              {preference.isEnabled && isThresholdType(preference.type) && (
+              {metric && preference.isEnabled && (
                 <div className="ml-8 space-y-3 rounded-md border bg-muted/30 p-4">
-                  <Label htmlFor={`${id}-threshold`}>{text.thresholdLabel}</Label>
+                  <Label htmlFor={`${id}-threshold`}>{metric.thresholdLabel}</Label>
                   <div className="flex max-w-xs items-center gap-2">
                     <Input
                       id={`${id}-threshold`}
@@ -229,23 +232,23 @@ export function CompanyNotificationPreferences() {
                         updateLocal(preference.type, { threshold: value === "" ? null : Number(value) })
                       }}
                     />
-                    <span className="text-sm text-muted-foreground">{text.thresholdSuffix}</span>
+                    <span className="text-sm text-muted-foreground">{metric.thresholdSuffix}</span>
                   </div>
-                  {!validThreshold && <p className="text-sm text-destructive">{t.settings.notifications.company.thresholdError}</p>}
-                  <p className="text-sm text-muted-foreground">{t.settings.notifications.company.monthly}</p>
+                  {!validThreshold && <p className="text-sm text-destructive">{companyMessages.thresholdError}</p>}
+                  <p className="text-sm text-muted-foreground">{companyMessages.monthly}</p>
                 </div>
               )}
             </div>
           )
         })}
-        <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">{t.settings.notifications.company.privacy}</p>
+        <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">{companyMessages.privacy}</p>
         <div className="flex items-center justify-end gap-3 border-t pt-4">
           <Button
             disabled={isSaving(saving) || !hasChanges(preferences, confirmed) || !allThresholdsValid(preferences)}
             onClick={() => void saveAll()}
           >
             {isSaving(saving) && <Spinner className="mr-2" />}
-            {t.settings.notifications.company.saveAll}
+            {companyMessages.saveAll}
           </Button>
         </div>
       </CardContent>

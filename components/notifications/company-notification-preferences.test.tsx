@@ -11,9 +11,12 @@ const api = vi.hoisted(() => ({
   updateCompanyNotificationTypePreference: vi.fn(),
   toastApiError: vi.fn(),
 }))
+const i18n = vi.hoisted(() => ({
+  useMessages: vi.fn(),
+}))
 
 vi.mock("@/lib/api", () => api)
-vi.mock("@/lib/i18n", () => ({ useMessages: () => es }))
+vi.mock("@/lib/i18n", () => ({ useMessages: i18n.useMessages }))
 vi.mock("sonner", () => ({ toast: { success: vi.fn() } }))
 
 const preferences: CompanyNotificationTypePreferenceDto[] = [
@@ -28,6 +31,7 @@ describe("CompanyNotificationPreferences", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    i18n.useMessages.mockReturnValue(es)
     api.listCompanyNotificationTypePreferences.mockResolvedValue(preferences)
     api.updateCompanyNotificationTypePreference.mockImplementation(
       (_type: string, payload: CompanyNotificationTypePreferenceDto) => Promise.resolve(payload),
@@ -41,6 +45,23 @@ describe("CompanyNotificationPreferences", () => {
     for (const preference of preferences) {
       expect(screen.getByRole("switch", { name: new RegExp(preference.type === "EmployeeAdded" ? "Altas" : preference.type === "EmployeeRemoved" ? "Bajas" : preference.type === "ParticipationLow" ? "Participación" : "Bienestar") }).getAttribute("data-state")).toBe("unchecked")
     }
+  })
+
+  it("falls back to Spanish company notification messages when the active locale is missing them", async () => {
+    const incompleteMessages = {
+      ...es,
+      settings: {
+        ...es.settings,
+        notifications: { ...es.settings.notifications },
+      },
+    }
+    Reflect.deleteProperty(incompleteMessages.settings.notifications, "company")
+    i18n.useMessages.mockReturnValue(incompleteMessages)
+    api.listCompanyNotificationTypePreferences.mockReturnValue(new Promise(() => {}))
+
+    render(<CompanyNotificationPreferences />)
+
+    expect(await screen.findByText("Cargando las preferencias de la empresa...")).not.toBeNull()
   })
 
   it("validates thresholds and sends the fixed monthly payload", async () => {
