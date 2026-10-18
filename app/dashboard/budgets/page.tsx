@@ -32,6 +32,10 @@ export default function BudgetsPage() {
   const [activeTab, setActiveTab] = useState<BudgetsTab>(() =>
     searchParams.get("tab") === "savings" ? "savings" : "budgets",
   )
+  useEffect(() => {
+    const tab = searchParams.get("tab")
+    if (tab) setActiveTab(tab === "savings" ? "savings" : "budgets")
+  }, [searchParams])
   const [currentBudget, setCurrentBudget] = useState<BudgetDto | null>(null)
   const [isSavingsDialogOpen, setIsSavingsDialogOpen] = useState(false)
   const [savingsGoals, setSavingsGoals] = useState<GoalDto[]>([])

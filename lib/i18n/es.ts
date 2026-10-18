@@ -44,6 +44,7 @@ export const es = {
     empty: "No tenés notificaciones por ahora.",
     loadError: "No pudimos cargar tus notificaciones.",
     retry: "Reintentar",
+    loadMore: "Cargar anteriores",
   },
 
   achievements: {

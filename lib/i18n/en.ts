@@ -46,6 +46,7 @@ export const en: Messages = {
     empty: "You have no notifications yet.",
     loadError: "We could not load your notifications.",
     retry: "Retry",
+    loadMore: "Load earlier",
   },
 
   achievements: {

@@ -46,6 +46,7 @@ export const pt: Messages = {
     empty: "Você ainda não tem notificações.",
     loadError: "Não foi possível carregar suas notificações.",
     retry: "Tentar novamente",
+    loadMore: "Carregar anteriores",
   },
 
   achievements: {

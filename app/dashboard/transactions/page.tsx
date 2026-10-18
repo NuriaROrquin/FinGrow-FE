@@ -213,6 +213,11 @@ export default function TransactionsPage() {
   }, [dateFrom, dateTo, summaryRefreshKey, toast])
 
   useEffect(() => {
+    const view = searchParams.get("view")
+    if (view) setActiveView(view === "pending" ? "pending" : "movements")
+  }, [searchParams])
+
+  useEffect(() => {
     if (searchParams.get("mode") === "ocr") {
       setIsScanDialogOpen(true)
     }

@@ -9,6 +9,7 @@ import {
   GraduationCapIcon,
   AwardIcon,
 } from "lucide-react"
+import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { ArticlesCatalog } from "@/components/education/articles-catalog"
 import { CoursesCatalog } from "@/components/education/courses-catalog"
@@ -47,7 +48,12 @@ const achievements = [
 
 export default function EducationPage() {
   const searchParams = useSearchParams()
-  const activeTab = searchParams.get('tab') || 'courses'
+  const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'courses')
+
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab) setActiveTab(tab)
+  }, [searchParams])
 
   return (
     <div className="space-y-6">
@@ -73,7 +79,7 @@ export default function EducationPage() {
       </div>
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue={activeTab} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="courses">Cursos</TabsTrigger>
           <TabsTrigger value="articles">Artículos</TabsTrigger>
