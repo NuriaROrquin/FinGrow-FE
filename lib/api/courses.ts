@@ -78,6 +78,8 @@ export interface LearningProgressDto {
   lessonCount: number
   completedLessons: number
   progressPercentage: number
+  streakWeeks: number
+  studiedThisWeek: boolean
 }
 
 export function getLearningProgress(signal?: AbortSignal): Promise<LearningProgressDto> {
