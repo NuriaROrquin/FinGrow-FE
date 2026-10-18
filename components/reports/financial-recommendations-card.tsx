@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import type { FinancialRecommendationDto, RecommendationAction, RecommendationKind } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
 import { cn } from "@/lib/utils"
+import { useIsReportExport } from "./report-export-context"
 
 const kindStyles: Record<RecommendationKind, { box: string; icon: LucideIcon; iconColor: string; label: string }> = {
   Positive: {
@@ -49,6 +50,8 @@ export function FinancialRecommendationsCard({
   hasMovements,
   currency,
 }: FinancialRecommendationsCardProps) {
+  const isExport = useIsReportExport()
+
   return (
     <Card>
       <CardHeader>
@@ -69,7 +72,7 @@ export function FinancialRecommendationsCard({
             {recommendations.map((recommendation, index) => {
               const style = kindStyles[recommendation.kind]
               const Icon = style.icon
-              const link = recommendation.action === "None" ? null : actionLinks[recommendation.action]
+              const link = isExport || recommendation.action === "None" ? null : actionLinks[recommendation.action]
 
               return (
                 <li key={`${index}-${recommendation.title}`} className={cn("rounded-lg border p-3", style.box)}>
@@ -79,7 +82,7 @@ export function FinancialRecommendationsCard({
                       <p className="text-sm font-medium">{recommendation.title}</p>
                       <p className="text-sm text-muted-foreground">{recommendation.body}</p>
                       {link && (
-                        <Button asChild variant="link" size="sm" className="no-print h-auto px-0">
+                        <Button asChild variant="link" size="sm" className="h-auto px-0">
                           <Link href={link.href}>
                             {link.label}
                             <ArrowRightIcon className="size-3.5" />

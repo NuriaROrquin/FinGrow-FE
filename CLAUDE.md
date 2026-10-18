@@ -88,9 +88,10 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   historial. Las flechas de `components/period-filter.tsx` mueven la ventana entera (6 meses → los 6
   anteriores).
 - **Reportes: análisis de gastos (HU-42)**. La pestaña Análisis de Gastos es
-  `components/reports/expense-breakdown-section.tsx`, que pide `GET /api/reports/expense-breakdown`
-  con el período y la moneda de la página. El backend manda todo calculado: montos, porcentajes con un
-  decimal, el período anterior (misma cantidad de meses, justo antes) y la variación de cada categoría.
+  `components/reports/expense-breakdown-section.tsx`, que muestra lo que la página pide a
+  `GET /api/reports/expense-breakdown` con su período y su moneda. El backend manda todo calculado:
+  montos, porcentajes con un decimal, el período anterior (misma cantidad de meses, justo antes) y la
+  variación de cada categoría.
   No recalcules nada en el front. Ahorro e Inversión no entra en el ranking ni en la base de los
   porcentajes, porque es ahorro y no gasto. Va aparte, en la conciliación al pie de
   `expense-category-details.tsx`: gastos de consumo (100 %) + ahorro e inversión = total, que es igual
@@ -101,14 +102,31 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   muestra "Sin período anterior para mostrar". Sus textos están en `lib/i18n` (`expenseBreakdown`); los
   nombres de las categorías salen de `expenseCategoryLabels`, que todavía no pasa por i18n.
 - **Hitos y recomendaciones (HU-44)**: debajo del gráfico de Resumen,
-  `components/reports/financial-insights-section.tsx` pide `GET /api/reports/insights` con el
-  período y la moneda de la página y arma dos cards: Hitos Alcanzados (`financial-summary-card.tsx`,
-  los logros del período, sin umbral) y Análisis y Recomendaciones (`financial-recommendations-card.tsx`,
+  `components/reports/financial-insights-section.tsx` muestra lo que la página pide a
+  `GET /api/reports/insights` con su período y su moneda, en dos cards: Hitos Alcanzados
+  (`financial-summary-card.tsx`, los logros del período, sin umbral) y Análisis y Recomendaciones (`financial-recommendations-card.tsx`,
   tres recomendaciones de FinGrow-AI). Las recomendaciones necesitan 2 meses con actividad suficiente:
   sin eso, esa card muestra cuánto falta, con los números que manda el backend. Los `highlights` de
   `/insights` ya no se muestran: los meses destacados son de HU-41. El link de cada recomendación sale
   de `action`, una lista cerrada; la IA nunca manda URLs. La aclaración de que no es asesoramiento
   financiero certificado va fija al pie de la card de recomendaciones: no la saques.
+- **Exportar el reporte a PDF (HU-45)**. La página de Reportes pide los cuatro endpoints al entrar
+  (`useReportRequest`, `components/reports/use-report-request.ts`) y les pasa los datos a las secciones,
+  que ya no piden nada por su cuenta. Así el PDF sale con los mismos datos que se ven, sin volver a
+  pedirlos: las recomendaciones de `/insights` se generan con FinGrow-AI en cada pedido, así que pedirlas
+  de nuevo podría traer otras. El switch de comparación de gastos y la moneda del reporte de ahorros
+  también viven en la página. "Exportar PDF" se habilita cuando terminaron de cargar las cuatro y monta
+  `components/reports/report-pdf-export.tsx`: una versión del reporte fuera de pantalla, de 900 px fijos,
+  con las tres pestañas apiladas, encabezado (logo, empleado, período, moneda, fecha y hora de
+  generación) y en modo exportación (`ReportExportProvider`): sin animaciones de recharts, sin el switch
+  de comparación (la comparación sale si estaba prendida), sin los links de las recomendaciones y con la
+  moneda de ahorros como texto. `lib/report-pdf.ts` captura cada `[data-pdf-block]` con
+  `html2canvas-pro` (el `html2canvas` original no entiende los colores `oklch` de Tailwind v4), siempre
+  en tema claro y con un ancho de ventana de escritorio, y arma un A4 con `jspdf`: corta las páginas
+  entre cards y, si una card no entra en una página, entre líneas; al pie va "FinGrow" y el número de
+  página. Los textos nuevos están en `lib/i18n` (`reportPdf`). El reporte de ahorros siempre termina en
+  el mes en curso (el backend solo recibe la cantidad de meses): si no coincide con el período elegido,
+  la card lo avisa con `savingsReport.periodNote`, en pantalla y en el PDF.
 - **Bandeja de pendientes (HU-15)**: es la pestaña "Pendientes" de Transacciones
   (`components/transactions/pending-inbox.tsx`, también `/dashboard/transactions?view=pending`).
   Lista lo que propuso un canal automático (`GET /api/transactions/pending`), y cada movimiento

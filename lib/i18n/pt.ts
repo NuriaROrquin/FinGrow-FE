@@ -715,4 +715,24 @@ export const pt: Messages = {
     total: "Total",
     totalHint: "Igual a Gastos Totais",
   },
+
+  savingsReport: {
+    periodNote: (count: number, range: string) =>
+      `Esta seção mostra ${count === 1 ? "o último mês" : `os últimos ${count} meses`} (${range}): sempre termina no mês atual, então não segue o período escolhido.`,
+  },
+
+  reportPdf: {
+    export: "Exportar PDF",
+    exporting: "Gerando PDF...",
+    exportFailed: "Não foi possível gerar o PDF. Tente novamente.",
+    title: "Relatório Financeiro",
+    employee: "Funcionário",
+    period: "Período",
+    currency: "Moeda",
+    generatedAt: "Gerado em",
+    overview: "Resumo",
+    spending: "Análise de Gastos",
+    savings: "Relatório de Poupança",
+    fileName: "relatorio-financeiro",
+  },
 }

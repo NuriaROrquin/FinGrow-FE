@@ -1,10 +1,9 @@
 "use client"
 
-import { useEffect, useState, type ReactNode } from "react"
+import type { ReactNode } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { getExpenseBreakdown, toastApiError, type ExpenseBreakdownDto } from "@/lib/api"
-import type { Currency } from "@/lib/api/transactions"
+import type { ExpenseBreakdownDto } from "@/lib/api"
 import { useMessages } from "@/lib/i18n"
 import { ExpenseCategoryChart } from "./expense-category-chart"
 import { ExpenseCategoryDetails } from "./expense-category-details"
@@ -20,33 +19,14 @@ function Message({ children }: { children: ReactNode }) {
 }
 
 interface ExpenseBreakdownSectionProps {
-  dateFrom: string
-  dateTo: string
-  currency: Currency
+  breakdown: ExpenseBreakdownDto | null
+  isLoading: boolean
+  isComparing: boolean
+  onComparingChange: (isComparing: boolean) => void
 }
 
-export function ExpenseBreakdownSection({ dateFrom, dateTo, currency }: ExpenseBreakdownSectionProps) {
+export function ExpenseBreakdownSection({ breakdown, isLoading, isComparing, onComparingChange }: ExpenseBreakdownSectionProps) {
   const t = useMessages().expenseBreakdown
-  const [breakdown, setBreakdown] = useState<ExpenseBreakdownDto | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const controller = new AbortController()
-    setIsLoading(true)
-
-    getExpenseBreakdown(currency, dateFrom, dateTo, controller.signal)
-      .then(setBreakdown)
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError") return
-        setBreakdown(null)
-        toastApiError(error, t.loadFailed)
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setIsLoading(false)
-      })
-
-    return () => controller.abort()
-  }, [currency, dateFrom, dateTo, t.loadFailed])
 
   if (isLoading && !breakdown) {
     return (
@@ -64,7 +44,7 @@ export function ExpenseBreakdownSection({ dateFrom, dateTo, currency }: ExpenseB
   return (
     <div className="space-y-4">
       <ExpenseCategoryChart breakdown={breakdown} />
-      <ExpenseCategoryDetails breakdown={breakdown} />
+      <ExpenseCategoryDetails breakdown={breakdown} isComparing={isComparing} onComparingChange={onComparingChange} />
     </div>
   )
 }

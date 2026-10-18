@@ -728,6 +728,26 @@ export const es = {
     total: "Total",
     totalHint: "Igual a Gastos Totales",
   },
+
+  savingsReport: {
+    periodNote: (count: number, range: string) =>
+      `Esta sección muestra ${count === 1 ? "el último mes" : `los últimos ${count} meses`} (${range}): siempre termina en el mes en curso, así que no sigue el período elegido.`,
+  },
+
+  reportPdf: {
+    export: "Exportar PDF",
+    exporting: "Generando PDF...",
+    exportFailed: "No se pudo generar el PDF. Probá de nuevo.",
+    title: "Reporte Financiero",
+    employee: "Empleado",
+    period: "Período",
+    currency: "Moneda",
+    generatedAt: "Generado el",
+    overview: "Resumen",
+    spending: "Análisis de Gastos",
+    savings: "Reporte de Ahorros",
+    fileName: "reporte-financiero",
+  },
 }
 
 export type Messages = typeof es

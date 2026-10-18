@@ -13,6 +13,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import type { MonthlySummaryDto } from "@/lib/api"
 import { formatDateText, formatMoney, formatNumber } from "@/lib/format"
+import { useIsReportExport } from "./report-export-context"
 
 // Los tokens --chart-* del tema son todos violetas: acá cada serie lleva el color que ya usan las cards
 // de arriba (ingresos en verde, gastos en rojo, ahorro en el primario), y el ahorro va como línea para
@@ -33,6 +34,7 @@ interface MonthlyEvolutionChartProps {
 }
 
 export function MonthlyEvolutionChart({ summary, isLoading }: MonthlyEvolutionChartProps) {
+  const isExport = useIsReportExport()
   const months = summary?.months ?? []
   const currency = summary?.currency ?? "ARS"
   const spansSeveralYears = new Set(months.map((month) => month.year)).size > 1
@@ -99,8 +101,20 @@ export function MonthlyEvolutionChart({ summary, isLoading }: MonthlyEvolutionCh
                 }
               />
               <ChartLegend content={<ChartLegendContent />} />
-              <Bar dataKey="income" fill="var(--color-income)" radius={[4, 4, 0, 0]} maxBarSize={36} />
-              <Bar dataKey="expenses" fill="var(--color-expenses)" radius={[4, 4, 0, 0]} maxBarSize={36} />
+              <Bar
+                dataKey="income"
+                fill="var(--color-income)"
+                radius={[4, 4, 0, 0]}
+                maxBarSize={36}
+                isAnimationActive={!isExport}
+              />
+              <Bar
+                dataKey="expenses"
+                fill="var(--color-expenses)"
+                radius={[4, 4, 0, 0]}
+                maxBarSize={36}
+                isAnimationActive={!isExport}
+              />
               <Line
                 type="monotone"
                 dataKey="savings"
@@ -108,6 +122,7 @@ export function MonthlyEvolutionChart({ summary, isLoading }: MonthlyEvolutionCh
                 strokeWidth={2}
                 dot={{ r: 4, fill: "var(--color-savings)", stroke: "var(--card)", strokeWidth: 2 }}
                 activeDot={{ r: 5 }}
+                isAnimationActive={!isExport}
               />
             </ComposedChart>
           </ChartContainer>
