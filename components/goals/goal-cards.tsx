@@ -65,7 +65,7 @@ export function InProgressGoalCard({
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-baseline justify-between">
-          <span className="text-2xl font-bold text-success">{formatMoney(goal.currentAmount, goal.currency)}</span>
+          <span className="text-2xl font-bold">{formatMoney(goal.currentAmount, goal.currency)}</span>
           <span className="text-sm text-muted-foreground">
             de {formatMoney(goal.targetAmount, goal.currency)}
           </span>
@@ -123,7 +123,7 @@ export function AchievedGoalCard({
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-baseline justify-between">
-          <span className="text-2xl font-bold text-success">{formatMoney(goal.currentAmount, goal.currency)}</span>
+          <span className="text-2xl font-bold">{formatMoney(goal.currentAmount, goal.currency)}</span>
           <span className="text-sm text-muted-foreground">
             objetivo {formatMoney(goal.targetAmount, goal.currency)}
           </span>

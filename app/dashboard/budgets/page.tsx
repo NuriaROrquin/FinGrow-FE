@@ -125,7 +125,7 @@ export default function BudgetsPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription>Total Ahorrado</CardDescription>
-                <CardTitle className="text-2xl text-success">${totalSavingsCurrent.toLocaleString()}</CardTitle>
+                <CardTitle className="text-2xl">${totalSavingsCurrent.toLocaleString()}</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">

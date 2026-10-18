@@ -55,6 +55,14 @@ export const pt: Messages = {
     earnedCount: (count: number) => `Você ganhou ${count} conquistas`,
     great: "Ótimo",
     close: "Fechar",
+    label: "Conquistas",
+    title: "Suas Conquistas",
+    description: "Marcos que você alcançou na sua jornada financeira",
+    earnedOf: (total: number) => `de ${total} obtidas`,
+    earnedOn: (date: string) => `Obtida em ${date}`,
+    howToEarn: "Como conseguir",
+    loadError: "Não foi possível carregar suas conquistas.",
+    retry: "Tentar novamente",
   },
 
   settings: {
