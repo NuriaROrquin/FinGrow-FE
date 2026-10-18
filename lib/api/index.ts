@@ -266,6 +266,7 @@ export {
   BUDGET_NOTIFICATION_EVENT,
   changeNotificationChannel,
   changeNotificationTypePreference,
+  listCompanyNotificationTypePreferences,
   getUnreadNotificationCount,
   listNotificationChannels,
   listNotifications,
@@ -273,11 +274,16 @@ export {
   markAllNotificationsAsRead,
   markNotificationAsRead,
   NOTIFICATIONS_PAGE_SIZE,
+  updateCompanyNotificationTypePreference,
+  type CompanyNotificationType,
+  type CompanyNotificationTypePreferenceDto,
   type NotificationChannel,
   type NotificationChannelDto,
+  type NotificationCadence,
   type NotificationDto,
   type NotificationType,
   type NotificationTypePreferenceDto,
+  type UpdateCompanyNotificationTypePreferencePayload,
 } from "./notifications"
 export { connectToNotifications, type NotificationsHubHandlers } from "./notifications-hub"
 export {
