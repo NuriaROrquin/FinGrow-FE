@@ -268,11 +268,11 @@ export const es = {
           },
           EmployeeAdded: {
             label: "Altas de empleados",
-            description: "Recibí un resumen de nuevas incorporaciones según la frecuencia elegida.",
+            description: "Recibí un resumen de nuevas incorporaciones.",
           },
           EmployeeRemoved: {
             label: "Bajas definitivas",
-            description: "Recibí un resumen de empleados eliminados definitivamente según la frecuencia elegida.",
+            description: "Recibí un resumen de empleados eliminados definitivamente.",
           },
         },
       },
