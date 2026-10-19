@@ -237,3 +237,19 @@ export interface CompanyParticipationDto {
 export function getCompanyParticipation(signal?: AbortSignal): Promise<CompanyParticipationDto> {
   return api.get<CompanyParticipationDto>("/api/company/metrics/participation", { signal })
 }
+
+export interface CompanyMetricsComparisonPeriodDto {
+  period: string
+  participationRate: number | null
+  averageFinancialHealthScore: number | null
+}
+
+export interface CompanyMetricsComparisonDto {
+  periods: CompanyMetricsComparisonPeriodDto[]
+  participationRateChange: number | null
+  averageFinancialHealthScoreChange: number | null
+}
+
+export function getCompanyMetricsComparison(signal?: AbortSignal): Promise<CompanyMetricsComparisonDto> {
+  return api.get<CompanyMetricsComparisonDto>("/api/company/metrics/comparison", { signal })
+}

@@ -16,25 +16,10 @@ import {
   BuildingIcon,
 } from "lucide-react"
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
+import { Skeleton } from "@/components/ui/skeleton"
 import { ParticipationCards } from "@/components/company/participation-cards"
-
-const employeeEngagement = [
-  { month: "Ene", active: 145, enrolled: 180 },
-  { month: "Feb", active: 152, enrolled: 185 },
-  { month: "Mar", active: 158, enrolled: 190 },
-  { month: "Abr", active: 165, enrolled: 195 },
-  { month: "May", active: 172, enrolled: 200 },
-  { month: "Jun", active: 178, enrolled: 205 },
-]
-
-const financialHealthScore = [
-  { month: "Ene", score: 62 },
-  { month: "Feb", score: 64 },
-  { month: "Mar", score: 66 },
-  { month: "Abr", score: 68 },
-  { month: "May", score: 71 },
-  { month: "Jun", score: 73 },
-]
+import { getCompanyMetricsComparison, isApiError, type CompanyMetricsComparisonDto } from "@/lib/api"
+import { useEffect, useState } from "react"
 
 const departmentData = [
   { department: "Ingeniería", employees: 85, avgScore: 75, participation: 88 },
@@ -66,9 +51,62 @@ const chartConfig = {
   },
 }
 
+function formatPeriod(period: string): string {
+  const [year, month, day] = period.split("-").map(Number)
+  const label = new Intl.DateTimeFormat("es-AR", { month: "short" }).format(new Date(year, month - 1, day))
+  return label.charAt(0).toLocaleUpperCase("es-AR") + label.slice(1)
+}
+
+function formatRate(rate: number): string {
+  return `${rate.toLocaleString("es-AR", { maximumFractionDigits: 1 })}%`
+}
+
 export default function CompanyDashboardPage() {
   const avgHealthScore = 73
   const completedCourses = 342
+  const [comparison, setComparison] = useState<CompanyMetricsComparisonDto | null>(null)
+  const [comparisonError, setComparisonError] = useState<string | null>(null)
+  const [isComparisonLoading, setIsComparisonLoading] = useState(true)
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    getCompanyMetricsComparison(controller.signal)
+      .then(setComparison)
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return
+
+        if (isApiError(error)) {
+          if (error.status === 400) {
+            setComparisonError("Se necesitan al menos dos períodos con datos para mostrar la evolución.")
+          } else if (error.status === 403) {
+            setComparisonError(error.description || "No tenés permiso para consultar estas métricas.")
+          } else if (error.status === 503) {
+            setComparisonError("Las métricas no están disponibles para preservar el anonimato de grupos pequeños.")
+          } else {
+            setComparisonError(error.description)
+          }
+        } else {
+          setComparisonError("No se pudieron cargar las métricas de participación y bienestar.")
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsComparisonLoading(false)
+      })
+
+    return () => controller.abort()
+  }, [])
+
+  const periods = comparison?.periods ?? []
+  const participationChartData = periods.map(({ period, participationRate }) => ({
+    month: formatPeriod(period),
+    active: participationRate,
+    enrolled: null,
+  }))
+  const financialHealthChartData = periods.map(({ period, averageFinancialHealthScore }) => ({
+    month: formatPeriod(period),
+    score: averageFinancialHealthScore,
+  }))
 
   return (
     <div className="space-y-6">
@@ -122,26 +160,39 @@ export default function CompanyDashboardPage() {
             <CardDescription>Usuarios activos vs empleados inscritos en el tiempo</CardDescription>
           </CardHeader>
           <CardContent className="overflow-x-auto">
-            <ChartContainer config={chartConfig} className="h-[300px] w-full min-w-[300px]">
-              <LineChart data={employeeEngagement}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <ChartTooltip content={<ChartTooltipContent />} cursor={{ stroke: "rgba(0, 0, 0, 0.2)" }} />
-                <Line
+            {isComparisonLoading ? (
+              <Skeleton className="h-[300px] w-full min-w-[300px]" />
+            ) : comparisonError ? (
+              <p className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">{comparisonError}</p>
+            ) : periods.length === 0 ? (
+              <p className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+                No hay períodos para mostrar.
+              </p>
+            ) : (
+              <ChartContainer config={chartConfig} className="h-[300px] w-full min-w-[300px]">
+                <LineChart data={participationChartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis tickFormatter={(value: number) => formatRate(value)} />
+                  <ChartTooltip
+                    content={<ChartTooltipContent formatter={(value) => typeof value === "number" ? formatRate(value) : "—"} />}
+                    cursor={{ stroke: "rgba(0, 0, 0, 0.2)" }}
+                  />
+                  <Line
                     type="monotone"
                     dataKey="active"
                     stroke={chartConfig.active.color}
                     strokeWidth={2}
-                />
-                <Line
+                  />
+                  <Line
                     type="monotone"
                     dataKey="enrolled"
                     stroke={chartConfig.enrolled.color}
                     strokeWidth={2}
-                />
-              </LineChart>
-            </ChartContainer>
+                  />
+                </LineChart>
+              </ChartContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -151,20 +202,30 @@ export default function CompanyDashboardPage() {
             <CardDescription>Puntaje promedio de salud financiera de empleados</CardDescription>
           </CardHeader>
           <CardContent className="overflow-x-auto">
-            <ChartContainer config={chartConfig} className="h-[300px] w-full min-w-[300px]">
-              <LineChart data={financialHealthScore}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis domain={[0, 100]} />
-                <ChartTooltip content={<ChartTooltipContent />} cursor={{ stroke: "rgba(0, 0, 0, 0.2)" }} />
-                <Line
-                  type="monotone"
-                  dataKey="score"
-                  stroke={chartConfig.score.color}
-                  strokeWidth={2}
-                />
-              </LineChart>
-            </ChartContainer>
+            {isComparisonLoading ? (
+              <Skeleton className="h-[300px] w-full min-w-[300px]" />
+            ) : comparisonError ? (
+              <p className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">{comparisonError}</p>
+            ) : periods.length === 0 ? (
+              <p className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+                No hay períodos para mostrar.
+              </p>
+            ) : (
+              <ChartContainer config={chartConfig} className="h-[300px] w-full min-w-[300px]">
+                <LineChart data={financialHealthChartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis domain={[0, 100]} />
+                  <ChartTooltip content={<ChartTooltipContent />} cursor={{ stroke: "rgba(0, 0, 0, 0.2)" }} />
+                  <Line
+                    type="monotone"
+                    dataKey="score"
+                    stroke={chartConfig.score.color}
+                    strokeWidth={2}
+                  />
+                </LineChart>
+              </ChartContainer>
+            )}
           </CardContent>
         </Card>
       </div>
