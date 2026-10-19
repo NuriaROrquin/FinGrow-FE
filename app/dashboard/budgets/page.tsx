@@ -32,6 +32,10 @@ export default function BudgetsPage() {
   const [activeTab, setActiveTab] = useState<BudgetsTab>(() =>
     searchParams.get("tab") === "savings" ? "savings" : "budgets",
   )
+  useEffect(() => {
+    const tab = searchParams.get("tab")
+    if (tab) setActiveTab(tab === "savings" ? "savings" : "budgets")
+  }, [searchParams])
   const [currentBudget, setCurrentBudget] = useState<BudgetDto | null>(null)
   const [isSavingsDialogOpen, setIsSavingsDialogOpen] = useState(false)
   const [savingsGoals, setSavingsGoals] = useState<GoalDto[]>([])
@@ -67,8 +71,19 @@ export default function BudgetsPage() {
     setSavingsGoals((current) => current.map((goal) => (goal.id === updated.id ? updated : goal)))
 
   const totalBudget = currentBudget?.limits.reduce((sum, limit) => sum + limit.amount, 0) ?? 0
-  const totalSavingsTarget = savingsGoals.reduce((sum, g) => sum + g.targetAmount, 0)
-  const totalSavingsCurrent = savingsGoals.reduce((sum, g) => sum + g.currentAmount, 0)
+  // Sin conversión: cada moneda se suma por separado.
+  const savingsTotalsByCurrency = Object.values(
+    savingsGoals.reduce<Record<string, { currency: GoalDto["currency"]; target: number; current: number }>>(
+      (totals, goal) => {
+        const total = totals[goal.currency] ?? { currency: goal.currency, target: 0, current: 0 }
+        total.target += goal.targetAmount
+        total.current += goal.currentAmount
+        totals[goal.currency] = total
+        return totals
+      },
+      {},
+    ),
+  )
 
   return (
     <div className="space-y-6">
@@ -121,13 +136,19 @@ export default function BudgetsPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription>Total Ahorrado</CardDescription>
-                <CardTitle className="text-2xl text-success">${totalSavingsCurrent.toLocaleString()}</CardTitle>
+                {savingsTotalsByCurrency.length === 0 && <CardTitle className="text-2xl">—</CardTitle>}
+                {savingsTotalsByCurrency.map(({ currency, current }) => (
+                  <CardTitle key={currency} className="text-2xl">
+                    {formatAmount(current, currency)}
+                  </CardTitle>
+                ))}
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  {(totalSavingsTarget > 0 ? (totalSavingsCurrent / totalSavingsTarget) * 100 : 0).toFixed(1)}% del
-                  objetivo
-                </p>
+                {savingsTotalsByCurrency.map(({ currency, target, current }) => (
+                  <p key={currency} className="text-sm text-muted-foreground">
+                    {(target > 0 ? (current / target) * 100 : 0).toFixed(1)}% del objetivo ({currency})
+                  </p>
+                ))}
               </CardContent>
             </Card>
           </>

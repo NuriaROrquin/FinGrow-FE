@@ -182,7 +182,7 @@ export function GoalContributionsDialog({
                     className="flex items-center justify-between gap-3 rounded-lg border p-3"
                   >
                     <div className="min-w-0">
-                      <p className="font-medium text-success">
+                      <p className="font-medium">
                         +{formatAmount(contribution.amount, contribution.currency)}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">

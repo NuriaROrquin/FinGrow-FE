@@ -44,6 +44,7 @@ export const es = {
     empty: "No tenés notificaciones por ahora.",
     loadError: "No pudimos cargar tus notificaciones.",
     retry: "Reintentar",
+    loadMore: "Cargar anteriores",
   },
 
   achievements: {
@@ -52,6 +53,14 @@ export const es = {
     earnedCount: (count: number) => `Ganaste ${count} logros`,
     great: "Genial",
     close: "Cerrar",
+    label: "Logros",
+    title: "Tus Logros",
+    description: "Hitos que has alcanzado en tu viaje financiero",
+    earnedOf: (total: number) => `de ${total} obtenidos`,
+    earnedOn: (date: string) => `Obtenido el ${date}`,
+    howToEarn: "Cómo conseguirlo",
+    loadError: "No pudimos cargar tus logros.",
+    retry: "Reintentar",
   },
 
   settings: {

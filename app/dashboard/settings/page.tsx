@@ -30,11 +30,18 @@ import { MercadoPagoCard } from "@/components/integrations/mercado-pago-card"
 import { TELEGRAM_BOT_USERNAME, TelegramCard } from "@/components/integrations/telegram-card"
 import { WhatsAppCard } from "@/components/integrations/whatsapp-card"
 import { useEffect, useState, type FormEvent } from "react"
+import { useSearchParams } from "next/navigation"
 import { toast as sonnerToast } from "sonner"
 
 export default function SettingsPage() {
   const { role, logout } = useAuth()
   const t = useMessages()
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState(() => searchParams.get("tab") || "profile")
+  useEffect(() => {
+    const tab = searchParams.get("tab")
+    if (tab) setActiveTab(tab)
+  }, [searchParams])
   const [mounted, setMounted] = useState(false)
 
   const [currentPassword, setCurrentPassword] = useState("")
@@ -88,7 +95,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Settings Tabs */}
-      <Tabs defaultValue="profile" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="profile">{t.settings.tabs.profile}</TabsTrigger>
           <TabsTrigger value="notifications">{t.settings.tabs.notifications}</TabsTrigger>

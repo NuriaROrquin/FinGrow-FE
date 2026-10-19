@@ -3,6 +3,8 @@ import type { Currency } from "./transactions"
 
 export interface DashboardPeriodQuery {
   currency?: Currency
+  /** La serie de seis meses termina en el mes de esta fecha; sin ella, en el mes actual. */
+  dateTo?: string
   signal?: AbortSignal
 }
 
@@ -64,7 +66,7 @@ export function getMonthlyExpenses(
   query: DashboardPeriodQuery = {},
 ): Promise<DashboardCollectionResponse<MonthlyExpenseDto>> {
   return api.get<DashboardCollectionResponse<MonthlyExpenseDto>>("/api/transactions/monthly-expenses", {
-    query: { currency: query.currency ?? "ARS" },
+    query: { currency: query.currency ?? "ARS", dateTo: query.dateTo },
     signal: query.signal,
   })
 }
@@ -73,7 +75,7 @@ export function getIncomeVsExpenses(
   query: DashboardPeriodQuery = {},
 ): Promise<DashboardCollectionResponse<IncomeExpenseMonthDto>> {
   return api.get<DashboardCollectionResponse<IncomeExpenseMonthDto>>("/api/transactions/income-vs-expenses", {
-    query: { currency: query.currency ?? "ARS" },
+    query: { currency: query.currency ?? "ARS", dateTo: query.dateTo },
     signal: query.signal,
   })
 }

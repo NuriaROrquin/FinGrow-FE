@@ -75,6 +75,13 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   (`achievement-medal.tsx`): el ícono sale del código, así que un código nuevo en el backend
   necesita su ícono acá. El dorado son los tokens `--gold` y `--gold-soft` de `globals.css`. Los
   nombres y descripciones de los logros vienen del backend en castellano.
+  **Pestaña Logros de Educación (HU-76, SCRUM-138)**: `app/dashboard/education/page.tsx` muestra el
+  catálogo real con `GET /api/achievements` (`components/achievements/use-achievements.ts` y
+  `achievements-list.tsx`): los 12 logros con su medalla; el ganado sale destacado y con su fecha
+  (`achievedAt`), el que falta sale apagado con su `condition` como "cómo conseguirlo". El indicador
+  "Logros" de arriba cuenta los ganados sobre el total del catálogo. El hook vuelve a pedir la lista
+  cuando llega `ACHIEVEMENT_NOTIFICATION_EVENT`, así un logro nuevo aparece sin recargar. Los textos
+  están en `achievements` de los tres idiomas.
 - **Reportes: evolución mensual (HU-41)**. `app/dashboard/reports/page.tsx` arranca en los últimos 6
   meses (contando el mes en curso) y tiene un solo selector de moneda: período y moneda los siguen las
   cards de arriba, el gráfico, los meses destacados y la sección de HU-44. Todo sale de

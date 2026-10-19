@@ -206,7 +206,7 @@ export function MonthlyBudgetSection({
           >
             <ChevronLeftIcon className="size-4" />
           </Button>
-          <h2 className="min-w-48 text-center text-xl font-semibold capitalize">
+          <h2 className="min-w-48 text-center text-xl font-semibold">
             {periodLabel}
           </h2>
           <Button
@@ -310,7 +310,7 @@ export function MonthlyBudgetSection({
             <DialogTitle>Crear presupuesto</DialogTitle>
             <DialogDescription>
               Asigná un límite de gasto por categoría para{" "}
-              <span className="capitalize">{periodLabel}</span>.
+              {periodLabel}.
             </DialogDescription>
           </DialogHeader>
           <CreateBudgetForm
@@ -337,7 +337,7 @@ export function MonthlyBudgetSection({
               {limitEditor?.mode === "edit"
                 ? "Ajustá el límite"
                 : "Definí el límite de una categoría nueva"}{" "}
-              para <span className="capitalize">{periodLabel}</span>. Lo gastado
+              para {periodLabel}. Lo gastado
               y el estado se recalculan al guardar.
             </DialogDescription>
           </DialogHeader>
@@ -374,7 +374,7 @@ export function MonthlyBudgetSection({
               Vas a quitar{" "}
               {categoryToRemove ? expenseCategoryLabels[categoryToRemove] : ""}{" "}
               del presupuesto de{" "}
-              <span className="capitalize">{periodLabel}</span>. Tus movimientos
+              {periodLabel}. Tus movimientos
               de esa categoría no se borran: solo dejan de compararse contra un
               límite.
             </AlertDialogDescription>
@@ -408,7 +408,7 @@ export function MonthlyBudgetSection({
             <AlertDialogTitle>¿Eliminar presupuesto?</AlertDialogTitle>
             <AlertDialogDescription>
               Vas a eliminar el presupuesto de{" "}
-              <span className="capitalize">{periodLabel}</span> con todas sus
+              {periodLabel} con todas sus
               categorías. Tus movimientos no se borran. Esta acción no se puede
               deshacer, pero podés crear otro presupuesto para el mes.
             </AlertDialogDescription>

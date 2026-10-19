@@ -75,6 +75,25 @@ export function LearningProgressOverview() {
           {progress && <p className="text-sm text-muted-foreground">{progress.notStartedCourses} sin empezar</p>}
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardDescription>Racha de Aprendizaje</CardDescription>
+          <CardTitle className="text-2xl">
+            {value(progress?.streakWeeks, progress?.streakWeeks === 1 ? " semana" : " semanas")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>{progress && <p className="text-sm text-muted-foreground">{streakMessage(progress)}</p>}</CardContent>
+      </Card>
     </>
   )
+}
+
+function streakMessage(progress: LearningProgressDto): string {
+  if (progress.streakWeeks > 0) {
+    return progress.studiedThisWeek ? "¡Sigue así!" : "Completa una lección esta semana para sostenerla"
+  }
+  return progress.completedLessons > 0
+    ? "Retoma tu racha completando una lección"
+    : "Completa tu primera lección para empezar"
 }

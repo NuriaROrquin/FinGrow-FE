@@ -46,6 +46,7 @@ export const en: Messages = {
     empty: "You have no notifications yet.",
     loadError: "We could not load your notifications.",
     retry: "Retry",
+    loadMore: "Load earlier",
   },
 
   achievements: {
@@ -54,6 +55,14 @@ export const en: Messages = {
     earnedCount: (count: number) => `You earned ${count} achievements`,
     great: "Great",
     close: "Close",
+    label: "Achievements",
+    title: "Your Achievements",
+    description: "Milestones you have reached on your financial journey",
+    earnedOf: (total: number) => `of ${total} earned`,
+    earnedOn: (date: string) => `Earned on ${date}`,
+    howToEarn: "How to earn it",
+    loadError: "We could not load your achievements.",
+    retry: "Retry",
   },
 
   settings: {

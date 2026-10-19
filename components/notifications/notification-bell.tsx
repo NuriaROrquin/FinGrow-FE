@@ -51,13 +51,14 @@ const unreadStyleByType: Partial<Record<NotificationType, string>> = {
   AchievementUnlocked: "bg-gold-soft text-gold",
 }
 
-const hrefByType: Partial<Record<NotificationType, string>> = {
-  TransactionsToReview: "/dashboard/transactions",
-  GoalStalled: "/dashboard",
-  GoalDeadlineApproaching: "/dashboard",
-  IntegrationAccessLost: "/dashboard/settings",
-  BudgetWarning: "/dashboard/budgets",
-  BudgetExceeded: "/dashboard/budgets",
+const hrefByType: Record<NotificationType, string> = {
+  TransactionsToReview: "/dashboard/transactions?view=pending",
+  GoalStalled: "/dashboard/budgets?tab=savings",
+  GoalDeadlineApproaching: "/dashboard/budgets?tab=savings",
+  IntegrationAccessLost: "/dashboard/settings?tab=integrations",
+  BudgetWarning: "/dashboard/budgets?tab=budgets",
+  BudgetExceeded: "/dashboard/budgets?tab=budgets",
+  AchievementUnlocked: "/dashboard/education?tab=achievements",
 }
 
 type ListStatus = "idle" | "loading" | "error" | "ready"
@@ -69,6 +70,9 @@ export function NotificationBell() {
   const [unread, setUnread] = useState(0)
   const [notifications, setNotifications] = useState<NotificationDto[]>([])
   const [status, setStatus] = useState<ListStatus>("idle")
+  const [pageNumber, setPageNumber] = useState(1)
+  const [hasMore, setHasMore] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
 
   const refreshUnread = useCallback(
     (signal?: AbortSignal) => getUnreadNotificationCount(signal).then(setUnread, () => undefined),
@@ -84,6 +88,8 @@ export function NotificationBell() {
         getUnreadNotificationCount(signal),
       ])
       setNotifications(page.items)
+      setPageNumber(page.pageNumber)
+      setHasMore(page.pageNumber < page.totalPages)
       setUnread(unreadCount)
       setStatus("ready")
     } catch (error) {
@@ -136,6 +142,24 @@ export function NotificationBell() {
     return () => controller.abort()
   }, [open, loadNotifications])
 
+  const loadMore = async () => {
+    setLoadingMore(true)
+
+    try {
+      const page = await listNotifications({ pageNumber: pageNumber + 1 })
+      setNotifications((current) => {
+        const known = new Set(current.map((item) => item.id))
+        return [...current, ...page.items.filter((item) => !known.has(item.id))]
+      })
+      setPageNumber(page.pageNumber)
+      setHasMore(page.pageNumber < page.totalPages)
+    } catch (error) {
+      toastApiError(error)
+    } finally {
+      setLoadingMore(false)
+    }
+  }
+
   const markAsRead = async (notification: NotificationDto) => {
     if (notification.isRead) return
 
@@ -155,7 +179,7 @@ export function NotificationBell() {
   const handleSelect = (notification: NotificationDto) => {
     void markAsRead(notification)
 
-    const href = hrefByType[notification.type]
+    const href = hrefByType[notification.type] as string | undefined
     if (href) {
       setOpen(false)
       router.push(href)
@@ -272,6 +296,14 @@ export function NotificationBell() {
                 )
               })}
             </ul>
+            {hasMore && (
+              <div className="flex justify-center border-t p-2">
+                <Button variant="ghost" size="sm" disabled={loadingMore} onClick={() => void loadMore()}>
+                  {loadingMore && <Spinner />}
+                  {t.notifications.loadMore}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </PopoverContent>
