@@ -238,6 +238,16 @@ export function getCompanyParticipation(signal?: AbortSignal): Promise<CompanyPa
   return api.get<CompanyParticipationDto>("/api/company/metrics/participation", { signal })
 }
 
+export type CompanyEducationMetricsResponse = {
+  totalCompletedCourses: number
+  satisfactionPercentage: number | null
+  last30DaysCompletedCourses: number
+}
+
+export function getCompanyEducationMetrics(signal?: AbortSignal): Promise<CompanyEducationMetricsResponse> {
+  return api.get<CompanyEducationMetricsResponse>("/api/company/metrics/education", { signal })
+}
+
 export interface CompanyMetricsComparisonPeriodDto {
   period: string
   participationRate: number | null

@@ -18,6 +18,7 @@ import {
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ParticipationCards } from "@/components/company/participation-cards"
+import { EducationMetricsCard } from "@/components/company/education-metrics-card"
 import { getCompanyMetricsComparison, isApiError, type CompanyMetricsComparisonDto } from "@/lib/api"
 import { useEffect, useState } from "react"
 
@@ -63,7 +64,6 @@ function formatRate(rate: number): string {
 
 export default function CompanyDashboardPage() {
   const avgHealthScore = 73
-  const completedCourses = 342
   const [comparison, setComparison] = useState<CompanyMetricsComparisonDto | null>(null)
   const [comparisonError, setComparisonError] = useState<string | null>(null)
   const [isComparisonLoading, setIsComparisonLoading] = useState(true)
@@ -138,18 +138,7 @@ export default function CompanyDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Cursos Completados</CardDescription>
-            <CardTitle className="text-2xl">{completedCourses}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <GraduationCapIcon className="size-4" />
-              <span>Entre todos los empleados</span>
-            </div>
-          </CardContent>
-        </Card>
+        <EducationMetricsCard />
       </div>
 
       {/* Charts */}
