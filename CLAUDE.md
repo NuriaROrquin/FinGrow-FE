@@ -29,6 +29,12 @@ responde con la cookie **HttpOnly** `fingrow-session` (que lleva el JWT) y un `S
 con `userId`, `companyId`, `fullName`, `role` y `expiresAt`. Al cargar la página se rehidrata
 con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve el token: en
 `localStorage` solo queda `fingrow-role`, para saber a qué login volver ante un 401.
+- **Sesiones abiertas (HU-73)**: en Configuración → Seguridad, `components/security/active-sessions-card.tsx`
+  lista las sesiones reales del usuario, empleado o empresa (`GET /session/all`), y cierra una
+  (`DELETE /session/{id}`) o todas menos la actual (`DELETE /session/others`). Cuelgan de `/session`
+  porque el backend reconoce la sesión actual por la cookie de refresh, que solo viaja ahí. No hay
+  ubicación: el backend no la registra y la pantalla no inventa una ciudad. Un dispositivo cerrado
+  sigue entrando hasta que vence su access token y vuelve al login en el próximo refresh.
 - **Departamentos y empleados del panel de empresa** (HU-51, HU-54) usan la API real
   (`lib/api/company.ts`, `/api/company/departments` y `/api/company/employees`). El empleado se
   relaciona con su departamento por id. El alta devuelve una contraseña temporal que se muestra

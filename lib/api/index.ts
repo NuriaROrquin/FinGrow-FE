@@ -20,12 +20,16 @@ export { ApiError, ClientErrorCodes, isApiError, parseApiError } from "./errors"
 export { toastApiError } from "./notify"
 export { clearSession, getRole, loginPathForCurrentRole, saveSession, type SessionRole } from "./session"
 export {
+  closeOtherSessions,
+  closeSession,
   getSession,
   isTwoFactorChallenge,
+  listSessions,
   loginEmpleado,
   loginEmpresa,
   logout,
   verifyTwoFactorLogin,
+  type ActiveSessionDto,
   type LoginRequest,
   type SessionResponse,
   type TwoFactorChallenge,
