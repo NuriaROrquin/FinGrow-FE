@@ -219,7 +219,7 @@ export default function EmpresaLoginPage() {
                   <div className="flex items-center justify-between">
                     <Label htmlFor="password">Contraseña</Label>
                     <Link
-                      href="/recuperar-password"
+                      href="/recuperar-password?tipo=empresa"
                       className="text-xs text-primary hover:underline"
                     >
                       ¿Olvidaste tu contraseña?

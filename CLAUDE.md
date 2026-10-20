@@ -29,6 +29,13 @@ responde con la cookie **HttpOnly** `fingrow-session` (que lleva el JWT) y un `S
 con `userId`, `companyId`, `fullName`, `role` y `expiresAt`. Al cargar la página se rehidrata
 con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve el token: en
 `localStorage` solo queda `fingrow-role`, para saber a qué login volver ante un 401.
+- **Recuperar la contraseña (HU-72)**: el "¿Olvidaste tu contraseña?" de cada login lleva a
+  `/recuperar-password` (`?tipo=empresa` desde el de empresa), que pide el enlace con
+  `POST /password-reset/{empleado|empresa}` (`lib/api/password-reset.ts`). La confirmación es la
+  misma exista o no la cuenta: no muestres nada distinto según la respuesta. El correo lleva a
+  `/recuperar-password/restablecer?token=...&tipo=...`, que valida el enlace al abrirlo y lo canjea
+  con la contraseña nueva; el backend devuelve el rol y con eso se vuelve al login que corresponde
+  (el `tipo` de la URL solo decide adónde pedir otro enlace si este no sirve).
 - **Departamentos y empleados del panel de empresa** (HU-51, HU-54) usan la API real
   (`lib/api/company.ts`, `/api/company/departments` y `/api/company/employees`). El empleado se
   relaciona con su departamento por id. El alta devuelve una contraseña temporal que se muestra
