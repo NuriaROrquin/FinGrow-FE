@@ -121,10 +121,10 @@ export function ActiveSessionsCard() {
                 <div className="flex min-w-0 items-start gap-3">
                   <Icon className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
                   <div className="min-w-0 space-y-0.5">
-                    <p className="flex flex-wrap items-center gap-2 font-medium">
+                    <div className="flex flex-wrap items-center gap-2 font-medium">
                       {describeDevice(session, texts)}
                       {session.isCurrent && <Badge variant="secondary">{texts.currentSession}</Badge>}
-                    </p>
+                    </div>
                     <p className="text-sm text-muted-foreground">{texts.sessionStarted(formatDateTime(session.startedAt))}</p>
                     <p className="text-sm text-muted-foreground">
                       {texts.sessionLastActive(formatRelativeTime(session.lastActiveAt))}
