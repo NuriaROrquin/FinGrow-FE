@@ -36,7 +36,11 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   pedirla. El switch de estado activa o desactiva el acceso (HU-55): desactivar conserva los
   datos, eliminar los borra. El responsable de un departamento (HU-52) es un empleado activo de
   la empresa elegido con `components/company/manager-picker.tsx`; si después pierde el acceso,
-  sigue figurando como "(sin acceso)" hasta que se cambie. En el panel principal de la empresa
+  sigue figurando como "(sin acceso)" hasta que se cambie. Un empleado que se dio de baja solo
+  (HU-74, `withdrawnAt`) sale como "Dado de baja", sin switch: no se puede reactivar. La baja la
+  pide el empleado desde la Zona de Peligro de Configuración
+  (`components/security/withdraw-account-dialog.tsx`, `POST /account/withdrawal`), con su
+  contraseña; al terminar, el backend ya cerró la sesión y el front vuelve al inicio. En el panel principal de la empresa
   (`/dashboard/company`) solo son reales las tarjetas de total de empleados y tasa de
   participación (HU-56, `components/company/participation-cards.tsx`,
   `GET /api/company/metrics/participation`); el resto sigue mock. Cuando el backend manda

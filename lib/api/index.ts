@@ -50,6 +50,7 @@ export {
   setupTwoFactor,
   TWO_FACTOR_CODE_LENGTH,
   updateProfile,
+  withdrawAccount,
   type ChangePasswordPayload,
   type EmployeeProfile,
   type TwoFactorSetup,
