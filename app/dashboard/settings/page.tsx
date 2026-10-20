@@ -4,12 +4,10 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
-  BellIcon,
   ShieldIcon,
   LockIcon,
   TrashIcon,
@@ -23,6 +21,8 @@ import { changePassword, PASSWORD_MIN_LENGTH, toastApiError } from "@/lib/api"
 import { ProfileCard } from "@/components/profile/profile-card"
 import { CompanyProfileCard } from "@/components/company/company-profile-card"
 import { TwoFactorCard } from "@/components/security/two-factor-card"
+import { NotificationPreferences } from "@/components/notifications/notification-preferences"
+import { CompanyNotificationPreferences } from "@/components/notifications/company-notification-preferences"
 import { PreferencesCard } from "@/components/preferences/preferences-card"
 import { IolCard } from "@/components/integrations/iol-card"
 import { GmailCard } from "@/components/integrations/gmail-card"
@@ -30,11 +30,18 @@ import { MercadoPagoCard } from "@/components/integrations/mercado-pago-card"
 import { TELEGRAM_BOT_USERNAME, TelegramCard } from "@/components/integrations/telegram-card"
 import { WhatsAppCard } from "@/components/integrations/whatsapp-card"
 import { useEffect, useState, type FormEvent } from "react"
+import { useSearchParams } from "next/navigation"
 import { toast as sonnerToast } from "sonner"
 
 export default function SettingsPage() {
   const { role, logout } = useAuth()
   const t = useMessages()
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState(() => searchParams.get("tab") || "profile")
+  useEffect(() => {
+    const tab = searchParams.get("tab")
+    if (tab) setActiveTab(tab)
+  }, [searchParams])
   const [mounted, setMounted] = useState(false)
 
   const [currentPassword, setCurrentPassword] = useState("")
@@ -88,7 +95,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Settings Tabs */}
-      <Tabs defaultValue="profile" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="profile">{t.settings.tabs.profile}</TabsTrigger>
           <TabsTrigger value="notifications">{t.settings.tabs.notifications}</TabsTrigger>
@@ -104,124 +111,11 @@ export default function SettingsPage() {
 
         {/* Notifications Tab */}
         <TabsContent value="notifications" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <BellIcon className="size-5" />
-                <div>
-                  <CardTitle>{t.settings.notifications.title}</CardTitle>
-                  <CardDescription>{t.settings.notifications.description}</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {role === "empleado" ? (
-                <>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>{t.settings.notifications.budgetAlerts}</Label>
-                      <p className="text-sm text-muted-foreground">{t.settings.notifications.budgetAlertsHint}</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>{t.settings.notifications.transactions}</Label>
-                      <p className="text-sm text-muted-foreground">{t.settings.notifications.transactionsHint}</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>{t.settings.notifications.goals}</Label>
-                      <p className="text-sm text-muted-foreground">{t.settings.notifications.goalsHint}</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>{t.settings.notifications.investments}</Label>
-                      <p className="text-sm text-muted-foreground">{t.settings.notifications.investmentsHint}</p>
-                    </div>
-                    <Switch />
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>{t.settings.notifications.education}</Label>
-                      <p className="text-sm text-muted-foreground">{t.settings.notifications.educationHint}</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>{t.settings.notifications.wellbeing}</Label>
-                      <p className="text-sm text-muted-foreground">{t.settings.notifications.wellbeingHint}</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>{t.settings.notifications.newEmployees}</Label>
-                      <p className="text-sm text-muted-foreground">{t.settings.notifications.newEmployeesHint}</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>{t.settings.notifications.monthlyReports}</Label>
-                      <p className="text-sm text-muted-foreground">{t.settings.notifications.monthlyReportsHint}</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>{t.settings.notifications.participation}</Label>
-                      <p className="text-sm text-muted-foreground">{t.settings.notifications.participationHint}</p>
-                    </div>
-                    <Switch />
-                  </div>
-                </>
-              )}
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>{t.settings.notifications.email}</Label>
-                  <p className="text-sm text-muted-foreground">{t.settings.notifications.emailHint}</p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4">
-                <Button>{t.settings.notifications.save}</Button>
-              </div>
-            </CardContent>
-          </Card>
+          {role === "empleado" ? (
+            <NotificationPreferences />
+          ) : (
+            <CompanyNotificationPreferences />
+          )}
         </TabsContent>
 
         {/* Integrations Tab */}

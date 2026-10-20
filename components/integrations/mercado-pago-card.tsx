@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { CheckCircle2, ExternalLink, Info, RefreshCw, Unlink, Wallet } from "lucide-react"
+import { AlertTriangle, CheckCircle2, ExternalLink, Info, RefreshCw, Unlink, Wallet } from "lucide-react"
 import { toast } from "sonner"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -33,6 +33,7 @@ import {
 } from "@/lib/api"
 import { useMessages } from "@/lib/i18n"
 
+import { LastSync } from "./last-sync"
 import { formatLinkedDate, LINKED_ICON_CLASS } from "./link-code-integration-card"
 
 const PROVIDER = "mercadopago"
@@ -45,6 +46,7 @@ export function MercadoPagoCard() {
   const [syncing, setSyncing] = useState(false)
   const [unlinking, setUnlinking] = useState(false)
   const linked = integration?.linked ?? false
+  const failed = linked && integration?.status === "Error"
 
   useEffect(() => {
     const controller = new AbortController()
@@ -103,6 +105,10 @@ export function MercadoPagoCard() {
       toastApiError(error, t.mercadoPago.syncFailed)
     } finally {
       setSyncing(false)
+      // Si Mercado Pago rechazó el acceso, la integración quedó con error: se refleja sin recargar la página.
+      getIntegration(PROVIDER)
+        .then(setIntegration)
+        .catch(() => undefined)
     }
   }
 
@@ -132,12 +138,18 @@ export function MercadoPagoCard() {
               <CardDescription>{t.mercadoPago.description}</CardDescription>
             </div>
           </div>
-          {linked && (
-            <Badge variant="default" className="shrink-0 gap-1">
-              <CheckCircle2 className="size-3" />
-              {t.common.linked}
-            </Badge>
-          )}
+          {linked &&
+            (failed ? (
+              <Badge variant="destructive" className="shrink-0 gap-1">
+                <AlertTriangle className="size-3" />
+                {t.mercadoPago.failedBadge}
+              </Badge>
+            ) : (
+              <Badge variant="default" className="shrink-0 gap-1">
+                <CheckCircle2 className="size-3" />
+                {t.common.linked}
+              </Badge>
+            ))}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -147,22 +159,32 @@ export function MercadoPagoCard() {
           </div>
         ) : linked ? (
           <div className="space-y-4">
-            <Alert>
-              <CheckCircle2 className={LINKED_ICON_CLASS} />
-              <AlertDescription>
-                {t.mercadoPago.linkedPrefix}
-                <span className="font-mono">{integration.externalAccountId}</span>
-                {t.mercadoPago.linkedMiddle}
-                {integration.linkedAt && t.mercadoPago.linkedOn(formatLinkedDate(integration.linkedAt))}
-                {t.mercadoPago.linkedSuffix}
-              </AlertDescription>
-            </Alert>
+            {failed ? (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>{integration.errorReason ?? t.mercadoPago.failed}</AlertDescription>
+              </Alert>
+            ) : (
+              <Alert>
+                <CheckCircle2 className={LINKED_ICON_CLASS} />
+                <AlertDescription>
+                  {t.mercadoPago.linkedPrefix}
+                  <span className="font-mono">{integration.externalAccountId}</span>
+                  {t.mercadoPago.linkedMiddle}
+                  {integration.linkedAt && t.mercadoPago.linkedOn(formatLinkedDate(integration.linkedAt))}
+                  {t.mercadoPago.linkedSuffix}
+                </AlertDescription>
+              </Alert>
+            )}
+            <LastSync lastSyncedAt={integration.lastSyncedAt} />
             <div className="flex flex-wrap gap-2">
-              <Button onClick={sync} disabled={busy} variant="outline">
-                {syncing ? <Spinner className="mr-2" /> : <RefreshCw className="size-4 mr-2" />}
-                {t.mercadoPago.syncNow}
-              </Button>
-              <Button onClick={start} disabled={busy} variant="outline">
+              {!failed && (
+                <Button onClick={sync} disabled={busy} variant="outline">
+                  {syncing ? <Spinner className="mr-2" /> : <RefreshCw className="size-4 mr-2" />}
+                  {t.mercadoPago.syncNow}
+                </Button>
+              )}
+              <Button onClick={start} disabled={busy} variant={failed ? "default" : "outline"}>
                 {starting && <Spinner className="mr-2" />}
                 {t.mercadoPago.reauthorize}
               </Button>

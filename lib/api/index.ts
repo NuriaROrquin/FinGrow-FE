@@ -69,6 +69,9 @@ export {
   DEPARTMENT_NAME_MAX_LENGTH,
   COMPANY_INDUSTRIES,
   EMPLOYEE_EMAIL_MAX_LENGTH,
+  getCompanyParticipation,
+  getCompanyEducationMetrics,
+  getCompanyMetricsComparison,
   getCompanyProfile,
   getCompanyPreferences,
   isValidCuit,
@@ -79,6 +82,10 @@ export {
   updateDepartment,
   updateEmployee,
   type CompanyEmployeeDto,
+  type CompanyParticipationDto,
+  type CompanyEducationMetricsResponse,
+  type CompanyMetricsComparisonDto,
+  type CompanyMetricsComparisonPeriodDto,
   type CompanyIndustry,
   type CompanyProfileDto,
   type CompanyPreferencesDto,
@@ -115,6 +122,7 @@ export {
   courseLevelLabels,
   courseProgressStatusLabels,
   getCourse,
+  getLearningProgress,
   listCourses,
   rateCourse,
   type CourseDetailDto,
@@ -122,6 +130,7 @@ export {
   type CourseLevel,
   type CourseProgressStatus,
   type CourseSummaryDto,
+  type LearningProgressDto,
   type LessonDto,
 } from "./courses"
 export { type EducationCategory } from "./education"
@@ -222,7 +231,29 @@ export {
   type QuoteMarket,
   type SortDirection,
 } from "./investments"
-export { getSavingsVsGoals, type SavingsVsGoalsDto, type SavingsVsGoalsMonthDto } from "./reports"
+export {
+  getExpenseBreakdown,
+  getFinancialInsights,
+  getMonthlySummary,
+  getSavingsVsGoals,
+  type CategoryAmountDto,
+  type CategoryExpenseDto,
+  type ExpenseBreakdownDto,
+  type ExpenseComparisonDto,
+  type ExpenseTotalDto,
+  type FinancialHighlightsDto,
+  type FinancialInsightsDto,
+  type FinancialRecommendationDto,
+  type InsightsEligibilityDto,
+  type MonthAmountDto,
+  type MonthHighlightsDto,
+  type MonthlySummaryDto,
+  type MonthlySummaryMonthDto,
+  type RecommendationAction,
+  type RecommendationKind,
+  type SavingsVsGoalsDto,
+  type SavingsVsGoalsMonthDto,
+} from "./reports"
 export { canQuoteIn, getSecurityPrice, searchSecurityPrices, type SecurityPriceDto } from "./security-prices"
 export {
   getDashboardSummary,
@@ -238,13 +269,26 @@ export {
 } from "./dashboard"
 export {
   BUDGET_NOTIFICATION_EVENT,
+  changeNotificationChannel,
+  changeNotificationTypePreference,
+  listCompanyNotificationTypePreferences,
   getUnreadNotificationCount,
+  listNotificationChannels,
   listNotifications,
+  listNotificationTypePreferences,
   markAllNotificationsAsRead,
   markNotificationAsRead,
   NOTIFICATIONS_PAGE_SIZE,
+  updateCompanyNotificationTypePreference,
+  type CompanyNotificationType,
+  type CompanyNotificationTypePreferenceDto,
+  type NotificationChannel,
+  type NotificationChannelDto,
+  type NotificationCadence,
   type NotificationDto,
   type NotificationType,
+  type NotificationTypePreferenceDto,
+  type UpdateCompanyNotificationTypePreferencePayload,
 } from "./notifications"
 export { connectToNotifications, type NotificationsHubHandlers } from "./notifications-hub"
 export {

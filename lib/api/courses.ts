@@ -70,6 +70,22 @@ export function listCourses(filters: CourseFilters = {}, signal?: AbortSignal): 
   })
 }
 
+export interface LearningProgressDto {
+  courseCount: number
+  completedCourses: number
+  inProgressCourses: number
+  notStartedCourses: number
+  lessonCount: number
+  completedLessons: number
+  progressPercentage: number
+  streakWeeks: number
+  studiedThisWeek: boolean
+}
+
+export function getLearningProgress(signal?: AbortSignal): Promise<LearningProgressDto> {
+  return api.get<LearningProgressDto>("/api/courses/progress", { signal })
+}
+
 export function getCourse(slug: string, signal?: AbortSignal): Promise<CourseDetailDto> {
   return api.get<CourseDetailDto>(`/api/courses/${encodeURIComponent(slug)}`, { signal })
 }

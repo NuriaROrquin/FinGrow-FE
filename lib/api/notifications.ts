@@ -10,6 +10,14 @@ export type NotificationType =
   | "BudgetExceeded"
   | "AchievementUnlocked"
 
+export type CompanyNotificationType =
+  | "FinancialWellbeingLow"
+  | "ParticipationLow"
+  | "EmployeeAdded"
+  | "EmployeeRemoved"
+
+export type NotificationCadence = "Daily" | "Weekly" | "Monthly"
+
 /** Evento de window que se dispara cuando llega una alerta de presupuesto, para refrescar esa pantalla. */
 export const BUDGET_NOTIFICATION_EVENT = "fingrow:budget-notification"
 
@@ -48,4 +56,69 @@ export function markNotificationAsRead(notificationId: string, signal?: AbortSig
 export async function markAllNotificationsAsRead(signal?: AbortSignal): Promise<number> {
   const { marked } = await api.post<{ marked: number }>("/api/notifications/read-all", undefined, { signal })
   return marked
+}
+
+export type NotificationChannel = "InApp" | "Telegram" | "Email"
+
+export interface NotificationChannelDto {
+  channel: NotificationChannel
+  isEnabled: boolean
+  isConfigurable: boolean
+  isConnected: boolean
+}
+
+export interface NotificationTypePreferenceDto {
+  type: NotificationType
+  isEnabled: boolean
+}
+
+export interface CompanyNotificationTypePreferenceDto {
+  type: CompanyNotificationType
+  isEnabled: boolean
+  cadence: NotificationCadence
+  threshold: number | null
+}
+
+export interface UpdateCompanyNotificationTypePreferencePayload {
+  isEnabled: boolean
+  cadence: NotificationCadence
+  threshold: number | null
+}
+
+export function listNotificationChannels(signal?: AbortSignal): Promise<NotificationChannelDto[]> {
+  return api.get<NotificationChannelDto[]>("/api/notifications/channels", { signal })
+}
+
+export function changeNotificationChannel(
+  channel: NotificationChannel,
+  isEnabled: boolean,
+  signal?: AbortSignal,
+): Promise<NotificationChannelDto> {
+  return api.put<NotificationChannelDto>(`/api/notifications/channels/${channel}`, { isEnabled }, { signal })
+}
+
+export function listNotificationTypePreferences(signal?: AbortSignal): Promise<NotificationTypePreferenceDto[]> {
+  return api.get<NotificationTypePreferenceDto[]>("/api/notifications/types", { signal })
+}
+
+export function changeNotificationTypePreference(
+  type: NotificationType,
+  isEnabled: boolean,
+  signal?: AbortSignal,
+): Promise<NotificationTypePreferenceDto> {
+  return api.put<NotificationTypePreferenceDto>(`/api/notifications/types/${type}`, { isEnabled }, { signal })
+}
+
+export function listCompanyNotificationTypePreferences(
+  signal?: AbortSignal,
+): Promise<CompanyNotificationTypePreferenceDto[]> {
+  return api.get<CompanyNotificationTypePreferenceDto[]>("/api/notifications/types", { signal })
+}
+
+export function updateCompanyNotificationTypePreference(
+  type: CompanyNotificationType,
+  payload: UpdateCompanyNotificationTypePreferencePayload,
+  signal?: AbortSignal,
+): Promise<CompanyNotificationTypePreferenceDto> {
+  return api.put<CompanyNotificationTypePreferenceDto>(`/api/notifications/types/${type}`, payload, { signal })
 }

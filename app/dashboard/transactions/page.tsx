@@ -213,6 +213,11 @@ export default function TransactionsPage() {
   }, [dateFrom, dateTo, summaryRefreshKey, toast])
 
   useEffect(() => {
+    const view = searchParams.get("view")
+    if (view) setActiveView(view === "pending" ? "pending" : "movements")
+  }, [searchParams])
+
+  useEffect(() => {
     if (searchParams.get("mode") === "ocr") {
       setIsScanDialogOpen(true)
     }
@@ -958,6 +963,10 @@ export default function TransactionsPage() {
                 ) : (
                   filteredTransactions.map((transaction) => {
                     const CategoryIcon = getCategoryIcon(transaction.category)
+                    const categoryLabel =
+                      expenseCategoryLabels[transaction.category as keyof typeof expenseCategoryLabels] ??
+                      incomeCategoryLabels[transaction.category as keyof typeof incomeCategoryLabels] ??
+                      transaction.category
                     const PaymentMethodIcon = getPaymentMethodIcon(transaction.paymentMethod)
 
                     return (
@@ -971,9 +980,9 @@ export default function TransactionsPage() {
                           </span>
                         </TableCell>
                         <TableCell className={transactionTableCellClassName}>
-                          <div className="flex items-center gap-2" title={transaction.category}>
+                          <div className="flex items-center gap-2" title={categoryLabel}>
                             <CategoryIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                            <span className="truncate text-sm text-foreground">{transaction.category}</span>
+                            <span className="truncate text-sm text-foreground">{categoryLabel}</span>
                           </div>
                         </TableCell>
                         <TableCell className={`${transactionTableCellClassName} text-muted-foreground`}>

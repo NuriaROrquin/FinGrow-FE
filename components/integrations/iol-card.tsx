@@ -36,6 +36,7 @@ import {
 } from "@/lib/api"
 import { useMessages } from "@/lib/i18n"
 
+import { LastSync } from "./last-sync"
 import { formatLinkedDate, LINKED_ICON_CLASS } from "./link-code-integration-card"
 
 const PROVIDER = "iol"
@@ -96,6 +97,7 @@ export function IolCard() {
       toast.success(t.iol.synced, {
         description: t.iol.syncDetail(summary.imported, summary.updated, summary.ignored),
       })
+      setIntegration((current) => current && { ...current, lastSyncedAt: summary.syncedAt })
     } catch (error) {
       if (isApiError(error) && error.code === IOL_GRANT_EXPIRED) {
         setIntegration((current) => current && { ...current, status: "Error" })
@@ -227,7 +229,7 @@ export function IolCard() {
           <>
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>{t.iol.expired}</AlertDescription>
+              <AlertDescription>{integration.errorReason ?? t.iol.expired}</AlertDescription>
             </Alert>
             {credentialsForm}
           </>
@@ -243,6 +245,7 @@ export function IolCard() {
                 {t.iol.linkedSuffix}
               </AlertDescription>
             </Alert>
+            <LastSync lastSyncedAt={integration.lastSyncedAt} />
             <div className="flex flex-wrap gap-2">
               <Button onClick={sync} disabled={busy} variant="outline">
                 {syncing ? <Spinner className="mr-2" /> : <RefreshCw className="size-4 mr-2" />}

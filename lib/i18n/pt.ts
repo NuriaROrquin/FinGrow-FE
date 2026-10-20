@@ -8,6 +8,10 @@ export const pt: Messages = {
     open: "Abrir",
     unlink: "Desvincular",
     saveChanges: "Salvar Alterações",
+    lastSync: (date: string) => `Última sincronização: ${date}`,
+    neverSynced: "Ainda não foi sincronizado",
+    lastActivity: (date: string) => `Última atividade: ${date}`,
+    neverActive: "Ainda não recebemos mensagens",
   },
 
   nav: {
@@ -42,6 +46,7 @@ export const pt: Messages = {
     empty: "Você ainda não tem notificações.",
     loadError: "Não foi possível carregar suas notificações.",
     retry: "Tentar novamente",
+    loadMore: "Carregar anteriores",
   },
 
   achievements: {
@@ -50,6 +55,14 @@ export const pt: Messages = {
     earnedCount: (count: number) => `Você ganhou ${count} conquistas`,
     great: "Ótimo",
     close: "Fechar",
+    label: "Conquistas",
+    title: "Suas Conquistas",
+    description: "Marcos que você alcançou na sua jornada financeira",
+    earnedOf: (total: number) => `de ${total} obtidas`,
+    earnedOn: (date: string) => `Obtida em ${date}`,
+    howToEarn: "Como conseguir",
+    loadError: "Não foi possível carregar suas conquistas.",
+    retry: "Tentar novamente",
   },
 
   settings: {
@@ -153,6 +166,116 @@ export const pt: Messages = {
       email: "Notificações por E-mail",
       emailHint: "Receba notificações por e-mail",
       save: "Salvar Preferências",
+      alertTypes: {
+        title: "Quais alertas você quer receber",
+        description: "Se você desligar um tipo de alerta, ele não chega por nenhum canal nem fica na sua caixa de entrada.",
+        TransactionsToReview: {
+          label: "Movimentos para revisar",
+          hint: "Quando uma integração ou o bot propõe novos movimentos",
+        },
+        GoalStalled: {
+          label: "Meta parada",
+          hint: "Quando uma meta de economia está há tempo sem avançar",
+        },
+        GoalDeadlineApproaching: {
+          label: "Meta perto do prazo",
+          hint: "Quando o prazo de uma meta está chegando",
+        },
+        BudgetWarning: {
+          label: "Orçamento quase esgotado",
+          hint: "Quando você se aproxima do limite de uma categoria",
+        },
+        BudgetExceeded: {
+          label: "Orçamento excedido",
+          hint: "Quando você ultrapassa o limite de uma categoria",
+        },
+        IntegrationAccessLost: {
+          label: "Integração sem acesso",
+          hint: "Quando o Gmail ou a IOL deixam de sincronizar e é preciso autorizar de novo",
+        },
+        AchievementUnlocked: {
+          label: "Conquistas desbloqueadas",
+          hint: "Quando você ganha uma medalha nova",
+        },
+      },
+      channels: {
+        title: "Por onde receber",
+        description: "O canal decide por onde viaja um alerta; o tipo, se ele chega até você.",
+        InApp: {
+          label: "No app",
+          hint: "Sempre ativo: é o histórico de todos os seus alertas",
+        },
+        Telegram: {
+          label: "Telegram",
+          hint: "Receba os alertas no seu chat do Telegram",
+        },
+        Email: {
+          label: "E-mail",
+          hint: "Receba os alertas no seu e-mail",
+        },
+        alwaysOn: "Sempre ativo",
+        notConnected: "Vincule seu chat em Integrações para receber por aqui.",
+      },
+      loading: "Carregando suas preferências...",
+      loadFailed: "Não conseguimos carregar suas preferências de notificações.",
+      retry: "Tentar de novo",
+      saveFailed: "Não conseguimos salvar a alteração.",
+      company: {
+        title: "Notificações",
+        description: "Escolha quais alertas agregados deseja receber sobre a evolução da sua empresa.",
+        loading: "Carregando as preferências da empresa...",
+        loadFailed: "Não conseguimos carregar as preferências de notificações da empresa.",
+        saveFailed: "Não conseguimos salvar a configuração. O último valor confirmado foi restaurado.",
+        saved: "Configuração do alerta salva.",
+        save: "Salvar alerta",
+        saveAll: "Salvar alterações",
+        frequency: "Frequência",
+        daily: "Diária",
+        weekly: "Semanal",
+        monthly: "Mensal",
+        thresholdError: "Informe um valor entre 1 e 100.",
+        privacy:
+          "Os alertas são calculados com métricas mensais agregadas. Não incluem informações pessoais, transações ou valores individuais. Se não houver funcionários ativos suficientes para preservar a privacidade, o alerta não será gerado.",
+        types: {
+          FinancialWellbeingLow: {
+            label: "Bem-estar financeiro",
+            description: "Receba um alerta mensal quando a média agregada de poupança, orçamentos, metas e reserva financeira ficar abaixo do valor definido.",
+            shortHelp: "Baseia-se na média agregada de poupança, orçamentos, metas e reserva financeira da equipe.",
+            thresholdLabel: "Alertar se o bem-estar financeiro médio for menor que",
+            thresholdSuffix: "/100",
+            helpTitle: "O que mede o bem-estar financeiro?",
+            help: [
+              "É uma pontuação mensal de 0 a 100 que resume tendências financeiras saudáveis de forma agregada.",
+              "Considera poupança, cumprimento de orçamentos, avanço de metas e reserva financeira.",
+              "O alerta compara a média agregada da empresa com o limite escolhido.",
+            ],
+            factors: [
+              "Poupança: 40%. Relação entre receitas e despesas do mês.",
+              "Orçamentos: 25%. Cumprimento dos limites orçados.",
+              "Metas: 20%. Avanço dos aportes para metas financeiras.",
+              "Reserva financeira: 15%. Capacidade de cobrir despesas com o saldo acumulado.",
+            ],
+            privacyNote: "A pontuação só é calculada para pessoas com atividade mensal suficiente: pelo menos 10 movimentos confirmados e alguma receita. A empresa recebe apenas a média agregada e não pode ver pontuações individuais.",
+          },
+          ParticipationLow: {
+            label: "Participação",
+            description: "Receba um alerta mensal quando a porcentagem de funcionários ativos com movimentos confirmados ou aportes a metas ficar abaixo do valor definido.",
+            shortHelp: "É calculada com base nos funcionários ativos que registraram movimentos confirmados ou aportes a metas durante o mês.",
+            thresholdLabel: "Alertar se a participação mensal for menor que",
+            thresholdSuffix: "%",
+            helpTitle: "O que mede a participação?",
+            help: [
+              "A participação mostra a porcentagem de funcionários ativos que registrou atividade durante o mês.",
+              "Uma pessoa conta como participante se confirmou ao menos um movimento ou fez ao menos um aporte a uma meta.",
+              "O alerta se baseia na porcentagem agregada da empresa, sem mostrar quem participou.",
+            ],
+            formula: "participação = funcionários ativos com atividade / total de funcionários ativos × 100",
+            privacyNote: "A empresa recebe apenas métricas agregadas e não pode identificar as pessoas participantes.",
+          },
+          EmployeeAdded: { label: "Admissões de funcionários", description: "Receba um resumo de novas admissões." },
+          EmployeeRemoved: { label: "Remoções definitivas", description: "Receba um resumo de funcionários excluídos definitivamente." },
+        },
+      },
     },
     ocr: {
       title: "Processamento OCR",
@@ -324,6 +447,9 @@ export const pt: Messages = {
     linkedOn: (date: string) => ` em ${date}`,
     linkedSuffix: ". As novas transações são trazidas a cada hora e aparecem como pendentes em Transações.",
     syncNow: "Sincronizar agora",
+    failedBadge: "Com erro",
+    failed:
+      "Perdemos o acesso à sua conta do Mercado Pago, provavelmente porque você removeu a permissão ou ela venceu. Autorize novamente para continuar importando suas transações.",
     reauthorize: "Autorizar novamente",
     unlinkTitle: "Desvincular o Mercado Pago?",
     unlinkWarning:
@@ -575,5 +701,47 @@ export const pt: Messages = {
     storageUnavailable: "Não conseguimos acessar o comprovante salvo. Tente novamente em alguns minutos.",
     alreadyScanned: "Este comprovante já foi escaneado. Se você descartou a proposta, cadastre manualmente.",
     scanFailed: "Não conseguimos escanear o comprovante. Tente novamente.",
+  },
+
+  expenseBreakdown: {
+    loadFailed: "Não foi possível carregar a análise de gastos.",
+    empty: (currency: string) => `Não há gastos confirmados em ${currency} neste período.`,
+    chartTitle: "Gastos por Categoria",
+    chartDescription: (currency: string) => `Para onde vai seu dinheiro em ${currency}, sem contar poupança e investimentos`,
+    chartEmpty: "Neste período só há movimentações de poupança e investimentos.",
+    chartAmount: "Valor",
+    detailsTitle: "Detalhes por Categoria",
+    detailsDescription: "Do maior para o menor, sobre seus gastos de consumo",
+    compare: "Comparar com o período anterior",
+    comparedWith: (from: string, to: string) => `Comparado com ${from} – ${to}`,
+    noPreviousPeriod: "Sem período anterior para mostrar",
+    newCategory: "Nova",
+    noChange: "Sem alterações",
+    consumption: "Gastos de consumo",
+    consumptionHint: "Base das porcentagens",
+    savings: "Poupança e Investimentos",
+    savingsHint: "É poupança: não entra no ranking",
+    total: "Total",
+    totalHint: "Igual a Gastos Totais",
+  },
+
+  savingsReport: {
+    periodNote: (count: number, range: string) =>
+      `Esta seção mostra ${count === 1 ? "o último mês" : `os últimos ${count} meses`} (${range}): sempre termina no mês atual, então não segue o período escolhido.`,
+  },
+
+  reportPdf: {
+    export: "Exportar PDF",
+    exporting: "Gerando PDF...",
+    exportFailed: "Não foi possível gerar o PDF. Tente novamente.",
+    title: "Relatório Financeiro",
+    employee: "Funcionário",
+    period: "Período",
+    currency: "Moeda",
+    generatedAt: "Gerado em",
+    overview: "Resumo",
+    spending: "Análise de Gastos",
+    savings: "Relatório de Poupança",
+    fileName: "relatorio-financeiro",
   },
 }

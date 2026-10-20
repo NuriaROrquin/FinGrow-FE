@@ -45,7 +45,7 @@ import {
 import { GoalForm } from "@/components/goals/goal-form"
 import { AddTransactionForm } from "@/components/transactions/add-transaction-form"
 import { PeriodFilter, getCurrentMonthStart, getToday } from "@/components/period-filter"
-import { formatDateText, formatMoney } from "@/lib/format"
+import { formatDateText, formatMoney, formatNumber } from "@/lib/format"
 import { usePreferences } from "@/lib/preferences-context"
 
 const categoryColors = ["#3b5998", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#ef4444", "#14b8a6"]
@@ -182,8 +182,8 @@ export default function DashboardPage() {
     setCategoryData([])
 
     Promise.all([
-      getMonthlyExpenses({ currency, signal: controller.signal }),
-      getIncomeVsExpenses({ currency, signal: controller.signal }),
+      getMonthlyExpenses({ currency, dateTo, signal: controller.signal }),
+      getIncomeVsExpenses({ currency, dateTo, signal: controller.signal }),
       getExpensesByCategory({ dateFrom, dateTo, currency, signal: controller.signal }),
     ])
       .then(([monthlyExpenses, incomeVsExpenses, expensesByCategory]) => {
@@ -320,7 +320,7 @@ export default function DashboardPage() {
           <CardHeader className="pb-2">
             <CardDescription>Tasa de Ahorro</CardDescription>
             <CardTitle className="text-2xl">
-              {isLoadingSummary ? <Skeleton className="h-8 w-24" /> : dashboardSummary?.savingsRate === null || dashboardSummary?.savingsRate === undefined ? "—" : `${dashboardSummary.savingsRate}%`}
+              {isLoadingSummary ? <Skeleton className="h-8 w-24" /> : dashboardSummary?.savingsRate === null || dashboardSummary?.savingsRate === undefined ? "—" : `${formatNumber(dashboardSummary.savingsRate, { maximumFractionDigits: 2 })}%`}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -451,13 +451,13 @@ export default function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle>Gastos Mensuales</CardTitle>
-              <CardDescription>Tus gastos durante los últimos 6 meses</CardDescription>
+              <CardDescription>Tus gastos durante los 6 meses hasta el período elegido</CardDescription>
             </CardHeader>
             <CardContent>
               {!hasMonthlySpendingData && !isLoadingCharts ? (
                 <ChartEmptyState
                   title="Todavía no hay gastos mensuales"
-                  description={`Este gráfico mostrará tus gastos confirmados en ${currency} durante los últimos seis meses.`}
+                  description={`Este gráfico mostrará tus gastos confirmados en ${currency} durante los seis meses hasta el período elegido.`}
                 />
               ) : (
                 <ChartContainer config={chartConfig} className="h-[350px] w-full">
@@ -595,12 +595,12 @@ export default function DashboardPage() {
                       <div>
                         <p className="font-medium">{transaction.description}</p>
                         <p className="text-sm text-muted-foreground">
-                          {transactionDate} • {transaction.category}
+                          {transactionDate} • {getCategoryLabel(transaction.category)}
                         </p>
                       </div>
                     </div>
                     <span className={`font-semibold ${isIncome ? "text-success" : "text-foreground"}`}>
-                      {isIncome ? "+" : "-"}${Math.abs(transaction.amount).toFixed(2)} {transaction.currency}
+                      {isIncome ? "+" : "-"}{formatMoney(Math.abs(transaction.amount), transaction.currency)}
                     </span>
                   </div>
                 )

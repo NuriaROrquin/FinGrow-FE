@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
+import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   ChartContainer,
@@ -13,10 +13,12 @@ import {
 } from "@/components/ui/chart"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
-import { getSavingsVsGoals, toastApiError, type SavingsVsGoalsDto } from "@/lib/api"
+import { formatDateInput, formatPeriodLabel } from "@/components/period-filter"
+import type { SavingsVsGoalsDto } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
 import { formatMoney } from "@/lib/format"
-import { usePreferences } from "@/lib/preferences-context"
+import { useMessages } from "@/lib/i18n"
+import { useIsReportExport } from "./report-export-context"
 
 const currencies: Currency[] = ["ARS", "USD", "EUR", "BRL"]
 
@@ -27,29 +29,51 @@ const chartConfig = {
   contributed: { label: "Aportado", color: "#a78bfa" },
 } satisfies ChartConfig
 
+function toMonthKey(year: number, month: number): string {
+  return `${year}-${String(month).padStart(2, "0")}`
+}
 
-export function SavingsVsGoalsReport({ months }: { months: number | null }) {
-  const { preferences } = usePreferences()
-  const [currency, setCurrency] = useState<Currency>(preferences.currency)
-  const [report, setReport] = useState<SavingsVsGoalsDto | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+function shownPeriodNote(
+  report: SavingsVsGoalsDto | null,
+  dateFrom: string,
+  dateTo: string,
+  periodNote: (count: number, range: string) => string,
+): string | null {
+  const first = report?.months[0]
+  const last = report?.months.at(-1)
+  if (!report || !first || !last) return null
 
-  useEffect(() => {
-    const controller = new AbortController()
-    setIsLoading(true)
+  const followsPeriod =
+    toMonthKey(first.year, first.month) === dateFrom.slice(0, 7) && toMonthKey(last.year, last.month) === dateTo.slice(0, 7)
+  if (followsPeriod) return null
 
-    getSavingsVsGoals(currency, months, controller.signal)
-      .then(setReport)
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError") return
-        toastApiError(error, "No se pudo cargar el reporte de ahorros.")
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setIsLoading(false)
-      })
+  const range = formatPeriodLabel(
+    formatDateInput(new Date(first.year, first.month - 1, 1)),
+    formatDateInput(new Date(last.year, last.month - 1, 1)),
+  )
+  return periodNote(report.months.length, range)
+}
 
-    return () => controller.abort()
-  }, [currency, months])
+interface SavingsVsGoalsReportProps {
+  report: SavingsVsGoalsDto | null
+  isLoading: boolean
+  currency: Currency
+  onCurrencyChange: (currency: Currency) => void
+  dateFrom: string
+  dateTo: string
+}
+
+export function SavingsVsGoalsReport({
+  report,
+  isLoading,
+  currency,
+  onCurrencyChange,
+  dateFrom,
+  dateTo,
+}: SavingsVsGoalsReportProps) {
+  const t = useMessages().savingsReport
+  const isExport = useIsReportExport()
+  const periodNote = shownPeriodNote(report, dateFrom, dateTo, t.periodNote)
 
   const spansSeveralYears = new Set(report?.months.map((month) => month.year)).size > 1
   const chartData =
@@ -70,24 +94,31 @@ export function SavingsVsGoalsReport({ months }: { months: number | null }) {
             <CardTitle>Rendimiento de Ahorros</CardTitle>
             <CardDescription>Lo que tus metas te pedían aportar cada mes vs lo que aportaste</CardDescription>
           </div>
-          <Select value={currency} onValueChange={(value) => setCurrency(value as Currency)}>
-            <SelectTrigger className="w-[100px] no-print" aria-label="Moneda del reporte">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {currencies.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {isExport ? (
+            <Badge variant="outline">{currency}</Badge>
+          ) : (
+            <Select value={currency} onValueChange={(value) => onCurrencyChange(value as Currency)}>
+              <SelectTrigger className="w-[100px]" aria-label="Moneda del reporte">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {currencies.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </CardHeader>
         <CardContent>
           {isLoading && !report ? (
             <Skeleton className="h-[400px] w-full" />
           ) : (
             <>
+              {periodNote && (
+                <p className="mb-4 rounded-lg border border-dashed p-3 text-sm text-muted-foreground">{periodNote}</p>
+              )}
               {report && !report.hasGoals && (
                 <p className="mb-4 rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
                   No tenés metas de ahorro en {currency}, así que no hay un objetivo contra el cual comparar. Creá
@@ -107,8 +138,15 @@ export function SavingsVsGoalsReport({ months }: { months: number | null }) {
                     stroke="var(--color-committed)"
                     strokeWidth={2}
                     strokeDasharray="5 5"
+                    isAnimationActive={!isExport}
                   />
-                  <Line type="monotone" dataKey="contributed" stroke="var(--color-contributed)" strokeWidth={2} />
+                  <Line
+                    type="monotone"
+                    dataKey="contributed"
+                    stroke="var(--color-contributed)"
+                    strokeWidth={2}
+                    isAnimationActive={!isExport}
+                  />
                 </LineChart>
               </ChartContainer>
             </>

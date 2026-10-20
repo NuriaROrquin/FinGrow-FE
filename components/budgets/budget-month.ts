@@ -17,7 +17,8 @@ export function shiftMonth({ year, month }: YearMonth, delta: number): YearMonth
 }
 
 export function formatYearMonth({ year, month }: YearMonth): string {
-  return formatDateText(new Date(year, month - 1, 1), { month: "long", year: "numeric" })
+  const label = formatDateText(new Date(year, month - 1, 1), { month: "long", year: "numeric" })
+  return `${label.charAt(0).toUpperCase()}${label.slice(1)}`
 }
 
 export function formatAmount(amount: number, currency: Currency | null): string {

@@ -30,7 +30,8 @@ export function TransactionActionsMenu({
         size="icon"
         className="size-8 text-muted-foreground hover:text-rose-500 dark:hover:text-rose-300"
         aria-label={`Eliminar ${transaction.description}`}
-        title="Eliminar"
+        title={transaction.status === "Eliminated" ? "La transacción ya fue eliminada" : "Eliminar"}
+        disabled={transaction.status === "Eliminated"}
         onClick={() => onDelete?.(transaction)}
       >
         <Trash2 className="size-4" />

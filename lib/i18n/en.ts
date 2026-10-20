@@ -8,6 +8,10 @@ export const en: Messages = {
     open: "Open",
     unlink: "Unlink",
     saveChanges: "Save Changes",
+    lastSync: (date: string) => `Last sync: ${date}`,
+    neverSynced: "Not synced yet",
+    lastActivity: (date: string) => `Last activity: ${date}`,
+    neverActive: "No messages received yet",
   },
 
   nav: {
@@ -42,6 +46,7 @@ export const en: Messages = {
     empty: "You have no notifications yet.",
     loadError: "We could not load your notifications.",
     retry: "Retry",
+    loadMore: "Load earlier",
   },
 
   achievements: {
@@ -50,6 +55,14 @@ export const en: Messages = {
     earnedCount: (count: number) => `You earned ${count} achievements`,
     great: "Great",
     close: "Close",
+    label: "Achievements",
+    title: "Your Achievements",
+    description: "Milestones you have reached on your financial journey",
+    earnedOf: (total: number) => `of ${total} earned`,
+    earnedOn: (date: string) => `Earned on ${date}`,
+    howToEarn: "How to earn it",
+    loadError: "We could not load your achievements.",
+    retry: "Retry",
   },
 
   settings: {
@@ -153,6 +166,116 @@ export const en: Messages = {
       email: "Email Notifications",
       emailHint: "Get notifications by email",
       save: "Save Preferences",
+      alertTypes: {
+        title: "Which alerts you want to receive",
+        description: "If you turn an alert type off, it won't reach you through any channel or show up in your inbox.",
+        TransactionsToReview: {
+          label: "Transactions to review",
+          hint: "When an integration or the bot proposes new transactions",
+        },
+        GoalStalled: {
+          label: "Stalled goal",
+          hint: "When a savings goal hasn't moved in a while",
+        },
+        GoalDeadlineApproaching: {
+          label: "Goal deadline approaching",
+          hint: "When a goal's deadline is getting close",
+        },
+        BudgetWarning: {
+          label: "Budget running low",
+          hint: "When you get close to a category limit",
+        },
+        BudgetExceeded: {
+          label: "Budget exceeded",
+          hint: "When you go over a category limit",
+        },
+        IntegrationAccessLost: {
+          label: "Integration lost access",
+          hint: "When Gmail or IOL can no longer sync and need to be authorized again",
+        },
+        AchievementUnlocked: {
+          label: "Achievements unlocked",
+          hint: "When you earn a new medal",
+        },
+      },
+      channels: {
+        title: "Where to receive them",
+        description: "The channel decides where an alert travels; the type decides whether it reaches you.",
+        InApp: {
+          label: "In the app",
+          hint: "Always on: it's the history of all your alerts",
+        },
+        Telegram: {
+          label: "Telegram",
+          hint: "Get alerts in your Telegram chat",
+        },
+        Email: {
+          label: "Email",
+          hint: "Get alerts in your inbox",
+        },
+        alwaysOn: "Always on",
+        notConnected: "Link your chat under Integrations to receive them here.",
+      },
+      loading: "Loading your preferences...",
+      loadFailed: "We couldn't load your notification preferences.",
+      retry: "Retry",
+      saveFailed: "We couldn't save the change.",
+      company: {
+        title: "Notifications",
+        description: "Choose which aggregated alerts you want to receive about your company's progress.",
+        loading: "Loading company preferences...",
+        loadFailed: "We couldn't load your company's notification preferences.",
+        saveFailed: "We couldn't save the configuration. The last confirmed value was restored.",
+        saved: "Alert configuration saved.",
+        save: "Save alert",
+        saveAll: "Save changes",
+        frequency: "Frequency",
+        daily: "Daily",
+        weekly: "Weekly",
+        monthly: "Monthly",
+        thresholdError: "Enter a value between 1 and 100.",
+        privacy:
+          "Alerts are calculated from aggregated monthly metrics. They do not include personal information, transactions, or individual amounts. If there are not enough active employees to preserve privacy, the alert is not generated.",
+        types: {
+          FinancialWellbeingLow: {
+            label: "Financial wellbeing",
+            description: "Receive a monthly alert when the aggregate average for savings, budgets, goals, and financial cushion is below the selected value.",
+            shortHelp: "It is based on the team's aggregate average for savings, budgets, goals, and financial cushion.",
+            thresholdLabel: "Alert when average financial wellbeing is lower than",
+            thresholdSuffix: "/100",
+            helpTitle: "What does financial wellbeing measure?",
+            help: [
+              "It is a monthly score from 0 to 100 that summarizes healthy financial trends in aggregate.",
+              "It considers savings, budget compliance, goal progress, and financial cushion.",
+              "The alert compares the company's aggregate average with the selected threshold.",
+            ],
+            factors: [
+              "Savings: 40%. Relationship between monthly income and expenses.",
+              "Budgets: 25%. Compliance with budgeted limits.",
+              "Goals: 20%. Progress on financial goal contributions.",
+              "Financial cushion: 15%. Ability to cover expenses with accumulated balance.",
+            ],
+            privacyNote: "The score is calculated only for people with enough monthly activity: at least 10 confirmed transactions and income. The company only receives the aggregate average and cannot view individual scores.",
+          },
+          ParticipationLow: {
+            label: "Participation",
+            description: "Receive a monthly alert when the percentage of active employees with confirmed transactions or goal contributions is below the selected value.",
+            shortHelp: "It is calculated from active employees who recorded confirmed transactions or goal contributions during the month.",
+            thresholdLabel: "Alert when monthly participation is lower than",
+            thresholdSuffix: "%",
+            helpTitle: "What does participation measure?",
+            help: [
+              "Participation shows the percentage of active employees who recorded activity during the month.",
+              "A person counts as a participant if they confirmed at least one transaction or made at least one goal contribution.",
+              "The alert is based on the company's aggregate percentage and does not show who participated.",
+            ],
+            formula: "participation = active employees with activity / total active employees × 100",
+            privacyNote: "The company receives aggregated metrics only and cannot identify participating people.",
+          },
+          EmployeeAdded: { label: "Employee additions", description: "Receive a summary of new hires." },
+          EmployeeRemoved: { label: "Permanent removals", description: "Receive a summary of permanently deleted employees." },
+        },
+      },
     },
     ocr: {
       title: "OCR Processing",
@@ -324,6 +447,9 @@ export const en: Messages = {
     linkedOn: (date: string) => ` on ${date}`,
     linkedSuffix: ". New transactions are fetched every hour and show up as pending in Transactions.",
     syncNow: "Sync now",
+    failedBadge: "Error",
+    failed:
+      "We lost access to your Mercado Pago account, probably because you removed the permission or it expired. Authorize again to keep importing your transactions.",
     reauthorize: "Authorize again",
     unlinkTitle: "Unlink Mercado Pago?",
     unlinkWarning:
@@ -572,5 +698,47 @@ export const en: Messages = {
     storageUnavailable: "We couldn't access the saved receipt. Please try again in a few minutes.",
     alreadyScanned: "This receipt was already scanned. If you discarded the proposal, enter it manually.",
     scanFailed: "We couldn't scan the receipt. Please try again.",
+  },
+
+  expenseBreakdown: {
+    loadFailed: "We couldn't load the spending analysis.",
+    empty: (currency: string) => `There are no confirmed expenses in ${currency} in this period.`,
+    chartTitle: "Spending by Category",
+    chartDescription: (currency: string) => `Where your money goes in ${currency}, excluding savings and investments`,
+    chartEmpty: "This period only has savings and investment transactions.",
+    chartAmount: "Amount",
+    detailsTitle: "Category Details",
+    detailsDescription: "From highest to lowest, over your consumption spending",
+    compare: "Compare with previous period",
+    comparedWith: (from: string, to: string) => `Compared with ${from} – ${to}`,
+    noPreviousPeriod: "No previous period to show",
+    newCategory: "New",
+    noChange: "No change",
+    consumption: "Consumption spending",
+    consumptionHint: "Base for the percentages",
+    savings: "Savings & Investments",
+    savingsHint: "It's savings: not part of the ranking",
+    total: "Total",
+    totalHint: "Same as Total Expenses",
+  },
+
+  savingsReport: {
+    periodNote: (count: number, range: string) =>
+      `This section shows ${count === 1 ? "the last month" : `the last ${count} months`} (${range}): it always ends in the current month, so it doesn't follow the selected period.`,
+  },
+
+  reportPdf: {
+    export: "Export PDF",
+    exporting: "Generating PDF...",
+    exportFailed: "We couldn't generate the PDF. Please try again.",
+    title: "Financial Report",
+    employee: "Employee",
+    period: "Period",
+    currency: "Currency",
+    generatedAt: "Generated on",
+    overview: "Overview",
+    spending: "Spending Analysis",
+    savings: "Savings Report",
+    fileName: "financial-report",
   },
 }

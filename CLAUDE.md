@@ -36,8 +36,12 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   pedirla. El switch de estado activa o desactiva el acceso (HU-55): desactivar conserva los
   datos, eliminar los borra. El responsable de un departamento (HU-52) es un empleado activo de
   la empresa elegido con `components/company/manager-picker.tsx`; si después pierde el acceso,
-  sigue figurando como "(sin acceso)" hasta que se cambie. El panel principal de la empresa
-  (`/dashboard/company`) sigue con métricas mock.
+  sigue figurando como "(sin acceso)" hasta que se cambie. En el panel principal de la empresa
+  (`/dashboard/company`) solo son reales las tarjetas de total de empleados y tasa de
+  participación (HU-56, `components/company/participation-cards.tsx`,
+  `GET /api/company/metrics/participation`); el resto sigue mock. Cuando el backend manda
+  `isParticipationHidden`, la tasa no se muestra ni se calcula en el front: es la protección
+  de anonimato para grupos chicos.
 - **Educación** (artículos y cursos) usa la API real. La pantalla de Inversiones abre el contenido
   de cada tipo de activo (HU-35, `components/investments/related-education-dialog.tsx`) y todo
   artículo o curso con `isInvestmentContent` muestra `components/education/investment-disclaimer.tsx`:
@@ -53,6 +57,14 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   de sesión. Cada notificación nueva llega con el evento `NotificationReceived`. Al conectarse,
   al perder la conexión y al volver a la pestaña se vuelve a pedir el contador: ese pedido pasa
   por `api`, así que de paso renueva la sesión vencida antes de reconectar.
+- **Preferencias de notificaciones del empleado (HU-05)**: la pestaña Notificaciones de Configuración
+  es `components/notifications/notification-preferences.tsx` y usa la API real
+  (`/api/notifications/types` y `/api/notifications/channels`). Conviven dos niveles: el **tipo**
+  de alerta decide si existe (apagado, no llega a ningún canal ni a la bandeja) y el **canal**
+  decide por dónde viaja (la app es fija; Telegram y correo se apagan). Cada switch guarda al
+  instante y vuelve atrás si falla. Los 7 tipos son los de `NotificationType`: uno nuevo en el
+  backend necesita su texto en `settings.notifications.alertTypes` de los tres idiomas. La
+  pestaña de la empresa sigue siendo mock: la empresa no tiene preferencias en el backend.
 - **Logros (T-22, SCRUM-106)**: `components/achievements/achievement-celebrator.tsx`, montado en el
   layout del dashboard solo para empleados, pide `GET /api/achievements/uncelebrated` al entrar y
   cada vez que la campanita recibe una notificación `AchievementUnlocked` (la campanita dispara
@@ -63,6 +75,65 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   (`achievement-medal.tsx`): el ícono sale del código, así que un código nuevo en el backend
   necesita su ícono acá. El dorado son los tokens `--gold` y `--gold-soft` de `globals.css`. Los
   nombres y descripciones de los logros vienen del backend en castellano.
+  **Pestaña Logros de Educación (HU-76, SCRUM-138)**: `app/dashboard/education/page.tsx` muestra el
+  catálogo real con `GET /api/achievements` (`components/achievements/use-achievements.ts` y
+  `achievements-list.tsx`): los 12 logros con su medalla; el ganado sale destacado y con su fecha
+  (`achievedAt`), el que falta sale apagado con su `condition` como "cómo conseguirlo". El indicador
+  "Logros" de arriba cuenta los ganados sobre el total del catálogo. El hook vuelve a pedir la lista
+  cuando llega `ACHIEVEMENT_NOTIFICATION_EVENT`, así un logro nuevo aparece sin recargar. Los textos
+  están en `achievements` de los tres idiomas.
+- **Reportes: evolución mensual (HU-41)**. `app/dashboard/reports/page.tsx` arranca en los últimos 6
+  meses (contando el mes en curso) y tiene un solo selector de moneda: período y moneda los siguen las
+  cards de arriba, el gráfico, los meses destacados y la sección de HU-44. Todo sale de
+  `GET /api/reports/monthly-summary` (`getMonthlySummary`), que ya viene recortado por el backend (sin
+  los meses antes del primer movimiento del empleado ni el mes en curso vacío; cualquier otro mes vacío
+  viene en cero):
+  no filtres meses en el front ni recalcules totales, promedio o meses destacados, porque dejarían de
+  coincidir con el gráfico. Las cards son `report-summary-cards.tsx`, el gráfico
+  `monthly-evolution-chart.tsx` (ingresos y gastos en barras, ahorro en línea) y el mes con mayor
+  ingreso, el de mayor gasto y el mejor mes de ahorro `monthly-highlights-card.tsx`, sin umbral de
+  historial. Las flechas de `components/period-filter.tsx` mueven la ventana entera (6 meses → los 6
+  anteriores).
+- **Reportes: análisis de gastos (HU-42)**. La pestaña Análisis de Gastos es
+  `components/reports/expense-breakdown-section.tsx`, que muestra lo que la página pide a
+  `GET /api/reports/expense-breakdown` con su período y su moneda. El backend manda todo calculado:
+  montos, porcentajes con un decimal, el período anterior (misma cantidad de meses, justo antes) y la
+  variación de cada categoría.
+  No recalcules nada en el front. Ahorro e Inversión no entra en el ranking ni en la base de los
+  porcentajes, porque es ahorro y no gasto. Va aparte, en la conciliación al pie de
+  `expense-category-details.tsx`: gastos de consumo (100 %) + ahorro e inversión = total, que es igual
+  a "Gastos Totales". En la comparación su variación tiene el sentido invertido: que suba es bueno
+  (`favorable="increase"` de `expense-variation.tsx`). El switch "Comparar con período anterior" muestra
+  la variación, marca "Nueva" una categoría sin gasto antes y suma al final las que bajaron a cero
+  (−100 %). Sin historia antes de que termine el período anterior (`hasPreviousPeriod`), el switch
+  muestra "Sin período anterior para mostrar". Sus textos están en `lib/i18n` (`expenseBreakdown`); los
+  nombres de las categorías salen de `expenseCategoryLabels`, que todavía no pasa por i18n.
+- **Hitos y recomendaciones (HU-44)**: debajo del gráfico de Resumen,
+  `components/reports/financial-insights-section.tsx` muestra lo que la página pide a
+  `GET /api/reports/insights` con su período y su moneda, en dos cards: Hitos Alcanzados
+  (`financial-summary-card.tsx`, los logros del período, sin umbral) y Análisis y Recomendaciones (`financial-recommendations-card.tsx`,
+  tres recomendaciones de FinGrow-AI). Las recomendaciones necesitan 2 meses con actividad suficiente:
+  sin eso, esa card muestra cuánto falta, con los números que manda el backend. Los `highlights` de
+  `/insights` ya no se muestran: los meses destacados son de HU-41. El link de cada recomendación sale
+  de `action`, una lista cerrada; la IA nunca manda URLs. La aclaración de que no es asesoramiento
+  financiero certificado va fija al pie de la card de recomendaciones: no la saques.
+- **Exportar el reporte a PDF (HU-45)**. La página de Reportes pide los cuatro endpoints al entrar
+  (`useReportRequest`, `components/reports/use-report-request.ts`) y les pasa los datos a las secciones,
+  que ya no piden nada por su cuenta. Así el PDF sale con los mismos datos que se ven, sin volver a
+  pedirlos: las recomendaciones de `/insights` se generan con FinGrow-AI en cada pedido, así que pedirlas
+  de nuevo podría traer otras. El switch de comparación de gastos y la moneda del reporte de ahorros
+  también viven en la página. "Exportar PDF" se habilita cuando terminaron de cargar las cuatro y monta
+  `components/reports/report-pdf-export.tsx`: una versión del reporte fuera de pantalla, de 900 px fijos,
+  con las tres pestañas apiladas, encabezado (logo, empleado, período, moneda, fecha y hora de
+  generación) y en modo exportación (`ReportExportProvider`): sin animaciones de recharts, sin el switch
+  de comparación (la comparación sale si estaba prendida), sin los links de las recomendaciones y con la
+  moneda de ahorros como texto. `lib/report-pdf.ts` captura cada `[data-pdf-block]` con
+  `html2canvas-pro` (el `html2canvas` original no entiende los colores `oklch` de Tailwind v4), siempre
+  en tema claro y con un ancho de ventana de escritorio, y arma un A4 con `jspdf`: corta las páginas
+  entre cards y, si una card no entra en una página, entre líneas; al pie va "FinGrow" y el número de
+  página. Los textos nuevos están en `lib/i18n` (`reportPdf`). El reporte de ahorros siempre termina en
+  el mes en curso (el backend solo recibe la cantidad de meses): si no coincide con el período elegido,
+  la card lo avisa con `savingsReport.periodNote`, en pantalla y en el PDF.
 - **Bandeja de pendientes (HU-15)**: es la pestaña "Pendientes" de Transacciones
   (`components/transactions/pending-inbox.tsx`, también `/dashboard/transactions?view=pending`).
   Lista lo que propuso un canal automático (`GET /api/transactions/pending`), y cada movimiento

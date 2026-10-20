@@ -26,6 +26,7 @@ import { Spinner } from "@/components/ui/spinner"
 import type { Integration, IntegrationProvider, LinkCode } from "@/lib/api"
 import { useMessages } from "@/lib/i18n"
 
+import { LastSync } from "./last-sync"
 import { useLinkCodeIntegration } from "./use-link-code-integration"
 import { formatDateText } from "@/lib/format"
 
@@ -95,6 +96,7 @@ export function LinkCodeIntegrationCard({
               <CheckCircle2 className={LINKED_ICON_CLASS} />
               <AlertDescription>{linkedDescription(integration)}</AlertDescription>
             </Alert>
+            <LastSync kind="activity" lastSyncedAt={integration?.lastSyncedAt} />
             <div className="flex flex-wrap gap-2">
               <Button onClick={generateCode} disabled={generating || unlinking} variant="outline">
                 {generating && <Spinner className="mr-2" />}

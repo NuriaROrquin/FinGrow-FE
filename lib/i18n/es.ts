@@ -6,6 +6,10 @@ export const es = {
     open: "Abrir",
     unlink: "Desvincular",
     saveChanges: "Guardar Cambios",
+    lastSync: (date: string) => `Última sincronización: ${date}`,
+    neverSynced: "Todavía no se sincronizó",
+    lastActivity: (date: string) => `Última actividad: ${date}`,
+    neverActive: "Todavía no recibimos mensajes",
   },
 
   nav: {
@@ -40,6 +44,7 @@ export const es = {
     empty: "No tenés notificaciones por ahora.",
     loadError: "No pudimos cargar tus notificaciones.",
     retry: "Reintentar",
+    loadMore: "Cargar anteriores",
   },
 
   achievements: {
@@ -48,6 +53,14 @@ export const es = {
     earnedCount: (count: number) => `Ganaste ${count} logros`,
     great: "Genial",
     close: "Cerrar",
+    label: "Logros",
+    title: "Tus Logros",
+    description: "Hitos que has alcanzado en tu viaje financiero",
+    earnedOf: (total: number) => `de ${total} obtenidos`,
+    earnedOn: (date: string) => `Obtenido el ${date}`,
+    howToEarn: "Cómo conseguirlo",
+    loadError: "No pudimos cargar tus logros.",
+    retry: "Reintentar",
   },
 
   settings: {
@@ -151,6 +164,127 @@ export const es = {
       email: "Notificaciones por Email",
       emailHint: "Recibe notificaciones vía correo electrónico",
       save: "Guardar Preferencias",
+      alertTypes: {
+        title: "Qué alertas querés recibir",
+        description: "Si apagás un tipo de alerta, no te llega por ningún canal ni queda en tu bandeja.",
+        TransactionsToReview: {
+          label: "Movimientos para revisar",
+          hint: "Cuando una integración o el bot propone movimientos nuevos",
+        },
+        GoalStalled: {
+          label: "Meta estancada",
+          hint: "Cuando una meta de ahorro lleva tiempo sin avanzar",
+        },
+        GoalDeadlineApproaching: {
+          label: "Meta por vencer",
+          hint: "Cuando se acerca la fecha límite de una meta",
+        },
+        BudgetWarning: {
+          label: "Presupuesto por agotarse",
+          hint: "Cuando te acercás al límite de una categoría",
+        },
+        BudgetExceeded: {
+          label: "Presupuesto excedido",
+          hint: "Cuando superás el límite de una categoría",
+        },
+        IntegrationAccessLost: {
+          label: "Integración sin acceso",
+          hint: "Cuando Gmail o IOL dejan de poder sincronizar y hay que volver a autorizar",
+        },
+        AchievementUnlocked: {
+          label: "Logros desbloqueados",
+          hint: "Cuando conseguís una medalla nueva",
+        },
+      },
+      channels: {
+        title: "Por dónde recibirlas",
+        description: "El canal decide por dónde viaja una alerta; el tipo, si te llega.",
+        InApp: {
+          label: "En la app",
+          hint: "Siempre activa: es el historial de todas tus alertas",
+        },
+        Telegram: {
+          label: "Telegram",
+          hint: "Recibí las alertas en tu chat de Telegram",
+        },
+        Email: {
+          label: "Correo electrónico",
+          hint: "Recibí las alertas en tu email",
+        },
+        alwaysOn: "Siempre activa",
+        notConnected: "Vinculá tu chat en Integraciones para recibirlas por acá.",
+      },
+      loading: "Cargando tus preferencias...",
+      loadFailed: "No pudimos cargar tus preferencias de notificaciones.",
+      retry: "Reintentar",
+      saveFailed: "No pudimos guardar el cambio.",
+      company: {
+        title: "Notificaciones",
+        description: "Elegí qué alertas agregadas querés recibir sobre la evolución de tu empresa.",
+        loading: "Cargando las preferencias de la empresa...",
+        loadFailed: "No pudimos cargar las preferencias de notificaciones de la empresa.",
+        saveFailed: "No pudimos guardar la configuración. Se restauró el último valor confirmado.",
+        saved: "Configuración de alerta guardada.",
+        save: "Guardar alerta",
+        saveAll: "Guardar cambios",
+        frequency: "Frecuencia",
+        daily: "Diaria",
+        weekly: "Semanal",
+        monthly: "Mensual",
+        thresholdError: "Ingresá un valor entre 1 y 100.",
+        privacy:
+          "Las alertas se calculan sobre métricas agregadas mensuales. No incluyen información personal, movimientos ni montos individuales. Si no hay suficientes empleados activos para preservar la privacidad, la alerta no se genera.",
+        types: {
+          FinancialWellbeingLow: {
+            label: "Bienestar financiero",
+            description:
+              "Recibí una alerta mensual cuando el promedio agregado de ahorro, presupuestos, metas y colchón financiero esté por debajo del valor definido.",
+            shortHelp:
+              "Se basa en el promedio agregado de ahorro, presupuestos, metas y colchón financiero del equipo.",
+            thresholdLabel: "Alertar si el bienestar financiero promedio es menor a",
+            thresholdSuffix: "/100",
+            helpTitle: "¿Qué mide el bienestar financiero?",
+            help: [
+              "Es un puntaje mensual de 0 a 100 que resume tendencias financieras saludables de forma agregada.",
+              "Tiene en cuenta ahorro, cumplimiento de presupuestos, avance de metas y colchón financiero.",
+              "La alerta compara el promedio agregado de la empresa con el umbral elegido.",
+            ],
+            factors: [
+              "Ahorro: 40 %. Relación entre ingresos y gastos del mes.",
+              "Presupuestos: 25 %. Cumplimiento de los topes presupuestados.",
+              "Metas: 20 %. Avance de los aportes a metas financieras.",
+              "Colchón financiero: 15 %. Capacidad de cubrir gastos con el saldo acumulado.",
+            ],
+            privacyNote:
+              "El puntaje solo se calcula para personas con actividad suficiente durante el mes: al menos 10 movimientos confirmados y algún ingreso. La empresa recibe únicamente el promedio agregado; no puede ver puntajes individuales.",
+          },
+          ParticipationLow: {
+            label: "Participación",
+            description:
+              "Recibí una alerta mensual cuando el porcentaje de empleados activos con movimientos confirmados o aportes a metas esté por debajo del valor definido.",
+            shortHelp:
+              "Se calcula según los empleados activos que registraron movimientos confirmados o aportes a metas durante el mes.",
+            thresholdLabel: "Alertar si la participación mensual es menor a",
+            thresholdSuffix: "%",
+            helpTitle: "¿Qué mide la participación?",
+            help: [
+              "La participación muestra qué porcentaje de empleados activos registró actividad durante el mes.",
+              "Una persona cuenta como participante si confirmó al menos un movimiento o realizó al menos un aporte a una meta.",
+              "La alerta se basa en el porcentaje agregado de la empresa, sin mostrar quién participó o quién no.",
+            ],
+            formula: "participación = empleados activos con actividad / total de empleados activos × 100",
+            privacyNote: "La empresa recibe únicamente métricas agregadas y no puede identificar a las personas participantes.",
+          },
+          EmployeeAdded: {
+            label: "Altas de empleados",
+            description: "Recibí un resumen de nuevas incorporaciones.",
+          },
+          EmployeeRemoved: {
+            label: "Bajas definitivas",
+            description: "Recibí un resumen de empleados eliminados definitivamente.",
+          },
+        },
+      },
     },
     ocr: {
       title: "Procesamiento OCR",
@@ -325,6 +459,9 @@ export const es = {
     linkedOn: (date: string) => ` el ${date}`,
     linkedSuffix: ". Los movimientos nuevos se traen cada hora y aparecen como pendientes en Transacciones.",
     syncNow: "Sincronizar ahora",
+    failedBadge: "Con error",
+    failed:
+      "Perdimos el acceso a tu cuenta de Mercado Pago, probablemente porque quitaste el permiso o venció. Volvé a autorizar para seguir importando tus movimientos.",
     reauthorize: "Volver a autorizar",
     unlinkTitle: "¿Desvincular Mercado Pago?",
     unlinkWarning:
@@ -577,6 +714,48 @@ export const es = {
     storageUnavailable: "No pudimos acceder al comprobante guardado. Probá de nuevo en unos minutos.",
     alreadyScanned: "Este comprobante ya se escaneó. Si descartaste la propuesta, cargalo a mano.",
     scanFailed: "No pudimos escanear el comprobante. Intentá de nuevo.",
+  },
+
+  expenseBreakdown: {
+    loadFailed: "No se pudo cargar el análisis de gastos.",
+    empty: (currency: string) => `No hay gastos confirmados en ${currency} en este período.`,
+    chartTitle: "Gastos por Categoría",
+    chartDescription: (currency: string) => `Dónde va tu dinero en ${currency}, sin contar ahorro e inversión`,
+    chartEmpty: "En este período solo hay movimientos de ahorro e inversión.",
+    chartAmount: "Monto",
+    detailsTitle: "Detalles por Categoría",
+    detailsDescription: "De mayor a menor, sobre tus gastos de consumo",
+    compare: "Comparar con período anterior",
+    comparedWith: (from: string, to: string) => `Comparado con ${from} – ${to}`,
+    noPreviousPeriod: "Sin período anterior para mostrar",
+    newCategory: "Nueva",
+    noChange: "Sin cambios",
+    consumption: "Gastos de consumo",
+    consumptionHint: "Base de los porcentajes",
+    savings: "Ahorro e Inversión",
+    savingsHint: "Es ahorro: no entra en el ranking",
+    total: "Total",
+    totalHint: "Igual a Gastos Totales",
+  },
+
+  savingsReport: {
+    periodNote: (count: number, range: string) =>
+      `Esta sección muestra ${count === 1 ? "el último mes" : `los últimos ${count} meses`} (${range}): siempre termina en el mes en curso, así que no sigue el período elegido.`,
+  },
+
+  reportPdf: {
+    export: "Exportar PDF",
+    exporting: "Generando PDF...",
+    exportFailed: "No se pudo generar el PDF. Probá de nuevo.",
+    title: "Reporte Financiero",
+    employee: "Empleado",
+    period: "Período",
+    currency: "Moneda",
+    generatedAt: "Generado el",
+    overview: "Resumen",
+    spending: "Análisis de Gastos",
+    savings: "Reporte de Ahorros",
+    fileName: "reporte-financiero",
   },
 }
 
