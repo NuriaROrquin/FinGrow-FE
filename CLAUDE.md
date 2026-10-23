@@ -62,7 +62,7 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   (`/api/notifications/types` y `/api/notifications/channels`). Conviven dos niveles: el **tipo**
   de alerta decide si existe (apagado, no llega a ningún canal ni a la bandeja) y el **canal**
   decide por dónde viaja (la app es fija; Telegram y correo se apagan). Cada switch guarda al
-  instante y vuelve atrás si falla. Los 7 tipos son los de `NotificationType`: uno nuevo en el
+  instante y vuelve atrás si falla. Los 10 tipos son los de `NotificationType`: uno nuevo en el
   backend necesita su texto en `settings.notifications.alertTypes` de los tres idiomas. La
   pestaña de la empresa sigue siendo mock: la empresa no tiene preferencias en el backend.
 - **Logros (T-22, SCRUM-106)**: `components/achievements/achievement-celebrator.tsx`, montado en el

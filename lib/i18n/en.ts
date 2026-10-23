@@ -197,6 +197,18 @@ export const en: Messages = {
           label: "Achievements unlocked",
           hint: "When you earn a new medal",
         },
+        InvestmentValueChanged: {
+          label: "Investment value change",
+          hint: "When your portfolio value moves sharply between two valuations",
+        },
+        InvestmentMaturing: {
+          label: "Investment maturing",
+          hint: "When a fixed-term deposit or repo is about to mature",
+        },
+        NewEducationContent: {
+          label: "New educational content",
+          hint: "When a new course or article is published",
+        },
       },
       channels: {
         title: "Where to receive them",
