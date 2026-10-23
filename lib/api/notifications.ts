@@ -13,6 +13,14 @@ export type NotificationType =
   | "InvestmentMaturing"
   | "NewEducationContent"
 
+export type CompanyNotificationType =
+  | "FinancialWellbeingLow"
+  | "ParticipationLow"
+  | "EmployeeAdded"
+  | "EmployeeRemoved"
+
+export type NotificationCadence = "Daily" | "Weekly" | "Monthly"
+
 /** Evento de window que se dispara cuando llega una alerta de presupuesto, para refrescar esa pantalla. */
 export const BUDGET_NOTIFICATION_EVENT = "fingrow:budget-notification"
 
@@ -67,6 +75,19 @@ export interface NotificationTypePreferenceDto {
   isEnabled: boolean
 }
 
+export interface CompanyNotificationTypePreferenceDto {
+  type: CompanyNotificationType
+  isEnabled: boolean
+  cadence: NotificationCadence
+  threshold: number | null
+}
+
+export interface UpdateCompanyNotificationTypePreferencePayload {
+  isEnabled: boolean
+  cadence: NotificationCadence
+  threshold: number | null
+}
+
 export function listNotificationChannels(signal?: AbortSignal): Promise<NotificationChannelDto[]> {
   return api.get<NotificationChannelDto[]>("/api/notifications/channels", { signal })
 }
@@ -89,4 +110,18 @@ export function changeNotificationTypePreference(
   signal?: AbortSignal,
 ): Promise<NotificationTypePreferenceDto> {
   return api.put<NotificationTypePreferenceDto>(`/api/notifications/types/${type}`, { isEnabled }, { signal })
+}
+
+export function listCompanyNotificationTypePreferences(
+  signal?: AbortSignal,
+): Promise<CompanyNotificationTypePreferenceDto[]> {
+  return api.get<CompanyNotificationTypePreferenceDto[]>("/api/notifications/types", { signal })
+}
+
+export function updateCompanyNotificationTypePreference(
+  type: CompanyNotificationType,
+  payload: UpdateCompanyNotificationTypePreferencePayload,
+  signal?: AbortSignal,
+): Promise<CompanyNotificationTypePreferenceDto> {
+  return api.put<CompanyNotificationTypePreferenceDto>(`/api/notifications/types/${type}`, payload, { signal })
 }

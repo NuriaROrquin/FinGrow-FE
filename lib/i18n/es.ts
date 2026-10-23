@@ -230,6 +230,73 @@ export const es = {
       loadFailed: "No pudimos cargar tus preferencias de notificaciones.",
       retry: "Reintentar",
       saveFailed: "No pudimos guardar el cambio.",
+      company: {
+        title: "Notificaciones",
+        description: "Elegí qué alertas agregadas querés recibir sobre la evolución de tu empresa.",
+        loading: "Cargando las preferencias de la empresa...",
+        loadFailed: "No pudimos cargar las preferencias de notificaciones de la empresa.",
+        saveFailed: "No pudimos guardar la configuración. Se restauró el último valor confirmado.",
+        saved: "Configuración de alerta guardada.",
+        save: "Guardar alerta",
+        saveAll: "Guardar cambios",
+        frequency: "Frecuencia",
+        daily: "Diaria",
+        weekly: "Semanal",
+        monthly: "Mensual",
+        thresholdError: "Ingresá un valor entre 1 y 100.",
+        privacy:
+          "Las alertas se calculan sobre métricas agregadas mensuales. No incluyen información personal, movimientos ni montos individuales. Si no hay suficientes empleados activos para preservar la privacidad, la alerta no se genera.",
+        types: {
+          FinancialWellbeingLow: {
+            label: "Bienestar financiero",
+            description:
+              "Recibí una alerta mensual cuando el promedio agregado de ahorro, presupuestos, metas y colchón financiero esté por debajo del valor definido.",
+            shortHelp:
+              "Se basa en el promedio agregado de ahorro, presupuestos, metas y colchón financiero del equipo.",
+            thresholdLabel: "Alertar si el bienestar financiero promedio es menor a",
+            thresholdSuffix: "/100",
+            helpTitle: "¿Qué mide el bienestar financiero?",
+            help: [
+              "Es un puntaje mensual de 0 a 100 que resume tendencias financieras saludables de forma agregada.",
+              "Tiene en cuenta ahorro, cumplimiento de presupuestos, avance de metas y colchón financiero.",
+              "La alerta compara el promedio agregado de la empresa con el umbral elegido.",
+            ],
+            factors: [
+              "Ahorro: 40 %. Relación entre ingresos y gastos del mes.",
+              "Presupuestos: 25 %. Cumplimiento de los topes presupuestados.",
+              "Metas: 20 %. Avance de los aportes a metas financieras.",
+              "Colchón financiero: 15 %. Capacidad de cubrir gastos con el saldo acumulado.",
+            ],
+            privacyNote:
+              "El puntaje solo se calcula para personas con actividad suficiente durante el mes: al menos 10 movimientos confirmados y algún ingreso. La empresa recibe únicamente el promedio agregado; no puede ver puntajes individuales.",
+          },
+          ParticipationLow: {
+            label: "Participación",
+            description:
+              "Recibí una alerta mensual cuando el porcentaje de empleados activos con movimientos confirmados o aportes a metas esté por debajo del valor definido.",
+            shortHelp:
+              "Se calcula según los empleados activos que registraron movimientos confirmados o aportes a metas durante el mes.",
+            thresholdLabel: "Alertar si la participación mensual es menor a",
+            thresholdSuffix: "%",
+            helpTitle: "¿Qué mide la participación?",
+            help: [
+              "La participación muestra qué porcentaje de empleados activos registró actividad durante el mes.",
+              "Una persona cuenta como participante si confirmó al menos un movimiento o realizó al menos un aporte a una meta.",
+              "La alerta se basa en el porcentaje agregado de la empresa, sin mostrar quién participó o quién no.",
+            ],
+            formula: "participación = empleados activos con actividad / total de empleados activos × 100",
+            privacyNote: "La empresa recibe únicamente métricas agregadas y no puede identificar a las personas participantes.",
+          },
+          EmployeeAdded: {
+            label: "Altas de empleados",
+            description: "Recibí un resumen de nuevas incorporaciones.",
+          },
+          EmployeeRemoved: {
+            label: "Bajas definitivas",
+            description: "Recibí un resumen de empleados eliminados definitivamente.",
+          },
+        },
+      },
     },
     ocr: {
       title: "Procesamiento OCR",
