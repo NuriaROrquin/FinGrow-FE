@@ -4,7 +4,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts"
 import { Progress } from "@/components/ui/progress"
-import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import {
   UsersIcon,
@@ -15,20 +14,12 @@ import {
   GraduationCapIcon,
   BuildingIcon,
 } from "lucide-react"
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ParticipationCards } from "@/components/company/participation-cards"
+import { DepartmentMetricsSection } from "@/components/company/department-metrics-section"
 import { EducationMetricsCard } from "@/components/company/education-metrics-card"
 import { getCompanyMetricsComparison, isApiError, type CompanyMetricsComparisonDto } from "@/lib/api"
 import { useEffect, useState } from "react"
-
-const departmentData = [
-  { department: "Ingeniería", employees: 85, avgScore: 75, participation: 88 },
-  { department: "Ventas", employees: 45, avgScore: 68, participation: 82 },
-  { department: "Marketing", employees: 32, avgScore: 72, participation: 85 },
-  { department: "Operaciones", employees: 28, avgScore: 70, participation: 79 },
-  { department: "RRHH", employees: 15, avgScore: 78, participation: 93 },
-]
 
 const topConcerns = [
   { concern: "Ahorros de Emergencia", employees: 78, percentage: 38 },
@@ -229,55 +220,7 @@ export default function CompanyDashboardPage() {
 
         {/* Departments Tab */}
         <TabsContent value="departments">
-          <Card>
-            <CardHeader>
-              <CardTitle>Desglose por Departamento</CardTitle>
-              <CardDescription>Métricas de bienestar financiero por departamento</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Departamento</TableHead>
-                    <TableHead>Empleados</TableHead>
-                    <TableHead>Puntaje Promedio</TableHead>
-                    <TableHead>Participación</TableHead>
-                    <TableHead>Estado</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {departmentData.map((dept) => (
-                    <TableRow key={dept.department}>
-                      <TableCell className="font-medium">{dept.department}</TableCell>
-                      <TableCell>{dept.employees}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold">{dept.avgScore}/100</span>
-                          <Progress value={dept.avgScore} className="h-2 w-20" />
-                        </div>
-                      </TableCell>
-                      <TableCell>{dept.participation}%</TableCell>
-                      <TableCell>
-                        {dept.avgScore >= 75 ? (
-                          <Badge className="">
-                            <CheckCircleIcon className="size-3 mr-1" />
-                            Excelente
-                          </Badge>
-                        ) : dept.avgScore >= 65 ? (
-                          <Badge variant="outline">Bueno</Badge>
-                        ) : (
-                          <Badge variant="secondary">
-                            <AlertCircleIcon className="size-3 mr-1" />
-                            Necesita Atención
-                          </Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <DepartmentMetricsSection />
         </TabsContent>
 
         {/* Top Concerns Tab */}
