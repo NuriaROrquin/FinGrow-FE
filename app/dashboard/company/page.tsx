@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ParticipationCards } from "@/components/company/participation-cards"
 import { DepartmentMetricsSection } from "@/components/company/department-metrics-section"
 import { EducationMetricsCard } from "@/components/company/education-metrics-card"
+import { FinancialHealthCard } from "@/components/company/financial-health-card"
 import { getCompanyMetricsComparison, isApiError, type CompanyMetricsComparisonDto } from "@/lib/api"
 import { useEffect, useState } from "react"
 
@@ -54,7 +55,6 @@ function formatRate(rate: number): string {
 }
 
 export default function CompanyDashboardPage() {
-  const avgHealthScore = 73
   const [comparison, setComparison] = useState<CompanyMetricsComparisonDto | null>(null)
   const [comparisonError, setComparisonError] = useState<string | null>(null)
   const [isComparisonLoading, setIsComparisonLoading] = useState(true)
@@ -116,18 +116,7 @@ export default function CompanyDashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <ParticipationCards />
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Salud Financiera Promedio</CardDescription>
-            <CardTitle className="text-2xl text-success">{avgHealthScore}/100</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-1 text-sm text-success">
-              <TrendingUpIcon className="size-4" />
-              <span>+11 puntos este trimestre</span>
-            </div>
-          </CardContent>
-        </Card>
+        <FinancialHealthCard />
 
         <EducationMetricsCard />
       </div>
