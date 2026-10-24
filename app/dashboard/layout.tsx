@@ -102,7 +102,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   const isCompanyRoute = pathname.startsWith("/dashboard/company")
-  const isEmployeeRoute = pathname.startsWith("/dashboard") && !isCompanyRoute && pathname !== "/dashboard/settings"
+  const isEmployeeRoute = pathname.startsWith("/dashboard") && !isCompanyRoute && !pathname.startsWith("/dashboard/settings")
   const hasInvalidRoleRoute =
     (role === "empresa" && isEmployeeRoute) ||
     (role === "empleado" && isCompanyRoute)

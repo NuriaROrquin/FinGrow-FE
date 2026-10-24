@@ -42,6 +42,7 @@ export default function SettingsPage() {
     const tab = searchParams.get("tab")
     if (tab) setActiveTab(tab)
   }, [searchParams])
+  const visibleTab = role === "empresa" && activeTab === "integrations" ? "profile" : activeTab
   const [mounted, setMounted] = useState(false)
 
   const [currentPassword, setCurrentPassword] = useState("")
@@ -95,11 +96,13 @@ export default function SettingsPage() {
       </div>
 
       {/* Settings Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      <Tabs value={visibleTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="profile">{t.settings.tabs.profile}</TabsTrigger>
           <TabsTrigger value="notifications">{t.settings.tabs.notifications}</TabsTrigger>
-          <TabsTrigger value="integrations">{t.settings.tabs.integrations}</TabsTrigger>
+          {role === "empleado" && (
+            <TabsTrigger value="integrations">{t.settings.tabs.integrations}</TabsTrigger>
+          )}
           <TabsTrigger value="security">{t.settings.tabs.security}</TabsTrigger>
           <TabsTrigger value="preferences">{t.settings.tabs.preferences}</TabsTrigger>
         </TabsList>
@@ -119,6 +122,7 @@ export default function SettingsPage() {
         </TabsContent>
 
         {/* Integrations Tab */}
+        {role === "empleado" && (
         <TabsContent value="integrations" className="space-y-4">
           <TelegramCard />
 
@@ -180,6 +184,7 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         </TabsContent>
+        )}
 
         {/* Security Tab */}
         <TabsContent value="security" className="space-y-4">
