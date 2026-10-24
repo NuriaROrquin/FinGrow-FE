@@ -117,6 +117,17 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   `/insights` ya no se muestran: los meses destacados son de HU-41. El link de cada recomendación sale
   de `action`, una lista cerrada; la IA nunca manda URLs. La aclaración de que no es asesoramiento
   financiero certificado va fija al pie de la card de recomendaciones: no la saques.
+- **Análisis de Presupuesto (HU-25)**: al pie de la pestaña Presupuestos,
+  `components/budgets/budget-analysis-card.tsx` pide `GET /api/budgets/analysis` con su propio selector
+  de moneda (arranca en la moneda preferida; no hay todavía un selector de moneda general). Mira los
+  últimos 6 meses y el mes en curso con presupuesto en esa moneda, y no depende del mes elegido en la
+  pestaña. Con menos de 2 meses con presupuesto (el mes en curso cuenta) muestra cuánto falta, con los
+  números del backend. Los datos calculados son de los meses cerrados y cada cartel dice qué mes o qué
+  período mira; si la IA no responde, se muestran igual. `MonthlyBudgetSection` avisa con
+  `onBudgetsChanged` cada cambio guardado (y cada alerta de presupuesto) y la card se recarga sin volver
+  al esqueleto. Las recomendaciones se dibujan con `components/recommendations/recommendation-list.tsx`,
+  la misma lista que usa la card de HU-44; acá sin el link "Ver presupuestos", porque ya se está en esa
+  pantalla.
 - **Exportar el reporte a PDF (HU-45)**. La página de Reportes pide los cuatro endpoints al entrar
   (`useReportRequest`, `components/reports/use-report-request.ts`) y les pasa los datos a las secciones,
   que ya no piden nada por su cuenta. Así el PDF sale con los mismos datos que se ven, sin volver a
