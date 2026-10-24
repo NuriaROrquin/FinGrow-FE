@@ -179,13 +179,20 @@ export default function CompanyDashboardPage() {
               <p className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
                 No hay períodos para mostrar.
               </p>
+            ) : financialHealthChartData.every(({ score }) => score === null) ? (
+              <p className="flex h-[300px] items-center justify-center text-center text-sm text-muted-foreground">
+                El puntaje se oculta en los meses con pocos empleados con actividad, para no identificar a nadie.
+              </p>
             ) : (
               <ChartContainer config={chartConfig} className="h-[300px] w-full min-w-[300px]">
                 <LineChart data={financialHealthChartData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis domain={[0, 100]} />
-                  <ChartTooltip content={<ChartTooltipContent />} cursor={{ stroke: "rgba(0, 0, 0, 0.2)" }} />
+                  <ChartTooltip
+                    content={<ChartTooltipContent formatter={(value) => typeof value === "number" ? `${value.toLocaleString("es-AR", { maximumFractionDigits: 2 })}/100` : "Oculto"} />}
+                    cursor={{ stroke: "rgba(0, 0, 0, 0.2)" }}
+                  />
                   <Line
                     type="monotone"
                     dataKey="score"
