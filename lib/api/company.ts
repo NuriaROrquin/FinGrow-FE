@@ -248,6 +248,23 @@ export function getCompanyEducationMetrics(signal?: AbortSignal): Promise<Compan
   return api.get<CompanyEducationMetricsResponse>("/api/company/metrics/education", { signal })
 }
 
+export interface CompanyMetricsDto {
+  period: string
+  fiscalYear: number
+  activeEmployees: number
+  participationRate: number | null
+  confirmedTransactions: number
+  employeesWithBudget: number
+  employeesWithActiveGoal: number
+  goalsAchieved: number
+  employeesWithIntegration: number
+  averageFinancialHealthScore: number | null
+}
+
+export function getCompanyMetrics(signal?: AbortSignal): Promise<CompanyMetricsDto[]> {
+  return api.get<CompanyMetricsDto[]>("/api/company/metrics", { signal })
+}
+
 export interface CompanyMetricsComparisonPeriodDto {
   period: string
   participationRate: number | null
