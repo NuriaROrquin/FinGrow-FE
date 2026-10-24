@@ -1,5 +1,6 @@
 import { api } from "./client"
 import { isApiError } from "./errors"
+import type { FinancialRecommendationDto } from "./reports"
 import type { Currency, ExpenseCategory } from "./transactions"
 
 export type BudgetPeriod = "Monthly" | "Yearly"
@@ -77,4 +78,51 @@ export function deleteBudget(year: number, month: number, signal?: AbortSignal):
 
 export function duplicatePreviousBudget(year: number, month: number, signal?: AbortSignal): Promise<BudgetDto> {
   return api.post<BudgetDto>("/api/budgets/duplicate-previous", { year, month }, { signal })
+}
+export interface BudgetAnalysisEligibilityDto {
+  isEligible: boolean
+  budgetMonths: number
+  requiredBudgetMonths: number
+  analyzedMonths: number
+  hasCurrentMonthBudget: boolean
+}
+
+export interface BudgetMonthComplianceDto {
+  year: number
+  month: number
+  categoriesWithLimit: number
+  categoriesWithinLimit: number
+  totalLimit: number
+  totalSpent: number
+}
+
+export interface BudgetCategoryAnalysisDto {
+  category: ExpenseCategory
+  monthsWithLimit: number
+  monthsExceeded: number
+  averageLimit: number
+  averageSpent: number
+  averageUsedPercentage: number
+  lastExceededMonth: string | null
+}
+
+export interface BudgetAnalysisSummaryDto {
+  firstMonth: string
+  lastMonth: string
+  closedBudgets: number
+  lastClosedMonth: BudgetMonthComplianceDto
+  mostExceededCategory: ExpenseCategory | null
+  categories: BudgetCategoryAnalysisDto[]
+}
+
+export interface BudgetAnalysisDto {
+  currency: Currency
+  eligibility: BudgetAnalysisEligibilityDto
+  summary: BudgetAnalysisSummaryDto | null
+  recommendations: FinancialRecommendationDto[]
+  recommendationsAvailable: boolean
+}
+
+export function getBudgetAnalysis(currency: Currency, signal?: AbortSignal): Promise<BudgetAnalysisDto> {
+  return api.get<BudgetAnalysisDto>("/api/budgets/analysis", { query: { currency }, signal })
 }
