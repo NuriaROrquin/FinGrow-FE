@@ -41,7 +41,11 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   participación (HU-56, `components/company/participation-cards.tsx`,
   `GET /api/company/metrics/participation`); el resto sigue mock. Cuando el backend manda
   `isParticipationHidden`, la tasa no se muestra ni se calcula en el front: es la protección
-  de anonimato para grupos chicos.
+  de anonimato para grupos chicos. La tarjeta de salud financiera promedio (HU-57,
+  `components/company/financial-health-card.tsx`) también es real: toma el último mes cerrado
+  de `GET /api/company/metrics` y lo compara con el anterior. El backend manda el puntaje en
+  `null` cuando hay menos de tres empleados con puntaje: la tarjeta lo muestra como oculto por
+  anonimato, nunca como cero, y el gráfico de tendencia deja ese mes en blanco.
 - **Educación** (artículos y cursos) usa la API real. La pantalla de Inversiones abre el contenido
   de cada tipo de activo (HU-35, `components/investments/related-education-dialog.tsx`) y todo
   artículo o curso con `isInvestmentContent` muestra `components/education/investment-disclaimer.tsx`:
@@ -62,7 +66,7 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   (`/api/notifications/types` y `/api/notifications/channels`). Conviven dos niveles: el **tipo**
   de alerta decide si existe (apagado, no llega a ningún canal ni a la bandeja) y el **canal**
   decide por dónde viaja (la app es fija; Telegram y correo se apagan). Cada switch guarda al
-  instante y vuelve atrás si falla. Los 7 tipos son los de `NotificationType`: uno nuevo en el
+  instante y vuelve atrás si falla. Los 10 tipos son los de `NotificationType`: uno nuevo en el
   backend necesita su texto en `settings.notifications.alertTypes` de los tres idiomas. La
   pestaña de la empresa sigue siendo mock: la empresa no tiene preferencias en el backend.
 - **Logros (T-22, SCRUM-106)**: `components/achievements/achievement-celebrator.tsx`, montado en el

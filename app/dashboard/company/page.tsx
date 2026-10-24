@@ -4,7 +4,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts"
 import { Progress } from "@/components/ui/progress"
-import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import {
   UsersIcon,
@@ -15,20 +14,13 @@ import {
   GraduationCapIcon,
   BuildingIcon,
 } from "lucide-react"
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ParticipationCards } from "@/components/company/participation-cards"
+import { DepartmentMetricsSection } from "@/components/company/department-metrics-section"
 import { EducationMetricsCard } from "@/components/company/education-metrics-card"
+import { FinancialHealthCard } from "@/components/company/financial-health-card"
 import { getCompanyMetricsComparison, isApiError, type CompanyMetricsComparisonDto } from "@/lib/api"
 import { useEffect, useState } from "react"
-
-const departmentData = [
-  { department: "Ingeniería", employees: 85, avgScore: 75, participation: 88 },
-  { department: "Ventas", employees: 45, avgScore: 68, participation: 82 },
-  { department: "Marketing", employees: 32, avgScore: 72, participation: 85 },
-  { department: "Operaciones", employees: 28, avgScore: 70, participation: 79 },
-  { department: "RRHH", employees: 15, avgScore: 78, participation: 93 },
-]
 
 const topConcerns = [
   { concern: "Ahorros de Emergencia", employees: 78, percentage: 38 },
@@ -63,7 +55,6 @@ function formatRate(rate: number): string {
 }
 
 export default function CompanyDashboardPage() {
-  const avgHealthScore = 73
   const [comparison, setComparison] = useState<CompanyMetricsComparisonDto | null>(null)
   const [comparisonError, setComparisonError] = useState<string | null>(null)
   const [isComparisonLoading, setIsComparisonLoading] = useState(true)
@@ -125,18 +116,7 @@ export default function CompanyDashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <ParticipationCards />
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Salud Financiera Promedio</CardDescription>
-            <CardTitle className="text-2xl text-success">{avgHealthScore}/100</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-1 text-sm text-success">
-              <TrendingUpIcon className="size-4" />
-              <span>+11 puntos este trimestre</span>
-            </div>
-          </CardContent>
-        </Card>
+        <FinancialHealthCard />
 
         <EducationMetricsCard />
       </div>
@@ -199,13 +179,20 @@ export default function CompanyDashboardPage() {
               <p className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
                 No hay períodos para mostrar.
               </p>
+            ) : financialHealthChartData.every(({ score }) => score === null) ? (
+              <p className="flex h-[300px] items-center justify-center text-center text-sm text-muted-foreground">
+                El puntaje se oculta en los meses con pocos empleados con actividad, para no identificar a nadie.
+              </p>
             ) : (
               <ChartContainer config={chartConfig} className="h-[300px] w-full min-w-[300px]">
                 <LineChart data={financialHealthChartData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis domain={[0, 100]} />
-                  <ChartTooltip content={<ChartTooltipContent />} cursor={{ stroke: "rgba(0, 0, 0, 0.2)" }} />
+                  <ChartTooltip
+                    content={<ChartTooltipContent formatter={(value) => typeof value === "number" ? `${value.toLocaleString("es-AR", { maximumFractionDigits: 2 })}/100` : "Oculto"} />}
+                    cursor={{ stroke: "rgba(0, 0, 0, 0.2)" }}
+                  />
                   <Line
                     type="monotone"
                     dataKey="score"
@@ -229,55 +216,7 @@ export default function CompanyDashboardPage() {
 
         {/* Departments Tab */}
         <TabsContent value="departments">
-          <Card>
-            <CardHeader>
-              <CardTitle>Desglose por Departamento</CardTitle>
-              <CardDescription>Métricas de bienestar financiero por departamento</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Departamento</TableHead>
-                    <TableHead>Empleados</TableHead>
-                    <TableHead>Puntaje Promedio</TableHead>
-                    <TableHead>Participación</TableHead>
-                    <TableHead>Estado</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {departmentData.map((dept) => (
-                    <TableRow key={dept.department}>
-                      <TableCell className="font-medium">{dept.department}</TableCell>
-                      <TableCell>{dept.employees}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold">{dept.avgScore}/100</span>
-                          <Progress value={dept.avgScore} className="h-2 w-20" />
-                        </div>
-                      </TableCell>
-                      <TableCell>{dept.participation}%</TableCell>
-                      <TableCell>
-                        {dept.avgScore >= 75 ? (
-                          <Badge className="">
-                            <CheckCircleIcon className="size-3 mr-1" />
-                            Excelente
-                          </Badge>
-                        ) : dept.avgScore >= 65 ? (
-                          <Badge variant="outline">Bueno</Badge>
-                        ) : (
-                          <Badge variant="secondary">
-                            <AlertCircleIcon className="size-3 mr-1" />
-                            Necesita Atención
-                          </Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <DepartmentMetricsSection />
         </TabsContent>
 
         {/* Top Concerns Tab */}

@@ -197,6 +197,18 @@ export const pt: Messages = {
           label: "Conquistas desbloqueadas",
           hint: "Quando você ganha uma medalha nova",
         },
+        InvestmentValueChanged: {
+          label: "Mudança nos seus investimentos",
+          hint: "Quando o valor da sua carteira sobe ou cai de repente entre duas avaliações",
+        },
+        InvestmentMaturing: {
+          label: "Investimento a vencer",
+          hint: "Quando se aproxima o vencimento de um depósito a prazo fixo ou de uma operação compromissada",
+        },
+        NewEducationContent: {
+          label: "Conteúdo educativo novo",
+          hint: "Quando um novo curso ou artigo é publicado",
+        },
       },
       channels: {
         title: "Por onde receber",

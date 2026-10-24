@@ -195,6 +195,18 @@ export const es = {
           label: "Logros desbloqueados",
           hint: "Cuando conseguís una medalla nueva",
         },
+        InvestmentValueChanged: {
+          label: "Cambio en tus inversiones",
+          hint: "Cuando el valor de tu portafolio sube o baja de golpe entre dos valuaciones",
+        },
+        InvestmentMaturing: {
+          label: "Inversión por vencer",
+          hint: "Cuando se acerca el vencimiento de un plazo fijo o una caución",
+        },
+        NewEducationContent: {
+          label: "Contenido educativo nuevo",
+          hint: "Cuando se publica un curso o un artículo nuevo",
+        },
       },
       channels: {
         title: "Por dónde recibirlas",
