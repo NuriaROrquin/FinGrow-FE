@@ -40,7 +40,7 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { NotificationBell } from "@/components/notifications/notification-bell"
 import { AchievementCelebrator } from "@/components/achievements/achievement-celebrator"
 import { usePreferences } from "@/lib/preferences-context"
@@ -217,7 +217,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex min-w-0 shrink items-center gap-2 px-1.5 sm:px-3">
                   <Avatar className="size-8">
-                    <AvatarImage src="/placeholder-user.jpg" alt={userName} />
                     <AvatarFallback>{getInitials(userName)}</AvatarFallback>
                   </Avatar>
                   <div className="hidden min-w-0 flex-col items-start sm:flex">
