@@ -1,8 +1,9 @@
 "use client"
 
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react"
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react"
 import { useTheme } from "next-themes"
 import { toastApiError } from "@/lib/api/notify"
+import { getCompanyPreferences } from "@/lib/api/company"
 import {
   defaultPreferences,
   getPreferences,
@@ -38,7 +39,11 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   // Las preferencias son solo del empleado: la empresa y quien no inició sesión usan los
   // valores por defecto. `readyFor` evita que, justo después del login, el dashboard vea
   // como listas las preferencias de la sesión anterior.
-  const owner = isAuthenticated && role === "empleado" ? "empleado" : "ninguno"
+  const owner = isAuthenticated && role ? role : "ninguno"
+  // next-themes puede devolver un setTheme nuevo en cada render: sin la ref, el efecto de carga
+  // se repetir�a al navegar y pisar�a el idioma elegido.
+  const setThemeRef = useRef(setTheme)
+  setThemeRef.current = setTheme
   const [readyFor, setReadyFor] = useState<string | null>(null)
 
   useEffect(() => {
@@ -53,11 +58,27 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 
     const controller = new AbortController()
 
+    if (owner === "empresa") {
+      getCompanyPreferences(controller.signal)
+        .then((loaded) => {
+          if (loaded.theme !== null) setThemeRef.current(loaded.theme.toLowerCase())
+          setApplicationLanguage(loaded.language)
+        })
+        .catch((error: unknown) => {
+          if (controller.signal.aborted) return
+          toastApiError(error, es.preferences.loadFailed, { showCode: false })
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setReadyFor(owner)
+        })
+      return () => controller.abort()
+    }
+
     getPreferences(controller.signal)
       .then((loaded) => {
         setPreferences(loaded)
         setApplicationLanguage(null)
-        setTheme(loaded.theme)
+        setThemeRef.current(loaded.theme)
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return
@@ -69,7 +90,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
       })
 
     return () => controller.abort()
-  }, [isHydrated, owner, setTheme])
+  }, [isHydrated, owner])
 
   // Se aplica durante el render y no en un efecto: así los hijos que se dibujan en esta misma
   // pasada ya formatean montos y fechas con las preferencias nuevas.

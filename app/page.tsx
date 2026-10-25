@@ -3,12 +3,14 @@ import { Building2, User } from "lucide-react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { AuthenticatedRedirect } from "@/components/home/authenticated-redirect"
+import { CurrentYear } from "@/components/home/current-year"
+import { FINGROW_CONTACT_EMAIL } from "@/lib/contact"
 
 export default function HomePage() {
-  console.log("[v0] HomePage rendering")
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+      <AuthenticatedRedirect />
       <div className="container mx-auto px-4 py-16">
         {/* Header */}
         <div className="text-center mb-16">
@@ -107,7 +109,10 @@ export default function HomePage() {
                 </Button>
               </Link>
               <p className="text-xs text-center text-muted-foreground mt-4">
-                Contacta a FinGrow para obtener acceso empresarial
+                <a href={`mailto:${FINGROW_CONTACT_EMAIL}`} className="text-primary hover:underline">
+                  Contactá a FinGrow
+                </a>{" "}
+                para obtener acceso empresarial
               </p>
             </CardContent>
           </Card>
@@ -115,7 +120,7 @@ export default function HomePage() {
 
         {/* Footer */}
         <div className="text-center mt-16 text-sm text-muted-foreground">
-          <p>© 2025 FinGrow. Plataforma de educación y bienestar financiero.</p>
+          <p>© <CurrentYear /> FinGrow. Plataforma de educación y bienestar financiero.</p>
         </div>
       </div>
     </div>

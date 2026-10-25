@@ -103,13 +103,17 @@ export interface TransactionsResponse {
 }
 
 export interface TransactionSummaryResponse {
-  totalExpenseArs: number
-  totalExpenseUsd: number
-  totalIncomeArs: number
-  totalIncomeUsd: number
-  totalTransactions: number
-  totalExpenseTransactions: number
-  totalIncomeTransactions: number
+  currencies: Partial<Record<Currency, CurrencyTransactionSummary>>
+  otherCurrencies: Currency[]
+}
+
+export interface CurrencyTransactionSummary {
+  income: number
+  expenses: number
+  balance: number
+  transactions: number
+  incomeTransactions: number
+  expenseTransactions: number
 }
 
 export interface TransactionFilters {

@@ -116,7 +116,7 @@ export function CompanyPreferencesCard() {
     // La tarjeta se recarga solo cuando cambia explícitamente la solicitud; el idioma
     // seleccionado modifica sus textos, pero no debe disparar otro GET.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reloadKey, setApplicationLanguage, setTheme])
+  }, [reloadKey, setApplicationLanguage])
 
   const hasChanges =
     preferences !== null &&

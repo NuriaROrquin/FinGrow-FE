@@ -250,6 +250,23 @@ export function getCompanyEducationMetrics(signal?: AbortSignal): Promise<Compan
   return api.get<CompanyEducationMetricsResponse>("/api/company/metrics/education", { signal })
 }
 
+export interface CompanyMetricsDto {
+  period: string
+  fiscalYear: number
+  activeEmployees: number
+  participationRate: number | null
+  confirmedTransactions: number
+  employeesWithBudget: number
+  employeesWithActiveGoal: number
+  goalsAchieved: number
+  employeesWithIntegration: number
+  averageFinancialHealthScore: number | null
+}
+
+export function getCompanyMetrics(signal?: AbortSignal): Promise<CompanyMetricsDto[]> {
+  return api.get<CompanyMetricsDto[]>("/api/company/metrics", { signal })
+}
+
 export interface CompanyMetricsComparisonPeriodDto {
   period: string
   participationRate: number | null
@@ -264,4 +281,37 @@ export interface CompanyMetricsComparisonDto {
 
 export function getCompanyMetricsComparison(signal?: AbortSignal): Promise<CompanyMetricsComparisonDto> {
   return api.get<CompanyMetricsComparisonDto>("/api/company/metrics/comparison", { signal })
+}
+
+export type HealthBand = "Critical" | "Fragile" | "Stable" | "Healthy"
+
+export type DepartmentMetricsSummary = {
+  departmentId: string
+  departmentName: string
+  period: string | null
+  employees: number | null
+  averageScore: number | null
+  participation: number | null
+  status: HealthBand | null
+  isMetricsHidden: boolean
+  minimumGroupSize: number
+  hiddenReason: string | null
+}
+
+export type DepartmentMetricsQuery = {
+  /** `YYYY-MM-DD`. Con `toDate`, acota el ultimo snapshot disponible a ese rango. */
+  fromDate?: string
+  toDate?: string
+}
+
+export function getDepartmentMetrics(
+  query: DepartmentMetricsQuery = {},
+  signal?: AbortSignal,
+): Promise<DepartmentMetricsSummary[]> {
+  const params = new URLSearchParams()
+  if (query.fromDate) params.set("fromDate", query.fromDate)
+  if (query.toDate) params.set("toDate", query.toDate)
+  const search = params.toString()
+
+  return api.get<DepartmentMetricsSummary[]>(`/api/company/metrics/departments${search ? `?${search}` : ""}`, { signal })
 }

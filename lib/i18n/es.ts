@@ -195,6 +195,18 @@ export const es = {
           label: "Logros desbloqueados",
           hint: "Cuando conseguís una medalla nueva",
         },
+        InvestmentValueChanged: {
+          label: "Cambio en tus inversiones",
+          hint: "Cuando el valor de tu portafolio sube o baja de golpe entre dos valuaciones",
+        },
+        InvestmentMaturing: {
+          label: "Inversión por vencer",
+          hint: "Cuando se acerca el vencimiento de un plazo fijo o una caución",
+        },
+        NewEducationContent: {
+          label: "Contenido educativo nuevo",
+          hint: "Cuando se publica un curso o un artículo nuevo",
+        },
       },
       channels: {
         title: "Por dónde recibirlas",
@@ -758,6 +770,11 @@ export const es = {
   savingsReport: {
     periodNote: (count: number, range: string) =>
       `Esta sección muestra ${count === 1 ? "el último mes" : `los últimos ${count} meses`} (${range}): siempre termina en el mes en curso, así que no sigue el período elegido.`,
+  },
+
+  otherCurrencyNotice: {
+    description: (currencies: string) =>
+      `Tenés movimientos en ${currencies}. No se incluyen en los totales en pesos ni en dólares y no se convierten automáticamente.`,
   },
 
   reportPdf: {

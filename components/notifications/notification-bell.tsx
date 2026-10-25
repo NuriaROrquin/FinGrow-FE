@@ -7,10 +7,13 @@ import {
   CalendarClockIcon,
   CheckCheckIcon,
   CircleAlertIcon,
+  GraduationCapIcon,
   InboxIcon,
+  LandmarkIcon,
   MedalIcon,
   PlugZapIcon,
   TargetIcon,
+  TrendingUpIcon,
   TriangleAlertIcon,
   type LucideIcon,
 } from "lucide-react"
@@ -43,6 +46,9 @@ const iconByType: Record<NotificationType, LucideIcon> = {
   BudgetWarning: TriangleAlertIcon,
   BudgetExceeded: CircleAlertIcon,
   AchievementUnlocked: MedalIcon,
+  InvestmentValueChanged: TrendingUpIcon,
+  InvestmentMaturing: LandmarkIcon,
+  NewEducationContent: GraduationCapIcon,
 }
 
 const unreadStyleByType: Partial<Record<NotificationType, string>> = {
@@ -59,6 +65,9 @@ const hrefByType: Record<NotificationType, string> = {
   BudgetWarning: "/dashboard/budgets?tab=budgets",
   BudgetExceeded: "/dashboard/budgets?tab=budgets",
   AchievementUnlocked: "/dashboard/education?tab=achievements",
+  InvestmentValueChanged: "/dashboard/investments",
+  InvestmentMaturing: "/dashboard/investments",
+  NewEducationContent: "/dashboard/education",
 }
 
 type ListStatus = "idle" | "loading" | "error" | "ready"

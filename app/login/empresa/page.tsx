@@ -23,6 +23,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth-context";
+import { FINGROW_CONTACT_EMAIL } from "@/lib/contact";
 import {
   isApiError,
   toastApiError,
@@ -250,22 +251,18 @@ export default function EmpresaLoginPage() {
               </form>
 
               <div className="mt-6 text-center text-sm text-muted-foreground">
-                ¿No tienes acceso? Contacta al equipo de FinGrow para obtener
-                credenciales empresariales.
+                ¿No tenés acceso?{" "}
+                <a
+                  href={`mailto:${FINGROW_CONTACT_EMAIL}`}
+                  className="text-primary hover:underline"
+                >
+                  Contactá al equipo de FinGrow
+                </a>{" "}
+                para obtener credenciales empresariales.
               </div>
             </CardContent>
           </Card>
         )}
-
-        {/* Demo Info */}
-        <Card className="mt-4 bg-muted/50">
-          <CardContent className="pt-6">
-            <p className="text-xs text-muted-foreground text-center">
-              <strong>Demo:</strong> Usa cualquier email corporativo y
-              contraseña para acceder
-            </p>
-          </CardContent>
-        </Card>
 
         {/* Features */}
         <div className="mt-6 space-y-2">

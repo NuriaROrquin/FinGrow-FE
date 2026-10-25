@@ -63,8 +63,11 @@ type LimitEditor =
 
 export function MonthlyBudgetSection({
   onBudgetChange,
+  onBudgetsChanged,
 }: {
   onBudgetChange: (budget: BudgetDto | null) => void;
+  /** Se llama cuando se guardó un cambio en un presupuesto o en su gasto, para refrescar el análisis (HU-25). */
+  onBudgetsChanged?: () => void;
 }) {
   const [period, setPeriod] = useState<YearMonth>(currentYearMonth);
   const [budget, setBudget] = useState<BudgetDto | null>(null);
@@ -128,15 +131,28 @@ export function MonthlyBudgetSection({
   const reload = () => setReloadKey((key) => key + 1);
 
   useEffect(() => {
-    const onBudgetAlert = () => setReloadKey((key) => key + 1);
+    const onBudgetAlert = () => {
+      setReloadKey((key) => key + 1);
+      onBudgetsChanged?.();
+    };
     window.addEventListener(BUDGET_NOTIFICATION_EVENT, onBudgetAlert);
     return () => window.removeEventListener(BUDGET_NOTIFICATION_EVENT, onBudgetAlert);
-  }, []);
+  }, [onBudgetsChanged]);
+
+  const reloadChanged = () => {
+    reload();
+    onBudgetsChanged?.();
+  };
+
+  const saveBudget = (updated: BudgetDto) => {
+    setBudget(updated);
+    onBudgetsChanged?.();
+  };
   const handleDuplicate = async () => {
     setIsDuplicating(true);
     try {
       await duplicatePreviousBudget(period.year, period.month);
-      reload();
+      reloadChanged();
       toast.success(
         `Presupuesto de ${periodLabel} creado a partir de ${previousLabel}`,
       );
@@ -159,7 +175,7 @@ export function MonthlyBudgetSection({
         period.month,
         categoryToRemove,
       );
-      setBudget(updated);
+      saveBudget(updated);
       toast.success(
         `${expenseCategoryLabels[categoryToRemove]} se quitó del presupuesto`,
       );
@@ -177,7 +193,7 @@ export function MonthlyBudgetSection({
     setIsRemoving(true);
     try {
       await deleteBudget(period.year, period.month);
-      reload();
+      reloadChanged();
       toast.success(`Presupuesto de ${periodLabel} eliminado`);
     } catch (error) {
       toastApiError(error, "No se pudo eliminar el presupuesto.");
@@ -315,7 +331,7 @@ export function MonthlyBudgetSection({
           </DialogHeader>
           <CreateBudgetForm
             period={period}
-            onCreated={reload}
+            onCreated={reloadChanged}
             onConflict={reload}
             onClose={() => setIsCreateOpen(false)}
           />
@@ -353,7 +369,7 @@ export function MonthlyBudgetSection({
                 limitEditor.mode === "edit" ? limitEditor.amount : undefined
               }
               availableCategories={categoriesWithoutLimit}
-              onSaved={setBudget}
+              onSaved={saveBudget}
               onBudgetMissing={reload}
               onClose={() => setLimitEditor(null)}
             />
