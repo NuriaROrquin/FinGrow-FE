@@ -29,6 +29,12 @@ export {
   type TwoFactorChallenge,
 } from "./auth"
 export {
+  PASSWORD_RESET_INVALID_LINK,
+  requestPasswordReset,
+  resetPassword,
+  validatePasswordResetToken,
+} from "./password-reset"
+export {
   ADDRESS_MAX_LENGTH,
   changePassword,
   disableTwoFactor,
