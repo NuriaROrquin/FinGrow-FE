@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -12,13 +12,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { PlusIcon, TrendingUpIcon, AlertCircleIcon, PiggyBankIcon, TrophyIcon } from "lucide-react"
+import { PlusIcon, TrophyIcon } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { GoalContributionsDialog } from "@/components/goals/goal-contributions-dialog"
 import { AchievedGoalCard, InProgressGoalCard } from "@/components/goals/goal-cards"
 import { DeleteGoalDialog } from "@/components/goals/delete-goal-dialog"
 import { GoalForm } from "@/components/goals/goal-form"
+import { BudgetAnalysisCard } from "@/components/budgets/budget-analysis-card"
 import { MonthlyBudgetSection } from "@/components/budgets/monthly-budget-section"
 import { formatAmount } from "@/components/budgets/budget-month"
 import { listGoals, toastApiError, type BudgetDto, type GoalDto } from "@/lib/api"
@@ -37,6 +38,8 @@ export default function BudgetsPage() {
     if (tab) setActiveTab(tab === "savings" ? "savings" : "budgets")
   }, [searchParams])
   const [currentBudget, setCurrentBudget] = useState<BudgetDto | null>(null)
+  const [analysisRefreshKey, setAnalysisRefreshKey] = useState(0)
+  const refreshAnalysis = useCallback(() => setAnalysisRefreshKey((key) => key + 1), [])
   const [isSavingsDialogOpen, setIsSavingsDialogOpen] = useState(false)
   const [savingsGoals, setSavingsGoals] = useState<GoalDto[]>([])
   const [isLoadingGoals, setIsLoadingGoals] = useState(true)
@@ -162,7 +165,8 @@ export default function BudgetsPage() {
         </TabsList>
 
         <TabsContent value="budgets" className="space-y-4">
-          <MonthlyBudgetSection onBudgetChange={setCurrentBudget} />
+          <MonthlyBudgetSection onBudgetChange={setCurrentBudget} onBudgetsChanged={refreshAnalysis} />
+          <BudgetAnalysisCard refreshKey={analysisRefreshKey} />
         </TabsContent>
 
         <TabsContent value="savings" className="space-y-4">
@@ -282,49 +286,6 @@ export default function BudgetsPage() {
           )}
         </TabsContent>
       </Tabs>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Análisis de Presupuesto</CardTitle>
-          <CardDescription>Consejos para mejorar tu salud financiera</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
-              <AlertCircleIcon className="size-5 text-amber-600 dark:text-amber-500 mt-0.5" />
-              <div>
-                <p className="font-medium text-amber-900 dark:text-amber-100">
-                  Presupuesto de entretenimiento excedido
-                </p>
-                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                  Has gastado $23000 de tu presupuesto de $20000 en entretenimiento. Considera reducir gastos
-                  discrecionales.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-success/10 border border-success/20">
-              <TrendingUpIcon className="size-5 text-success mt-0.5" />
-              <div>
-                <p className="font-medium text-success-foreground">¡Gran progreso en ahorros!</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Estás al 82.5% de tu meta de Laptop Nueva. ¡Sigue así!
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
-              <PiggyBankIcon className="size-5 text-blue-600 dark:text-blue-500 mt-0.5" />
-              <div>
-                <p className="font-medium text-blue-900 dark:text-blue-100">Oportunidad de ahorro</p>
-                <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                  Tienes $32000 restantes en tu presupuesto. Considera asignar algo a tus metas de ahorro.
-                </p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

@@ -197,6 +197,18 @@ export const en: Messages = {
           label: "Achievements unlocked",
           hint: "When you earn a new medal",
         },
+        InvestmentValueChanged: {
+          label: "Investment value change",
+          hint: "When your portfolio value moves sharply between two valuations",
+        },
+        InvestmentMaturing: {
+          label: "Investment maturing",
+          hint: "When a fixed-term deposit or repo is about to mature",
+        },
+        NewEducationContent: {
+          label: "New educational content",
+          hint: "When a new course or article is published",
+        },
       },
       channels: {
         title: "Where to receive them",
@@ -727,6 +739,11 @@ export const en: Messages = {
       `This section shows ${count === 1 ? "the last month" : `the last ${count} months`} (${range}): it always ends in the current month, so it doesn't follow the selected period.`,
   },
 
+  otherCurrencyNotice: {
+    description: (currencies: string) =>
+      `You have transactions in ${currencies}. They are not included in peso or dollar totals and are not converted automatically.`,
+  },
+
   reportPdf: {
     export: "Export PDF",
     exporting: "Generating PDF...",
@@ -740,5 +757,47 @@ export const en: Messages = {
     spending: "Spending Analysis",
     savings: "Savings Report",
     fileName: "financial-report",
+  },
+
+  companyTrends: {
+    title: "Trends",
+    description: "What improved and what got worse compared with the previous month",
+    comparedWith: (current: string, previous: string) => `${current} compared with ${previous}`,
+    positiveTitle: "Positive trends",
+    opportunitiesTitle: "Opportunities for improvement",
+    noPositive: "No indicator improved significantly.",
+    noOpportunities: "No indicator got significantly worse.",
+    noChanges: (current: string, previous: string) => `No significant changes between ${previous} and ${current}.`,
+    loadFailed: "Trends could not be loaded.",
+    noPeriod: "There are no closed months to analyze yet.",
+    noPreviousPeriod: (month: string) =>
+      `Trends need two consecutive months with data. For now there is only ${month}.`,
+    anonymized: (minimum: number) =>
+      `One of the two months had fewer than ${minimum} active employees. Trends are shown when there are enough to keep everyone anonymous.`,
+    footer: "Calculated from aggregated, anonymous indicators. A change smaller than 2 points is considered stable.",
+    fromTo: (previous: string, current: string) => `From ${previous} to ${current}`,
+    indicators: {
+      ParticipationRate: "Participation",
+      AverageFinancialHealthScore: "Average financial health",
+      BudgetAdoption: "Employees with a budget",
+      GoalAdoption: "Employees with active goals",
+      IntegrationAdoption: "Employees with integrations",
+      GoalsAchieved: "Goals achieved",
+      CompletedCourses: "Courses completed",
+      LowSavings: "Employees with low savings",
+      ThinCushion: "Employees with an insufficient emergency fund",
+      BudgetOverruns: "Employees who exceed their budget",
+      MissedGoalContributions: "Employees who miss their goal contributions",
+    },
+    values: {
+      Percentage: (value: string) => `${value}%`,
+      Points: (value: string) => `${value}/100`,
+      Count: (value: string) => value,
+    },
+    changes: {
+      Percentage: (change: string) => `${change} pp`,
+      Points: (change: string) => `${change} points`,
+      Count: (change: string) => change,
+    },
   },
 }

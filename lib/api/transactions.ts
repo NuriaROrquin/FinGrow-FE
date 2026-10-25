@@ -1,4 +1,5 @@
 import { api } from "./client"
+import type { SortDirection } from "./investments"
 
 export type TransactionType = "Income" | "Expense"
 
@@ -103,13 +104,17 @@ export interface TransactionsResponse {
 }
 
 export interface TransactionSummaryResponse {
-  totalExpenseArs: number
-  totalExpenseUsd: number
-  totalIncomeArs: number
-  totalIncomeUsd: number
-  totalTransactions: number
-  totalExpenseTransactions: number
-  totalIncomeTransactions: number
+  currencies: Partial<Record<Currency, CurrencyTransactionSummary>>
+  otherCurrencies: Currency[]
+}
+
+export interface CurrencyTransactionSummary {
+  income: number
+  expenses: number
+  balance: number
+  transactions: number
+  incomeTransactions: number
+  expenseTransactions: number
 }
 
 export interface TransactionFilters {
@@ -123,7 +128,18 @@ export interface TransactionFilters {
   dateFrom?: string
   /** Fecha hasta, formato yyyy-MM-dd (inclusive). */
   dateTo?: string
+  sortBy?: TransactionSortField
+  sortDirection?: SortDirection
 }
+
+export type TransactionSortField =
+  | "OccurredOn"
+  | "Description"
+  | "Category"
+  | "PaymentMethod"
+  | "Source"
+  | "Status"
+  | "Amount"
 
 export interface TransactionSummaryFilters {
   dateFrom?: string
@@ -170,6 +186,8 @@ export function listTransactions(
       paymentMethod: filters.paymentMethod,
       dateFrom: filters.dateFrom,
       dateTo: filters.dateTo,
+      sortBy: filters.sortBy,
+      sortDirection: filters.sortDirection,
     },
     signal,
   }).then((response) => ({

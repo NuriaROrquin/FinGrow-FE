@@ -197,6 +197,18 @@ export const pt: Messages = {
           label: "Conquistas desbloqueadas",
           hint: "Quando você ganha uma medalha nova",
         },
+        InvestmentValueChanged: {
+          label: "Mudança nos seus investimentos",
+          hint: "Quando o valor da sua carteira sobe ou cai de repente entre duas avaliações",
+        },
+        InvestmentMaturing: {
+          label: "Investimento a vencer",
+          hint: "Quando se aproxima o vencimento de um depósito a prazo fixo ou de uma operação compromissada",
+        },
+        NewEducationContent: {
+          label: "Conteúdo educativo novo",
+          hint: "Quando um novo curso ou artigo é publicado",
+        },
       },
       channels: {
         title: "Por onde receber",
@@ -730,6 +742,11 @@ export const pt: Messages = {
       `Esta seção mostra ${count === 1 ? "o último mês" : `os últimos ${count} meses`} (${range}): sempre termina no mês atual, então não segue o período escolhido.`,
   },
 
+  otherCurrencyNotice: {
+    description: (currencies: string) =>
+      `Você tem movimentos em ${currencies}. Eles não entram nos totais em pesos ou dólares e não são convertidos automaticamente.`,
+  },
+
   reportPdf: {
     export: "Exportar PDF",
     exporting: "Gerando PDF...",
@@ -743,5 +760,47 @@ export const pt: Messages = {
     spending: "Análise de Gastos",
     savings: "Relatório de Poupança",
     fileName: "relatorio-financeiro",
+  },
+
+  companyTrends: {
+    title: "Tendências",
+    description: "O que melhorou e o que piorou em relação ao mês anterior",
+    comparedWith: (current: string, previous: string) => `${current} comparado com ${previous}`,
+    positiveTitle: "Tendências positivas",
+    opportunitiesTitle: "Oportunidades de melhoria",
+    noPositive: "Nenhum indicador melhorou de forma significativa.",
+    noOpportunities: "Nenhum indicador piorou de forma significativa.",
+    noChanges: (current: string, previous: string) => `Sem mudanças significativas entre ${previous} e ${current}.`,
+    loadFailed: "Não foi possível carregar as tendências.",
+    noPeriod: "Ainda não há meses fechados para analisar.",
+    noPreviousPeriod: (month: string) =>
+      `Para ver tendências são necessários dois meses seguidos com dados. Por enquanto só há ${month}.`,
+    anonymized: (minimum: number) =>
+      `Em algum dos dois meses houve menos de ${minimum} funcionários ativos. As tendências são exibidas quando há o suficiente para não identificar ninguém.`,
+    footer: "Calculadas a partir de indicadores agregados e anônimos. Uma mudança menor que 2 pontos é considerada estável.",
+    fromTo: (previous: string, current: string) => `De ${previous} para ${current}`,
+    indicators: {
+      ParticipationRate: "Participação",
+      AverageFinancialHealthScore: "Saúde financeira média",
+      BudgetAdoption: "Funcionários com orçamento",
+      GoalAdoption: "Funcionários com metas ativas",
+      IntegrationAdoption: "Funcionários com integrações",
+      GoalsAchieved: "Metas alcançadas",
+      CompletedCourses: "Cursos concluídos",
+      LowSavings: "Funcionários com poupança baixa",
+      ThinCushion: "Funcionários com reserva de emergência insuficiente",
+      BudgetOverruns: "Funcionários que excedem o orçamento",
+      MissedGoalContributions: "Funcionários que não cobrem a parcela das metas",
+    },
+    values: {
+      Percentage: (value: string) => `${value}%`,
+      Points: (value: string) => `${value}/100`,
+      Count: (value: string) => value,
+    },
+    changes: {
+      Percentage: (change: string) => `${change} p.p.`,
+      Points: (change: string) => `${change} pontos`,
+      Count: (change: string) => change,
+    },
   },
 }
