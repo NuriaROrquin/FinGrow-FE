@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { es } from "@/lib/i18n/es"
 import type { CompanyInsightsDto, CompanyMonthlyReportDto, CompanyReportIndicatorDto } from "@/lib/api"
+import type { CompanyMetricsState } from "./company-evolution-charts"
 import { CompanyReportPdfExport } from "./company-report-pdf-export"
 
 const pdf = vi.hoisted(() => ({ exportReportPdf: vi.fn() }))
@@ -75,12 +76,20 @@ const insights: CompanyInsightsDto = {
   recommendationsAvailable: false,
 }
 
-function renderExport(value: CompanyMonthlyReportDto, onComplete = vi.fn(), onError = vi.fn()) {
+const noMetrics: CompanyMetricsState = { metrics: [], error: null, isLoading: false }
+
+function renderExport(
+  value: CompanyMonthlyReportDto,
+  onComplete = vi.fn(),
+  onError = vi.fn(),
+  metrics: CompanyMetricsState = noMetrics,
+) {
   render(
     <CompanyReportPdfExport
       generatedAt={new Date(2026, 9, 25, 15, 30)}
       report={value}
       insights={{ insights, isLoading: false, hasFailed: false }}
+      metrics={metrics}
       onComplete={onComplete}
       onError={onError}
     />,
@@ -153,6 +162,16 @@ describe("CompanyReportPdfExport", () => {
     expect(screen.getByText("Tendencias positivas")).not.toBeNull()
     expect(screen.getByText("Ahorro bajo")).not.toBeNull()
     expect(screen.getByText(/ningún dato identifica a un empleado/)).not.toBeNull()
+  })
+
+  it("includes the evolution charts section with what the panel shows", () => {
+    const message = "Las métricas no están disponibles para preservar el anonimato de grupos pequeños."
+    renderExport(report(), vi.fn(), vi.fn(), { metrics: [], error: message, isLoading: false })
+
+    expect(screen.getByText("Evolución")).not.toBeNull()
+    expect(screen.getByText("Participación de Empleados")).not.toBeNull()
+    expect(screen.getByText("Tendencia de Salud Financiera")).not.toBeNull()
+    expect(screen.getAllByText(message)).toHaveLength(2)
   })
 
   it("exports the PDF named after the month and reports when it finished", async () => {
