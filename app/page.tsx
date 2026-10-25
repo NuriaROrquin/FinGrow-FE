@@ -6,8 +6,6 @@ import { FINGROW_CONTACT_EMAIL } from "@/lib/contact"
 
 const leafColors = ["bg-[#559AC8]", "bg-[#7154B3]", "bg-[#FDA540]", "bg-[#F1573C]"]
 
-const highlights = ["Gastos y presupuestos", "Metas de ahorro", "Inversiones", "Educación financiera", "Métricas para empresas"]
-
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-background lg:grid lg:grid-cols-[1.15fr_1fr]">
@@ -42,16 +40,6 @@ export default function HomePage() {
             <p className="mt-4 max-w-md text-lg text-white/80">
               Bienestar financiero para cada persona y para la empresa que la acompaña.
             </p>
-            <ul className="mt-8 flex max-w-xl flex-wrap gap-2">
-              {highlights.map((highlight) => (
-                <li
-                  key={highlight}
-                  className="rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-sm text-white backdrop-blur-sm"
-                >
-                  {highlight}
-                </li>
-              ))}
-            </ul>
           </div>
         </div>
       </aside>
