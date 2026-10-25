@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react"
+import { usePathname } from "next/navigation"
 import { useTheme } from "next-themes"
 import { toastApiError } from "@/lib/api/notify"
 import { getCompanyPreferences } from "@/lib/api/company"
@@ -14,6 +15,7 @@ import {
 import { useAuth } from "@/lib/auth-context"
 import { setRegionalPreferences } from "@/lib/format"
 import { es } from "@/lib/i18n/es"
+import { messagesFor, setMessagesLanguage } from "@/lib/i18n/messages"
 
 interface PreferencesContextType {
   preferences: Preferences
@@ -92,13 +94,23 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     return () => controller.abort()
   }, [isHydrated, owner])
 
+  const language = applicationLanguage ?? preferences.language
+  const pathname = usePathname()
+
   // Se aplica durante el render y no en un efecto: así los hijos que se dibujan en esta misma
-  // pasada ya formatean montos y fechas con las preferencias nuevas.
-  setRegionalPreferences(applicationLanguage ?? preferences.language, preferences.dateFormat)
+  // pasada ya formatean montos y fechas, y arman los textos de `lib/api`, con las preferencias nuevas.
+  setRegionalPreferences(language, preferences.dateFormat)
+  setMessagesLanguage(language)
 
   useEffect(() => {
-    document.documentElement.lang = applicationLanguage ?? preferences.language
-  }, [applicationLanguage, preferences.language])
+    document.documentElement.lang = language
+  }, [language])
+
+  // El `metadata` del layout es del servidor y no conoce el idioma elegido: el título de la pestaña
+  // se reemplaza acá. Se repite al navegar por si Next vuelve a poner el del layout.
+  useEffect(() => {
+    document.title = messagesFor(language).meta.title
+  }, [language, pathname])
 
   const savePreferences = useCallback(
     async (next: Preferences) => {

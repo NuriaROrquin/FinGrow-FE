@@ -14,6 +14,31 @@ export const en: Messages = {
     neverActive: "No messages received yet",
   },
 
+  meta: {
+    title: "FinGrow - Financial Wellbeing",
+  },
+
+  apiErrors: {
+    byStatus: {
+      400: "The data you sent is not valid.",
+      401: "Your session expired. Please sign in again.",
+      403: "You don't have permission to do this.",
+      404: "We couldn't find what you were looking for.",
+      409: "The operation conflicts with the current state.",
+      500: "An unexpected error occurred. Please try again in a moment.",
+    },
+    unexpected: "An unexpected error occurred.",
+    network: "We couldn't connect to the server. Check your connection and try again.",
+    code: (code: string) => `Code: ${code}`,
+    reference: (traceId: string) => `Reference: ${traceId}`,
+  },
+
+  quantityUnits: {
+    nominal: (quantity: number) => (quantity === 1 ? "nominal unit" : "nominal units"),
+    fundShare: (quantity: number) => (quantity === 1 ? "fund share" : "fund shares"),
+    unit: (quantity: number) => (quantity === 1 ? "unit" : "units"),
+  },
+
   labels: {
     expenseCategories: {
       Alimentos: "Food",

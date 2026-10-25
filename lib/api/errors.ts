@@ -1,3 +1,5 @@
+import { currentMessages } from "@/lib/i18n/messages"
+
 /**
  * Un error devuelto por la API, ya normalizado.
  *
@@ -9,7 +11,10 @@ export class ApiError extends Error {
   /** Código estable del error, pensado para comparar en código. */
   readonly code: string
 
-  /** Mensaje para mostrar al usuario, en castellano. */
+  /**
+   * Mensaje para mostrar al usuario. Los que arma el cliente salen en el idioma elegido; los que
+   * escribe el backend llegan en castellano.
+   */
   readonly description: string
 
   /** Status HTTP de la respuesta. */
@@ -74,15 +79,6 @@ interface ProblemDetailsBody {
   errors?: unknown
 }
 
-const FALLBACK_DESCRIPTIONS: Record<number, string> = {
-  400: "Los datos enviados no son válidos.",
-  401: "Tu sesión expiró. Volvé a iniciar sesión.",
-  403: "No tenés permiso para hacer esto.",
-  404: "No encontramos lo que buscabas.",
-  409: "La operación entra en conflicto con el estado actual.",
-  500: "Ocurrió un error inesperado. Probá de nuevo en un momento.",
-}
-
 /**
  * Convierte el cuerpo de una respuesta con error en un ApiError.
  *
@@ -92,7 +88,8 @@ const FALLBACK_DESCRIPTIONS: Record<number, string> = {
  * de romper.
  */
 export function parseApiError(status: number, body: unknown): ApiError {
-  const fallback = FALLBACK_DESCRIPTIONS[status] ?? "Ocurrió un error inesperado."
+  const texts = currentMessages().apiErrors
+  const fallback = texts.byStatus[status] ?? texts.unexpected
 
   if (typeof body !== "object" || body === null) {
     return new ApiError({ code: ClientErrorCodes.Unknown, description: fallback, status })

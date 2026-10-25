@@ -14,6 +14,31 @@ export const pt: Messages = {
     neverActive: "Ainda não recebemos mensagens",
   },
 
+  meta: {
+    title: "FinGrow - Bem-estar Financeiro",
+  },
+
+  apiErrors: {
+    byStatus: {
+      400: "Os dados enviados não são válidos.",
+      401: "Sua sessão expirou. Entre novamente.",
+      403: "Você não tem permissão para fazer isso.",
+      404: "Não encontramos o que você procurava.",
+      409: "A operação entra em conflito com o estado atual.",
+      500: "Ocorreu um erro inesperado. Tente novamente em instantes.",
+    },
+    unexpected: "Ocorreu um erro inesperado.",
+    network: "Não conseguimos nos conectar ao servidor. Verifique sua conexão e tente novamente.",
+    code: (code: string) => `Código: ${code}`,
+    reference: (traceId: string) => `Referência: ${traceId}`,
+  },
+
+  quantityUnits: {
+    nominal: (quantity: number) => (quantity === 1 ? "nominal" : "nominais"),
+    fundShare: (quantity: number) => (quantity === 1 ? "cota" : "cotas"),
+    unit: (quantity: number) => (quantity === 1 ? "unidade" : "unidades"),
+  },
+
   labels: {
     expenseCategories: {
       Alimentos: "Alimentação",

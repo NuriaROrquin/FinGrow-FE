@@ -1,6 +1,7 @@
 import { api } from "./client"
 import type { Currency } from "./transactions"
 import { formatNumber } from "@/lib/format"
+import { currentMessages } from "@/lib/i18n/messages"
 
 export type InvestmentType =
   | "Stock"
@@ -65,21 +66,21 @@ export function isPricedPerNominal(type: InvestmentType): boolean {
 }
 
 export function quantityUnit(type: InvestmentType, quantity: number): string {
-  const isOne = quantity === 1
+  const units = currentMessages().quantityUnits
 
   if (isPricedPerNominal(type)) {
-    return isOne ? "nominal" : "nominales"
+    return units.nominal(quantity)
   }
 
   if (type === "MutualFund") {
-    return isOne ? "cuotaparte" : "cuotapartes"
+    return units.fundShare(quantity)
   }
 
   if (type === "Crypto") {
     return ""
   }
 
-  return isOne ? "unidad" : "unidades"
+  return units.unit(quantity)
 }
 
 export function formatQuantity(quantity: number, type: InvestmentType): string {

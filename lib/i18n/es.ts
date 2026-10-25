@@ -17,6 +17,31 @@ export const es = {
     neverActive: "Todavía no recibimos mensajes",
   },
 
+  meta: {
+    title: "FinGrow - Bienestar Financiero",
+  },
+
+  apiErrors: {
+    byStatus: {
+      400: "Los datos enviados no son válidos.",
+      401: "Tu sesión expiró. Volvé a iniciar sesión.",
+      403: "No tenés permiso para hacer esto.",
+      404: "No encontramos lo que buscabas.",
+      409: "La operación entra en conflicto con el estado actual.",
+      500: "Ocurrió un error inesperado. Probá de nuevo en un momento.",
+    } as Record<number, string>,
+    unexpected: "Ocurrió un error inesperado.",
+    network: "No pudimos conectarnos con el servidor. Revisá tu conexión e intentá de nuevo.",
+    code: (code: string) => `Código: ${code}`,
+    reference: (traceId: string) => `Referencia: ${traceId}`,
+  },
+
+  quantityUnits: {
+    nominal: (quantity: number): string => (quantity === 1 ? "nominal" : "nominales"),
+    fundShare: (quantity: number): string => (quantity === 1 ? "cuotaparte" : "cuotapartes"),
+    unit: (quantity: number): string => (quantity === 1 ? "unidad" : "unidades"),
+  },
+
   // Lo que se muestra de cada valor que viaja a la API. Las claves son contrato con FinGrow-BE (y
   // las categorías, también con FinGrow-AI): se traduce el texto, nunca la clave.
   labels: {
