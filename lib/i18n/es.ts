@@ -755,6 +755,11 @@ export const es = {
       `Esta sección muestra ${count === 1 ? "el último mes" : `los últimos ${count} meses`} (${range}): siempre termina en el mes en curso, así que no sigue el período elegido.`,
   },
 
+  otherCurrencyNotice: {
+    description: (currencies: string) =>
+      `Tenés movimientos en ${currencies}. No se incluyen en los totales en pesos ni en dólares y no se convierten automáticamente.`,
+  },
+
   reportPdf: {
     export: "Exportar PDF",
     exporting: "Generando PDF...",

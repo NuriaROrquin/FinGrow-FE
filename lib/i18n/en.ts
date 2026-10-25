@@ -739,6 +739,11 @@ export const en: Messages = {
       `This section shows ${count === 1 ? "the last month" : `the last ${count} months`} (${range}): it always ends in the current month, so it doesn't follow the selected period.`,
   },
 
+  otherCurrencyNotice: {
+    description: (currencies: string) =>
+      `You have transactions in ${currencies}. They are not included in peso or dollar totals and are not converted automatically.`,
+  },
+
   reportPdf: {
     export: "Export PDF",
     exporting: "Generating PDF...",

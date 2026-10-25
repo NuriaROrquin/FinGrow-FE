@@ -742,6 +742,11 @@ export const pt: Messages = {
       `Esta seção mostra ${count === 1 ? "o último mês" : `os últimos ${count} meses`} (${range}): sempre termina no mês atual, então não segue o período escolhido.`,
   },
 
+  otherCurrencyNotice: {
+    description: (currencies: string) =>
+      `Você tem movimentos em ${currencies}. Eles não entram nos totais em pesos ou dólares e não são convertidos automaticamente.`,
+  },
+
   reportPdf: {
     export: "Exportar PDF",
     exporting: "Gerando PDF...",

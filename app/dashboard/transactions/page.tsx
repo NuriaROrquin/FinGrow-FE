@@ -97,6 +97,7 @@ import {
 import { formatDate, formatMoney } from "@/lib/format"
 import { usePreferences } from "@/lib/preferences-context"
 import { useMessages } from "@/lib/i18n"
+import { OtherCurrencyNotice } from "@/components/transactions/other-currency-notice"
 
 const emptyTransactionsResponse: TransactionsResponse = {
   items: [],
@@ -107,13 +108,8 @@ const emptyTransactionsResponse: TransactionsResponse = {
 }
 
 const emptyTransactionSummary: TransactionSummaryResponse = {
-  totalExpenseArs: 0,
-  totalExpenseUsd: 0,
-  totalIncomeArs: 0,
-  totalIncomeUsd: 0,
-  totalTransactions: 0,
-  totalExpenseTransactions: 0,
-  totalIncomeTransactions: 0,
+  currencies: {},
+  otherCurrencies: [],
 }
 
 // Métodos de pago para el filtro, ordenados alfabéticamente
@@ -426,17 +422,13 @@ export default function TransactionsPage() {
     setSummaryRefreshKey((key) => key + 1)
   }
 
-  const totalIncome = {
-    ARS: transactionSummary.totalIncomeArs,
-    USD: transactionSummary.totalIncomeUsd,
-  }
-  const totalExpense = {
-    ARS: transactionSummary.totalExpenseArs,
-    USD: transactionSummary.totalExpenseUsd,
-  }
-  const balanceByCurrency = {
-    ARS: totalIncome.ARS - totalExpense.ARS,
-    USD: totalIncome.USD - totalExpense.USD,
+  const selectedSummary = transactionSummary.currencies?.[summaryCurrency] ?? {
+    income: 0,
+    expenses: 0,
+    balance: 0,
+    transactions: 0,
+    incomeTransactions: 0,
+    expenseTransactions: 0,
   }
   const formatCurrency = (amount: number, currency: Currency) => formatMoney(amount, currency)
 
@@ -641,6 +633,10 @@ export default function TransactionsPage() {
         </AlertDescription>
       </Alert>
 
+      <div className="order-2">
+        <OtherCurrencyNotice currencies={transactionSummary.otherCurrencies ?? []} />
+      </div>
+
       <div className="order-3 grid gap-4 md:grid-cols-3">
         <Card className="border border-border bg-card shadow-sm">
           <CardContent className="p-6">
@@ -650,12 +646,12 @@ export default function TransactionsPage() {
                 <CardDescription className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
                   Ingresos
                 </CardDescription>
-                <CardTitle className="mt-1 text-2xl text-foreground">{formatCurrency(totalIncome[summaryCurrency], summaryCurrency)}</CardTitle>
+                <CardTitle className="mt-1 text-2xl text-foreground">{formatCurrency(selectedSummary.income, summaryCurrency)}</CardTitle>
               </div>
             </div>
             <div className="mt-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
               <ArrowUpIcon className="size-3.5" />
-              <span>{transactionSummary.totalIncomeTransactions} ingresos</span>
+              <span>{selectedSummary.incomeTransactions} ingresos</span>
             </div>
           </CardContent>
         </Card>
@@ -668,12 +664,12 @@ export default function TransactionsPage() {
                 <CardDescription className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
                   Gastos
                 </CardDescription>
-                <CardTitle className="mt-1 text-2xl text-foreground">{formatCurrency(totalExpense[summaryCurrency], summaryCurrency)}</CardTitle>
+                <CardTitle className="mt-1 text-2xl text-foreground">{formatCurrency(selectedSummary.expenses, summaryCurrency)}</CardTitle>
               </div>
             </div>
             <div className="mt-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
               <ArrowDownIcon className="size-3.5" />
-              <span>{transactionSummary.totalExpenseTransactions} gastos</span>
+              <span>{selectedSummary.expenseTransactions} gastos</span>
             </div>
           </CardContent>
         </Card>
@@ -686,12 +682,12 @@ export default function TransactionsPage() {
                 <CardDescription className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
                   Balance Neto
                 </CardDescription>
-                <CardTitle className="mt-1 text-2xl text-foreground">{formatCurrency(balanceByCurrency[summaryCurrency], summaryCurrency)}</CardTitle>
+                <CardTitle className="mt-1 text-2xl text-foreground">{formatCurrency(selectedSummary.balance, summaryCurrency)}</CardTitle>
               </div>
             </div>
             <div className="mt-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
-              {balanceByCurrency[summaryCurrency] >= 0 ? <ArrowUpIcon className="size-3.5" /> : <ArrowDownIcon className="size-3.5" />}
-              <span>{transactionSummary.totalTransactions} transacciones totales</span>
+              {selectedSummary.balance >= 0 ? <ArrowUpIcon className="size-3.5" /> : <ArrowDownIcon className="size-3.5" />}
+              <span>{selectedSummary.transactions} transacciones totales</span>
             </div>
           </CardContent>
         </Card>

@@ -24,6 +24,7 @@ export interface DashboardSummaryDto {
   savings: number | null
   savingsRate: number | null
   previousPeriodSavingsRate: number | null
+  otherCurrencies: Currency[]
 }
 
 export interface MonthlyExpenseDto {
