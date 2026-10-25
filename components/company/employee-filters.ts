@@ -1,4 +1,5 @@
 import type { CompanyEmployeeDto } from "@/lib/api"
+import { compareText, sortRows, toDate, toggleSort, type SortAccessors, type SortState } from "@/lib/sort"
 import { normalizeForSearch } from "@/lib/utils"
 
 export const NO_DEPARTMENT_FILTER = "none"
@@ -39,14 +40,16 @@ export const lastLoginFilterLabels: Record<LastLoginFilter, string> = {
   never: "Nunca ingresó",
 }
 
-export type EmployeeSortField = "fullName" | "departmentName" | "hiredOn" | "lastLoginAt"
+export type EmployeeSortField =
+  | "fullName"
+  | "email"
+  | "phoneNumber"
+  | "departmentName"
+  | "hiredOn"
+  | "lastLoginAt"
+  | "isActive"
 
-export type SortOrder = "asc" | "desc"
-
-export interface EmployeeSort {
-  field: EmployeeSortField
-  direction: SortOrder
-}
+export type EmployeeSort = SortState<EmployeeSortField>
 
 export const defaultEmployeeSort: EmployeeSort = { field: "fullName", direction: "asc" }
 
@@ -145,42 +148,20 @@ export function filterEmployees(
   )
 }
 
-function byName(a: CompanyEmployeeDto, b: CompanyEmployeeDto): number {
-  return a.fullName.localeCompare(b.fullName, "es", { sensitivity: "base" })
-}
-
-function compareField(a: CompanyEmployeeDto, b: CompanyEmployeeDto, field: EmployeeSortField): number {
-  if (field === "fullName") {
-    return byName(a, b)
-  }
-
-  const left = a[field]
-  const right = b[field]
-
-  return field === "departmentName"
-    ? (left ?? "").localeCompare(right ?? "", "es", { sensitivity: "base" })
-    : (left ?? "").localeCompare(right ?? "")
+const employeeSortValues: SortAccessors<CompanyEmployeeDto, EmployeeSortField> = {
+  fullName: (employee) => employee.fullName,
+  email: (employee) => employee.email,
+  phoneNumber: (employee) => employee.phoneNumber,
+  departmentName: (employee) => employee.departmentName,
+  hiredOn: (employee) => toDate(employee.hiredOn),
+  lastLoginAt: (employee) => toDate(employee.lastLoginAt),
+  isActive: (employee) => (employee.isActive ? statusFilterLabels.active : statusFilterLabels.inactive),
 }
 
 export function sortEmployees(employees: CompanyEmployeeDto[], sort: EmployeeSort): CompanyEmployeeDto[] {
-  const direction = sort.direction === "asc" ? 1 : -1
-
-  return [...employees].sort((a, b) => {
-    const leftMissing = sort.field !== "fullName" && a[sort.field] === null
-    const rightMissing = sort.field !== "fullName" && b[sort.field] === null
-
-    if (leftMissing !== rightMissing) {
-      return leftMissing ? 1 : -1
-    }
-
-    return compareField(a, b, sort.field) * direction || byName(a, b)
-  })
+  return sortRows(employees, sort, employeeSortValues, (a, b) => compareText(a.fullName, b.fullName))
 }
 
 export function nextSort(current: EmployeeSort, field: EmployeeSortField): EmployeeSort {
-  if (current.field === field) {
-    return { field, direction: current.direction === "asc" ? "desc" : "asc" }
-  }
-
-  return { field, direction: field === "hiredOn" || field === "lastLoginAt" ? "desc" : "asc" }
+  return toggleSort(current, field, ["hiredOn", "lastLoginAt"])
 }
