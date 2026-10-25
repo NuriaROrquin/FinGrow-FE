@@ -225,3 +225,22 @@ hooks/          Hooks compartidos (use-mobile, use-toast)
 - Warnings de ESLint no deberían acumularse: la CI corre `npm run lint` en cada push.
 - Componentes de `components/ui/` son de shadcn: para modificarlos, preferir las props que ya
   exponen antes que editar el archivo generado.
+
+## Traducciones (español, inglés y portugués)
+
+- Ningún componente tiene textos escritos directamente: todos salen de `lib/i18n`. `es.ts` es la
+  fuente y define el tipo `Messages`; `en.ts` y `pt.ts` tienen que tener las mismas claves, y si falta
+  una TypeScript lo marca. Un texto nuevo va en los tres idiomas. Los textos con datos son funciones
+  (`(count: number) => ...`), y los plurales se resuelven adentro de cada idioma.
+- En un componente se leen con `useMessages()`. Fuera de los componentes (`lib/api`, helpers de módulo)
+  se usa `currentMessages()` de `lib/i18n/messages`, que sigue el idioma que fija PreferencesProvider
+  en cada render, igual que `lib/format`.
+- El idioma es el de las preferencias del empleado; en las pantallas de empresa, el idioma corporativo;
+  sin sesión (inicio y logins), el del navegador si es español, inglés o portugués.
+- Los valores que viajan a la API (categorías, medios de pago, tipos de inversión, industrias) no se
+  traducen: sus etiquetas están en `labels` y los DTO guardan el valor. Nunca buscar un valor a partir
+  de su etiqueta.
+- Montos, números y fechas se formatean con `lib/format`, nunca con `toLocaleString("es-AR")` fijo.
+- No se traducen desde el front: los mensajes de error de FinGrow-BE, el contenido de cursos y
+  artículos, los nombres de los logros y las recomendaciones de FinGrow-AI (llegan en castellano).
+- Los tests de componentes que usan `useMessages` mockean `@/lib/i18n` con el diccionario `es`.
