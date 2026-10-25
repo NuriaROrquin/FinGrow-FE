@@ -13,16 +13,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import type { MonthlySummaryDto } from "@/lib/api"
 import { formatDateText, formatMoney, formatNumber } from "@/lib/format"
+import { useMessages } from "@/lib/i18n"
 import { useIsReportExport } from "./report-export-context"
-
-// Los tokens --chart-* del tema son todos violetas: acá cada serie lleva el color que ya usan las cards
-// de arriba (ingresos en verde, gastos en rojo, ahorro en el primario), y el ahorro va como línea para
-// que no dependa solo del color.
-const chartConfig = {
-  income: { label: "Ingresos", color: "var(--success)" },
-  expenses: { label: "Gastos", color: "var(--destructive)" },
-  savings: { label: "Ahorro", color: "var(--primary)" },
-} satisfies ChartConfig
 
 function monthLabel(year: number, month: number, spansSeveralYears: boolean): string {
   return formatDateText(new Date(year, month - 1, 1), spansSeveralYears ? { month: "short", year: "2-digit" } : { month: "short" })
@@ -34,7 +26,16 @@ interface MonthlyEvolutionChartProps {
 }
 
 export function MonthlyEvolutionChart({ summary, isLoading }: MonthlyEvolutionChartProps) {
+  const t = useMessages().reports
   const isExport = useIsReportExport()
+  // Los tokens --chart-* del tema son todos violetas: acá cada serie lleva el color que ya usan las cards
+  // de arriba (ingresos en verde, gastos en rojo, ahorro en el primario), y el ahorro va como línea para
+  // que no dependa solo del color.
+  const chartConfig = {
+    income: { label: t.income, color: "var(--success)" },
+    expenses: { label: t.expenses, color: "var(--destructive)" },
+    savings: { label: t.savings, color: "var(--primary)" },
+  } satisfies ChartConfig
   const months = summary?.months ?? []
   const currency = summary?.currency ?? "ARS"
   const spansSeveralYears = new Set(months.map((month) => month.year)).size > 1
@@ -49,9 +50,9 @@ export function MonthlyEvolutionChart({ summary, isLoading }: MonthlyEvolutionCh
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Ingresos, Gastos y Ahorro</CardTitle>
+        <CardTitle>{t.evolutionTitle}</CardTitle>
         <CardDescription>
-          {summary ? `Evolución mes a mes en ${summary.currency}` : "Evolución mes a mes"}
+          {summary ? t.evolutionDescriptionIn(summary.currency) : t.evolutionDescription}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -59,11 +60,11 @@ export function MonthlyEvolutionChart({ summary, isLoading }: MonthlyEvolutionCh
           <Skeleton className="h-[400px] w-full" />
         ) : !summary ? (
           <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
-            No se pudo cargar la evolución mensual.
+            {t.evolutionLoadFailed}
           </p>
         ) : months.length === 0 ? (
           <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
-            No hay movimientos confirmados en {summary.currency} en este período.
+            {t.noMovements(summary.currency)}
           </p>
         ) : (
           <ChartContainer config={chartConfig} className="h-[400px] w-full">
