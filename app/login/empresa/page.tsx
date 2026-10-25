@@ -23,6 +23,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth-context";
+import { useMessages } from "@/lib/i18n";
 import { FINGROW_CONTACT_EMAIL } from "@/lib/contact";
 import {
   isApiError,
@@ -32,6 +33,8 @@ import {
 } from "@/lib/api";
 
 export default function EmpresaLoginPage() {
+  const messages = useMessages();
+  const t = messages.login;
   const router = useRouter();
   const { login, completeTwoFactorLogin } = useAuth();
   const [email, setEmail] = useState("");
@@ -57,7 +60,7 @@ export default function EmpresaLoginPage() {
     } catch (error) {
       toastApiError(
         error,
-        error instanceof Error ? error.message : "Intentá nuevamente.",
+        error instanceof Error ? error.message : t.tryAgain,
         { showCode: false },
       );
     } finally {
@@ -77,7 +80,7 @@ export default function EmpresaLoginPage() {
     } catch (error) {
       toastApiError(
         error,
-        "No pudimos verificar el código. Intentá nuevamente.",
+        t.codeFailed,
         { showCode: false },
       );
       setCode("");
@@ -105,7 +108,7 @@ export default function EmpresaLoginPage() {
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          Volver a inicio
+          {t.backHome}
         </Link>
 
         {/* Logo */}
@@ -113,7 +116,7 @@ export default function EmpresaLoginPage() {
           <div className="flex flex-col items-center justify-center gap-3 mb-4">
             <Image
               src="/9.png"
-              alt="FinGrow Logo"
+              alt={messages.home.logoAlt}
               width={60}
               height={40}
               className="object-contain"
@@ -123,7 +126,7 @@ export default function EmpresaLoginPage() {
               FinGrow
             </h1>
           </div>
-          <p className="text-muted-foreground">Portal Empresarial</p>
+          <p className="text-muted-foreground">{t.companyPortal}</p>
         </div>
 
         {/* Login Card */}
@@ -134,11 +137,10 @@ export default function EmpresaLoginPage() {
                 <ShieldCheck className="h-8 w-8 text-primary" />
               </div>
               <CardTitle className="text-2xl text-center">
-                Verificación en dos pasos
+                {t.twoFactorTitle}
               </CardTitle>
               <CardDescription className="text-center">
-                Ingresá el código de 6 dígitos que muestra tu app de
-                autenticación
+                {t.twoFactorDescription}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -170,7 +172,7 @@ export default function EmpresaLoginPage() {
                   size="lg"
                   disabled={isLoading || code.length !== TWO_FACTOR_CODE_LENGTH}
                 >
-                  {isLoading ? "Verificando..." : "Verificar"}
+                  {isLoading ? t.verifying : t.verify}
                 </Button>
 
                 <Button
@@ -180,7 +182,7 @@ export default function EmpresaLoginPage() {
                   onClick={backToCredentials}
                   disabled={isLoading}
                 >
-                  Volver
+                  {t.back}
                 </Button>
               </form>
             </CardContent>
@@ -192,22 +194,22 @@ export default function EmpresaLoginPage() {
                 <Building2 className="h-8 w-8 text-primary" />
               </div>
               <CardTitle className="text-2xl text-center">
-                Acceso Empresarial
+                {t.companyTitle}
               </CardTitle>
               <CardDescription className="text-center">
-                Ingresa las credenciales de tu empresa
+                {t.companyDescription}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Correo Corporativo</Label>
+                  <Label htmlFor="email">{t.companyEmail}</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="email"
                       type="email"
-                      placeholder="admin@empresa.com"
+                      placeholder={t.companyEmailPlaceholder}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="pl-10"
@@ -218,12 +220,12 @@ export default function EmpresaLoginPage() {
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Contraseña</Label>
+                    <Label htmlFor="password">{t.password}</Label>
                     <Link
                       href="/recuperar-password"
                       className="text-xs text-primary hover:underline"
                     >
-                      ¿Olvidaste tu contraseña?
+                      {t.forgotPassword}
                     </Link>
                   </div>
                   <div className="relative">
@@ -246,19 +248,19 @@ export default function EmpresaLoginPage() {
                   size="lg"
                   disabled={isLoading}
                 >
-                  {isLoading ? "Iniciando sesión..." : "Acceder al Panel"}
+                  {isLoading ? t.signingIn : t.accessPanel}
                 </Button>
               </form>
 
               <div className="mt-6 text-center text-sm text-muted-foreground">
-                ¿No tenés acceso?{" "}
+                {t.noAccessPrefix}
                 <a
                   href={`mailto:${FINGROW_CONTACT_EMAIL}`}
                   className="text-primary hover:underline"
                 >
-                  Contactá al equipo de FinGrow
-                </a>{" "}
-                para obtener credenciales empresariales.
+                  {t.contactLink}
+                </a>
+                {t.noAccessSuffix}
               </div>
             </CardContent>
           </Card>
@@ -267,21 +269,15 @@ export default function EmpresaLoginPage() {
         {/* Features */}
         <div className="mt-6 space-y-2">
           <p className="text-xs font-medium text-muted-foreground text-center mb-3">
-            Beneficios del Portal Empresarial:
+            {t.benefitsTitle}
           </p>
           <div className="grid gap-2 text-xs text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-              Métricas anónimas de bienestar financiero
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-              Análisis por departamento y tendencias
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-              Recomendaciones para mejorar el bienestar
-            </div>
+            {t.benefits.map((benefit) => (
+              <div key={benefit} className="flex items-center gap-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                {benefit}
+              </div>
+            ))}
           </div>
         </div>
       </div>

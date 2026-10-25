@@ -13,9 +13,12 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
 import { useAuth } from "@/lib/auth-context"
+import { useMessages } from "@/lib/i18n"
 import { isApiError, toastApiError, TWO_FACTOR_CODE_LENGTH, type TwoFactorChallenge } from "@/lib/api"
 
 export default function EmpleadoLoginPage() {
+  const messages = useMessages()
+  const t = messages.login
   const router = useRouter()
   const { login, completeTwoFactorLogin } = useAuth()
   const [email, setEmail] = useState("")
@@ -39,7 +42,7 @@ export default function EmpleadoLoginPage() {
 
       router.push("/dashboard")
     } catch (error) {
-      toastApiError(error, error instanceof Error ? error.message : "Intentá nuevamente.", { showCode: false })
+      toastApiError(error, error instanceof Error ? error.message : t.tryAgain, { showCode: false })
     } finally {
       setIsLoading(false)
     }
@@ -55,7 +58,7 @@ export default function EmpleadoLoginPage() {
       await completeTwoFactorLogin(challenge.challengeToken, code)
       router.push("/dashboard")
     } catch (error) {
-      toastApiError(error, "No pudimos verificar el código. Intentá nuevamente.", { showCode: false })
+      toastApiError(error, t.codeFailed, { showCode: false })
       setCode("")
 
       if (isApiError(error) && error.code === "Auth.DesafioInvalido") {
@@ -81,7 +84,7 @@ export default function EmpleadoLoginPage() {
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          Volver a inicio
+          {t.backHome}
         </Link>
 
         {/* Logo */}
@@ -89,7 +92,7 @@ export default function EmpleadoLoginPage() {
           <div className="flex flex-col items-center justify-center gap-3 mb-4">
             <Image
                 src="/9.png"
-                alt="FinGrow Logo"
+                alt={messages.home.logoAlt}
                 width={60}
                 height={40}
                 className="object-contain"
@@ -97,7 +100,7 @@ export default function EmpleadoLoginPage() {
             />
             <h1 className="text-4xl font-bold text-secondary-foreground">FinGrow</h1>
           </div>
-          <p className="text-muted-foreground">Portal de Empleados</p>
+          <p className="text-muted-foreground">{t.employeePortal}</p>
         </div>
 
         {/* Login Card */}
@@ -107,10 +110,8 @@ export default function EmpleadoLoginPage() {
               <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
                 <ShieldCheck className="h-8 w-8 text-primary" />
               </div>
-              <CardTitle className="text-2xl text-center">Verificación en dos pasos</CardTitle>
-              <CardDescription className="text-center">
-                Ingresá el código de 6 dígitos que muestra tu app de autenticación
-              </CardDescription>
+              <CardTitle className="text-2xl text-center">{t.twoFactorTitle}</CardTitle>
+              <CardDescription className="text-center">{t.twoFactorDescription}</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleVerifyCode} className="space-y-6">
@@ -138,11 +139,11 @@ export default function EmpleadoLoginPage() {
                   size="lg"
                   disabled={isLoading || code.length !== TWO_FACTOR_CODE_LENGTH}
                 >
-                  {isLoading ? "Verificando..." : "Verificar"}
+                  {isLoading ? t.verifying : t.verify}
                 </Button>
 
                 <Button type="button" variant="ghost" className="w-full" onClick={backToCredentials} disabled={isLoading}>
-                  Volver
+                  {t.back}
                 </Button>
               </form>
             </CardContent>
@@ -153,19 +154,19 @@ export default function EmpleadoLoginPage() {
               <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
                 <User className="h-8 w-8 text-primary"/>
               </div>
-              <CardTitle className="text-2xl text-center">Iniciar Sesión</CardTitle>
-              <CardDescription className="text-center">Ingresa tus credenciales para acceder a tu cuenta</CardDescription>
+              <CardTitle className="text-2xl text-center">{t.signInTitle}</CardTitle>
+              <CardDescription className="text-center">{t.signInDescription}</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Correo Electrónico</Label>
+                  <Label htmlFor="email">{t.email}</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="email"
                       type="email"
-                      placeholder="tu@email.com"
+                      placeholder={t.emailPlaceholder}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="pl-10"
@@ -176,9 +177,9 @@ export default function EmpleadoLoginPage() {
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Contraseña</Label>
+                    <Label htmlFor="password">{t.password}</Label>
                     <Link href="/recuperar-password" className="text-xs text-primary hover:underline">
-                      ¿Olvidaste tu contraseña?
+                      {t.forgotPassword}
                     </Link>
                   </div>
                   <div className="relative">
@@ -196,7 +197,7 @@ export default function EmpleadoLoginPage() {
                 </div>
 
                 <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-                  {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
+                  {isLoading ? t.signingIn : t.signIn}
                 </Button>
               </form>
             </CardContent>

@@ -17,6 +17,7 @@ import { setUnauthorizedHandler } from "@/lib/api/client"
 import { clearSession as clearStoredSession, saveSession } from "@/lib/api/session"
 import { isSessionActive, toSessionUser } from "@/lib/auth/session-user"
 import type { SessionUser, UserRole } from "@/lib/auth/types"
+import { currentMessages } from "@/lib/i18n/messages"
 
 interface AuthContextType {
   role: UserRole
@@ -85,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const user = toSessionUser(session)
 
     if (!user || !isSessionActive(user)) {
-      throw new Error("La sesión recibida no es válida")
+      throw new Error(currentMessages().login.invalidSession)
     }
 
     saveSession(user.role)

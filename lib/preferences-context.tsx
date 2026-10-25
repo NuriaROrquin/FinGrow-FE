@@ -32,6 +32,18 @@ interface PreferencesContextType {
 
 const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined)
 
+const supportedLanguages: readonly string[] = ["es", "en", "pt"] satisfies Language[]
+
+// Quien no inició sesión todavía no eligió idioma: la página de inicio y los logins usan el del
+// navegador si es uno de los de FinGrow.
+function browserLanguage(): Language | null {
+  const match = navigator.languages
+    .map((tag) => tag.slice(0, 2).toLowerCase())
+    .find((code) => supportedLanguages.includes(code))
+
+  return (match as Language | undefined) ?? null
+}
+
 export function PreferencesProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, isHydrated, role } = useAuth()
   const { setTheme } = useTheme()
@@ -53,7 +65,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 
     if (owner === "ninguno") {
       setPreferences(defaultPreferences)
-      setApplicationLanguage(null)
+      setApplicationLanguage(browserLanguage())
       setReadyFor(owner)
       return
     }
