@@ -1,6 +1,5 @@
 import { buildUrl } from "./config"
 import { ApiError, ClientErrorCodes, parseApiError } from "./errors"
-import { clearSession, loginPathForCurrentRole } from "./session"
 import { currentMessages } from "@/lib/i18n/messages"
 
 export interface RequestOptions {
@@ -22,7 +21,7 @@ let onUnauthorized: () => void = () => {
     return
   }
 
-  window.location.href = loginPathForCurrentRole()
+  window.location.href = "/"
 }
 
 export function setUnauthorizedHandler(handler: () => void): void {
@@ -93,7 +92,6 @@ async function request<TResponse>(
       return request<TResponse>(method, path, body, options, true)
     }
 
-    clearSession()
     onUnauthorized()
   }
 

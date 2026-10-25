@@ -24,11 +24,25 @@ Salvo el login, WhatsApp, Telegram y lo que se lista abajo, no hay llamadas real
 un bug, revisá si no es simplemente esto:
 
 - **`lib/auth-context.tsx`** (T-05, SCRUM-23; login de empresa: HU-46) mantiene la sesión real:
-`login()` llama a `POST /login/empleado` o `POST /login/empresa` según el rol, el backend
-responde con la cookie **HttpOnly** `fingrow-session` (que lleva el JWT) y un `SessionResponse`
-con `userId`, `companyId`, `fullName`, `role` y `expiresAt`. Al cargar la página se rehidrata
-con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve el token: en
-`localStorage` solo queda `fingrow-role`, para saber a qué login volver ante un 401.
+hay un solo login, en la portada (`components/home/login-form.tsx`): `login()` llama a
+`POST /login` sin rol, porque el email es único entre empleados y empresas y el backend lo
+resuelve. Responde con la cookie **HttpOnly** `fingrow-session` (que lleva el JWT) y un
+`SessionResponse` con `userId`, `companyId`, `fullName`, `role` y `expiresAt`; con el doble
+factor activo responde un desafío que se completa en `POST /login/2fa`. Con la sesión iniciada,
+`AuthenticatedRedirect` manda a cada rol a su panel. Al cargar la página se rehidrata con
+`GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve el token ni guarda
+el rol: un 401 vuelve siempre a la portada, y `/login/*` redirige ahí (`next.config.mjs`).
+- **Recuperar la contraseña (HU-72)**: el "¿La olvidaste?" de la portada lleva a
+  `/recuperar-password`, que pide el enlace con `POST /password-reset` (`lib/api/password-reset.ts`),
+  sin rol, igual que el login. La confirmación es la misma exista o no la cuenta: no muestres nada
+  distinto según la respuesta. El correo lleva a `/recuperar-password/restablecer?token=...`, que
+  valida el enlace al abrirlo y lo canjea con la contraseña nueva; al terminar se vuelve a la portada.
+- **Sesiones abiertas (HU-73)**: en Configuración → Seguridad, `components/security/active-sessions-card.tsx`
+  lista las sesiones reales del usuario, empleado o empresa (`GET /session/all`), y cierra una
+  (`DELETE /session/{id}`) o todas menos la actual (`DELETE /session/others`). Cuelgan de `/session`
+  porque el backend reconoce la sesión actual por la cookie de refresh, que solo viaja ahí. No hay
+  ubicación: el backend no la registra y la pantalla no inventa una ciudad. Un dispositivo cerrado
+  sigue entrando hasta que vence su access token y vuelve al login en el próximo refresh.
 - **Departamentos y empleados del panel de empresa** (HU-51, HU-54) usan la API real
   (`lib/api/company.ts`, `/api/company/departments` y `/api/company/employees`). El empleado se
   relaciona con su departamento por id. El alta devuelve una contraseña temporal que se muestra
@@ -64,6 +78,20 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   anterior (`previousPeriod = null`), con `isAnonymized` o sin cambios significativos se muestra un aviso
   en lugar de las listas. Los textos están en `lib/i18n` (`companyTrends`), con un texto por cada
   `CompanyTrendIndicator`: un indicador nuevo en el backend necesita su texto en los tres idiomas.
+  **Exportar el reporte de la empresa (HU-65)**: "Exportar reporte", en el encabezado del panel, se
+  habilita cuando terminó de cargar `/insights`. Al tocarlo pide `GET /api/company/metrics/report`
+  (`getCompanyMonthlyReport`, siempre el último mes con foto contra el anterior) y monta
+  `components/company/company-report-pdf-export.tsx`, que se captura con el mismo `lib/report-pdf.ts`
+  de HU-45. El PDF lleva el nombre de la empresa, los tres indicadores del mes (participación, puntaje
+  promedio con su nivel y cursos completados), los dos gráficos de evolución del panel
+  (`company-evolution-charts.tsx`, con los mismos datos de `GET /api/company/metrics` que ya pidió la
+  página: los meses ocultos por anonimato quedan en blanco), las tendencias (`TrendsContent` de la
+  tarjeta de HU-63) y
+  las mismas tarjetas de preocupaciones y recomendaciones que se ven en pantalla, con el estado de
+  `/insights` que ya tiene la página: la IA no se vuelve a llamar. Un indicador oculto llega en `null`
+  con su motivo (`CompanyReportValueStatus`) y el PDF muestra "Oculto" y por qué: no lo completes con
+  cero ni filtres nada en el front. Sin ningún mes cerrado no se genera el PDF y se avisa con un toast.
+  Los textos están en `lib/i18n` (`companyReportPdf`).
 - **Educación** (artículos y cursos) usa la API real. La pantalla de Inversiones abre el contenido
   de cada tipo de activo (HU-35, `components/investments/related-education-dialog.tsx`) y todo
   artículo o curso con `isInvestmentContent` muestra `components/education/investment-disclaimer.tsx`:
@@ -208,7 +236,7 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
 ## Arquitectura y estructura
 
 ```
-app/            Rutas (App Router): dashboard, login/empleado, login/empresa
+app/            Rutas (App Router): la portada con el login y dashboard
 components/ui/  Componentes shadcn — generados, no reescribir el estilo base a mano
 lib/            Contexts (auth, preferencias), utils y la capa de acceso HTTP (lib/api)
 hooks/          Hooks compartidos (use-mobile, use-toast)

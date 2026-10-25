@@ -18,18 +18,26 @@
 export { api, setUnauthorizedHandler, type RequestOptions } from "./client"
 export { ApiError, ClientErrorCodes, isApiError, parseApiError } from "./errors"
 export { toastApiError } from "./notify"
-export { clearSession, getRole, loginPathForCurrentRole, saveSession, type SessionRole } from "./session"
 export {
+  closeOtherSessions,
+  closeSession,
   getSession,
   isTwoFactorChallenge,
-  loginEmpleado,
-  loginEmpresa,
+  listSessions,
+  login,
   logout,
   verifyTwoFactorLogin,
+  type ActiveSessionDto,
   type LoginRequest,
   type SessionResponse,
   type TwoFactorChallenge,
 } from "./auth"
+export {
+  PASSWORD_RESET_INVALID_LINK,
+  requestPasswordReset,
+  resetPassword,
+  validatePasswordResetToken,
+} from "./password-reset"
 export {
   ADDRESS_MAX_LENGTH,
   changePassword,
@@ -73,6 +81,7 @@ export {
   getCompanyEducationMetrics,
   getCompanyInsights,
   getCompanyMetrics,
+  getCompanyMonthlyReport,
   getCompanyTrends,
   getCompanyProfile,
   getDepartmentMetrics,
@@ -91,6 +100,13 @@ export {
   type CompanyEducationMetricsResponse,
   type CompanyInsightsDto,
   type CompanyMetricsDto,
+  type CompanyMonthlyReportDto,
+  type CompanyReportIndicatorDto,
+  type CompanyReportValueStatus,
+  type CompanyTrendDto,
+  type CompanyTrendIndicator,
+  type CompanyTrendsDto,
+  type CompanyTrendUnit,
   type CompanyIndustry,
   type CompanyProfileDto,
   type CompanyPreferencesDto,

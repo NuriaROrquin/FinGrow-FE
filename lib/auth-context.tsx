@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation"
 import {
   getSession,
   isTwoFactorChallenge,
-  loginEmpleado,
-  loginEmpresa,
+  login as loginRequest,
   logout as logoutRequest,
   refreshSession,
   verifyTwoFactorLogin,
@@ -14,7 +13,6 @@ import {
   type TwoFactorChallenge,
 } from "@/lib/api/auth"
 import { setUnauthorizedHandler } from "@/lib/api/client"
-import { clearSession as clearStoredSession, saveSession } from "@/lib/api/session"
 import { isSessionActive, toSessionUser } from "@/lib/auth/session-user"
 import type { SessionUser, UserRole } from "@/lib/auth/types"
 import { currentMessages } from "@/lib/i18n/messages"
@@ -25,8 +23,8 @@ interface AuthContextType {
   userName: string
   isAuthenticated: boolean
   isHydrated: boolean
-  login: (email: string, password: string, role?: UserRole) => Promise<TwoFactorChallenge | null>
-  completeTwoFactorLogin: (challengeToken: string, code: string, role?: UserRole) => Promise<void>
+  login: (email: string, password: string) => Promise<TwoFactorChallenge | null>
+  completeTwoFactorLogin: (challengeToken: string, code: string) => Promise<void>
   logout: (redirectTo?: string) => Promise<void>
   refreshUser: () => Promise<void>
 }
@@ -64,15 +62,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (cancelled) return
 
         if (user && isSessionActive(user)) {
-          saveSession(user.role)
           setAuthState(createAuthenticatedState(user))
-        } else {
-          clearStoredSession()
         }
       })
-      .catch(() => {
-        if (!cancelled) clearStoredSession()
-      })
+      .catch(() => undefined)
       .finally(() => {
         if (!cancelled) setIsHydrated(true)
       })
@@ -89,13 +82,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error(currentMessages().login.invalidSession)
     }
 
-    saveSession(user.role)
     setAuthState(createAuthenticatedState(user))
   }
 
-const login = async (email: string, password: string, role: UserRole = "empleado") => {
-  const response =
-    role === "empresa" ? await loginEmpresa({ email, password }) : await loginEmpleado({ email, password })
+const login = async (email: string, password: string) => {
+  const response = await loginRequest({ email, password })
 
   if (isTwoFactorChallenge(response)) {
     return response
@@ -105,8 +96,8 @@ const login = async (email: string, password: string, role: UserRole = "empleado
   return null
 }
 
-const completeTwoFactorLogin = async (challengeToken: string, code: string, role: UserRole = "empleado") => {
-  startSession(await verifyTwoFactorLogin(challengeToken, code, role))
+const completeTwoFactorLogin = async (challengeToken: string, code: string) => {
+  startSession(await verifyTwoFactorLogin(challengeToken, code))
 }
 
   // El nombre viaja dentro del token: después de editar el perfil hay que renovar la sesión
@@ -117,7 +108,6 @@ const completeTwoFactorLogin = async (challengeToken: string, code: string, role
 
   const clearSession = useCallback(
     (redirectTo = "/") => {
-      clearStoredSession()
       setAuthState(unauthenticatedState)
       router.replace(redirectTo)
     },
@@ -149,7 +139,6 @@ const completeTwoFactorLogin = async (challengeToken: string, code: string, role
         if (cancelled) return
 
         if (user && isSessionActive(user)) {
-          saveSession(user.role)
           setAuthState(createAuthenticatedState(user))
           return
         }
