@@ -4,17 +4,15 @@ import type React from "react"
 
 import { useState } from "react"
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
 import { KeyRound, Mail, MailCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { parsePasswordResetRole, requestPasswordReset, toastApiError } from "@/lib/api"
+import { requestPasswordReset, toastApiError } from "@/lib/api"
 import { PasswordResetShell } from "./password-reset-shell"
 
 export function RequestPasswordResetForm() {
-  const role = parsePasswordResetRole(useSearchParams().get("tipo"))
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [sentTo, setSentTo] = useState<string | null>(null)
@@ -24,7 +22,7 @@ export function RequestPasswordResetForm() {
     setIsLoading(true)
 
     try {
-      await requestPasswordReset(role, email.trim())
+      await requestPasswordReset(email.trim())
       setSentTo(email.trim())
     } catch (error) {
       toastApiError(error, "No pudimos procesar el pedido. Intentá nuevamente.", { showCode: false })
@@ -34,7 +32,7 @@ export function RequestPasswordResetForm() {
   }
 
   return (
-    <PasswordResetShell role={role}>
+    <PasswordResetShell>
       {sentTo ? (
         <Card>
           <CardHeader className="space-y-1">
@@ -53,7 +51,7 @@ export function RequestPasswordResetForm() {
               ¿No llegó? Revisá la carpeta de spam o pedí otro enlace en un minuto.
             </p>
             <Button asChild className="w-full" size="lg">
-              <Link href={`/login/${role}`}>Volver al inicio de sesión</Link>
+              <Link href="/">Volver al inicio de sesión</Link>
             </Button>
             <Button type="button" variant="ghost" className="w-full" onClick={() => setSentTo(null)}>
               Usar otro email
@@ -74,13 +72,13 @@ export function RequestPasswordResetForm() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">{role === "empresa" ? "Correo Corporativo" : "Correo Electrónico"}</Label>
+                <Label htmlFor="email">Correo electrónico</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="email"
                     type="email"
-                    placeholder={role === "empresa" ? "admin@empresa.com" : "tu@email.com"}
+                    placeholder="nombre@empresa.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10"

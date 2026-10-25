@@ -29,7 +29,6 @@ export {
   type TwoFactorChallenge,
 } from "./auth"
 export {
-  parsePasswordResetRole,
   PASSWORD_RESET_INVALID_LINK,
   requestPasswordReset,
   resetPassword,

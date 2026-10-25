@@ -12,13 +12,11 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   isApiError,
-  parsePasswordResetRole,
   PASSWORD_MIN_LENGTH,
   PASSWORD_RESET_INVALID_LINK,
   resetPassword,
   toastApiError,
   validatePasswordResetToken,
-  type SessionRole,
 } from "@/lib/api"
 import { PasswordResetShell } from "./password-reset-shell"
 
@@ -27,9 +25,6 @@ type Step = "checking" | "invalid" | "form" | "done"
 export function ResetPasswordForm() {
   const searchParams = useSearchParams()
   const token = searchParams.get("token") ?? ""
-  // El `tipo` del enlace solo sirve para saber a qué formulario volver si el enlace no sirve; si es
-  // válido, manda el rol que devuelve el backend.
-  const [role, setRole] = useState<SessionRole>(() => parsePasswordResetRole(searchParams.get("tipo")))
   const [step, setStep] = useState<Step>(token ? "checking" : "invalid")
   const [password, setPassword] = useState("")
   const [confirmation, setConfirmation] = useState("")
@@ -41,9 +36,8 @@ export function ResetPasswordForm() {
     let ignore = false
 
     validatePasswordResetToken(token)
-      .then((tokenRole) => {
+      .then(() => {
         if (ignore) return
-        setRole(tokenRole)
         setStep("form")
       })
       .catch((error) => {
@@ -69,7 +63,7 @@ export function ResetPasswordForm() {
     setIsLoading(true)
 
     try {
-      setRole(await resetPassword(token, password))
+      await resetPassword(token, password)
       setStep("done")
     } catch (error) {
       if (isApiError(error) && error.code === PASSWORD_RESET_INVALID_LINK) {
@@ -84,7 +78,7 @@ export function ResetPasswordForm() {
   }
 
   return (
-    <PasswordResetShell role={role}>
+    <PasswordResetShell>
       {step === "checking" && (
         <Card>
           <CardContent className="py-12 flex flex-col items-center gap-3 text-muted-foreground">
@@ -107,10 +101,10 @@ export function ResetPasswordForm() {
           </CardHeader>
           <CardContent className="space-y-3">
             <Button asChild className="w-full" size="lg">
-              <Link href={`/recuperar-password?tipo=${role}`}>Pedir un enlace nuevo</Link>
+              <Link href="/recuperar-password">Pedir un enlace nuevo</Link>
             </Button>
             <Button asChild variant="ghost" className="w-full">
-              <Link href={`/login/${role}`}>Volver al inicio de sesión</Link>
+              <Link href="/">Volver al inicio de sesión</Link>
             </Button>
           </CardContent>
         </Card>
@@ -195,7 +189,7 @@ export function ResetPasswordForm() {
           </CardHeader>
           <CardContent>
             <Button asChild className="w-full" size="lg">
-              <Link href={`/login/${role}`}>Iniciar sesión</Link>
+              <Link href="/">Iniciar sesión</Link>
             </Button>
           </CardContent>
         </Card>
