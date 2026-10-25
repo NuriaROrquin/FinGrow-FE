@@ -46,6 +46,15 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   de `GET /api/company/metrics` y lo compara con el anterior. El backend manda el puntaje en
   `null` cuando hay menos de tres empleados con puntaje: la tarjeta lo muestra como oculto por
   anonimato, nunca como cero, y el gráfico de tendencia deja ese mes en blanco.
+  **Preocupaciones y recomendaciones (HU-61 y HU-64)**: la pestaña "Principales Preocupaciones"
+  (`components/company/financial-concerns-card.tsx`) y la tarjeta "Recomendaciones" de "Análisis"
+  (`company-recommendations-card.tsx`) son reales. La página pide una sola vez
+  `GET /api/company/metrics/insights` y les pasa el mismo estado a las dos: así muestran el mismo
+  mes y la IA no se consulta dos veces. Qué es una preocupación, su orden y cuáles se ocultan por
+  anonimato lo decide el backend: no filtres ni reordenes en el front. Con `isAnonymized` no hay
+  preocupaciones ni recomendaciones; si la IA no responde (`recommendationsAvailable = false`) las
+  preocupaciones se ven igual. Las recomendaciones van sin links (`showLinks={false}`): son acciones
+  que la empresa hace fuera de FinGrow. La tarjeta "Tendencias Positivas" sigue siendo mock (HU-63).
 - **Educación** (artículos y cursos) usa la API real. La pantalla de Inversiones abre el contenido
   de cada tipo de activo (HU-35, `components/investments/related-education-dialog.tsx`) y todo
   artículo o curso con `isInvestmentContent` muestra `components/education/investment-disclaimer.tsx`:
