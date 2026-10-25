@@ -6,7 +6,6 @@ import { BookOpenIcon, ClockIcon, GraduationCapIcon, NewspaperIcon } from "lucid
 import { relatedContentHref } from "@/components/education/back-target"
 import { formatDuration } from "@/components/education/format-duration"
 import { InvestmentDisclaimer } from "@/components/education/investment-disclaimer"
-import { investmentTypeTopics } from "@/components/investments/investment-type-topics"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -20,7 +19,6 @@ import {
   type InvestmentType,
 } from "@/lib/api"
 import { useMessages } from "@/lib/i18n"
-import { plural } from "@/lib/utils"
 
 type LoadState =
   | { status: "loading" }
@@ -31,7 +29,8 @@ const linkClassName =
   "block rounded-lg border p-3 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 
 function CourseLink({ course }: { course: CourseSummaryDto }) {
-  const labels = useMessages().labels
+  const messages = useMessages()
+  const labels = messages.labels
 
   return (
     <Link href={relatedContentHref("courses", course.slug)} className={linkClassName}>
@@ -51,7 +50,7 @@ function CourseLink({ course }: { course: CourseSummaryDto }) {
         </span>
         <span className="flex items-center gap-1">
           <BookOpenIcon className="size-3" />
-          {course.lessonCount} {plural(course.lessonCount, "lección", "lecciones")}
+          {messages.educationContent.lessons(course.lessonCount)}
         </span>
       </div>
     </Link>
@@ -59,13 +58,15 @@ function CourseLink({ course }: { course: CourseSummaryDto }) {
 }
 
 function ArticleLink({ article }: { article: ArticleSummaryDto }) {
+  const t = useMessages().educationContent
+
   return (
     <Link href={relatedContentHref("articles", article.slug)} className={linkClassName}>
       <span className="font-medium">{article.title}</span>
       <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{article.summary}</p>
       <span className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
         <ClockIcon className="size-3" />
-        {article.readingTimeMinutes} min de lectura
+        {t.readingTime(article.readingTimeMinutes)}
       </span>
     </Link>
   )
@@ -100,6 +101,7 @@ export function RelatedEducationDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const t = useMessages().investments
   const [state, setState] = useState<LoadState>({ status: "loading" })
   const [retryCount, setRetryCount] = useState(0)
 
@@ -116,28 +118,28 @@ export function RelatedEducationDialog({
       .then(([courses, articles]) => setState({ status: "loaded", courses, articles }))
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return
-        toastApiError(error, "No se pudo cargar el contenido educativo.")
+        toastApiError(error, t.relatedLoadFailed)
         setState({ status: "error" })
       })
 
     return () => controller.abort()
-  }, [type, retryCount])
+  }, [type, retryCount, t])
 
-  const topic = type ? investmentTypeTopics[type] : ""
+  const topic = type ? t.topics[type] : ""
   const isEmpty = state.status === "loaded" && state.courses.length === 0 && state.articles.length === 0
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Aprendé sobre {topic}</DialogTitle>
-          <DialogDescription>Cursos y artículos de FinGrow sobre este tipo de activo.</DialogDescription>
+          <DialogTitle>{t.relatedTitle(topic)}</DialogTitle>
+          <DialogDescription>{t.relatedDescription}</DialogDescription>
         </DialogHeader>
 
         <InvestmentDisclaimer />
 
         {state.status === "loading" && (
-          <div className="space-y-2" aria-label="Cargando contenido">
+          <div className="space-y-2" aria-label={t.loadingContent}>
             <Skeleton className="h-16 w-full" />
             <Skeleton className="h-16 w-full" />
             <Skeleton className="h-16 w-full" />
@@ -146,21 +148,21 @@ export function RelatedEducationDialog({
 
         {state.status === "error" && (
           <div className="space-y-3 py-2 text-center text-sm text-muted-foreground">
-            <p>No pudimos cargar el contenido. Probá de nuevo en un momento.</p>
+            <p>{t.contentFailed}</p>
             <Button variant="outline" size="sm" onClick={() => setRetryCount((count) => count + 1)}>
-              Reintentar
+              {t.retry}
             </Button>
           </div>
         )}
 
         {isEmpty && (
           <p className="py-2 text-center text-sm text-muted-foreground">
-            Todavía no hay contenido sobre {topic}. Mientras tanto, podés explorar el resto en Educación.
+            {t.noContent(topic)}
           </p>
         )}
 
         {state.status === "loaded" && state.courses.length > 0 && (
-          <Section icon={GraduationCapIcon} title="Cursos">
+          <Section icon={GraduationCapIcon} title={t.courses}>
             {state.courses.map((course) => (
               <CourseLink key={course.id} course={course} />
             ))}
@@ -168,7 +170,7 @@ export function RelatedEducationDialog({
         )}
 
         {state.status === "loaded" && state.articles.length > 0 && (
-          <Section icon={NewspaperIcon} title="Artículos">
+          <Section icon={NewspaperIcon} title={t.articles}>
             {state.articles.map((article) => (
               <ArticleLink key={article.id} article={article} />
             ))}
@@ -176,7 +178,7 @@ export function RelatedEducationDialog({
         )}
 
         <Button variant="outline" asChild>
-          <Link href="/dashboard/education">Ver todo en Educación</Link>
+          <Link href="/dashboard/education">{t.seeAllEducation}</Link>
         </Button>
       </DialogContent>
     </Dialog>

@@ -29,7 +29,9 @@ export function LearnByAssetTypeCard({
   heldTypes: InvestmentType[] | null
   onOpen: (type: InvestmentType) => void
 }) {
-  const typeLabels = useMessages().labels.investmentTypes
+  const messages = useMessages()
+  const t = messages.investments
+  const typeLabels = messages.labels.investmentTypes
   const otherTypes = INVESTMENT_TYPES.filter((type) => !heldTypes?.includes(type))
 
   return (
@@ -37,9 +39,9 @@ export function LearnByAssetTypeCard({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <LightbulbIcon className="size-5 text-primary" />
-          Aprendé sobre tus inversiones
+          {t.learnTitle}
         </CardTitle>
-        <CardDescription>Cursos y artículos según el tipo de activo</CardDescription>
+        <CardDescription>{t.learnDescription}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {heldTypes === null ? (
@@ -50,7 +52,7 @@ export function LearnByAssetTypeCard({
         ) : heldTypes.length > 0 ? (
           <>
             <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">En tu cartera</p>
+              <p className="text-xs font-medium text-muted-foreground">{t.inYourPortfolio}</p>
               {heldTypes.map((type) => (
                 <Button
                   key={type}
@@ -65,19 +67,19 @@ export function LearnByAssetTypeCard({
             </div>
             {otherTypes.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Otros tipos de activo</p>
+                <p className="text-xs font-medium text-muted-foreground">{t.otherTypes}</p>
                 <TypeChips types={otherTypes} onOpen={onOpen} />
               </div>
             )}
           </>
         ) : (
           <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">Elegí un tipo de activo para ver qué conviene saber antes de invertir.</p>
+            <p className="text-sm text-muted-foreground">{t.pickType}</p>
             <TypeChips types={INVESTMENT_TYPES} onOpen={onOpen} />
           </div>
         )}
         <Button variant="outline" size="sm" className="w-full bg-transparent" asChild>
-          <Link href="/dashboard/education">Ver más recursos educativos</Link>
+          <Link href="/dashboard/education">{t.moreResources}</Link>
         </Button>
       </CardContent>
     </Card>

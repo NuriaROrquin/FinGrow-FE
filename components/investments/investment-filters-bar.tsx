@@ -15,7 +15,7 @@ import {
   type InvestmentType,
   type SortDirection,
 } from "@/lib/api"
-import { useMessages } from "@/lib/i18n"
+import { useMessages, type Messages } from "@/lib/i18n"
 import type { Currency } from "@/lib/api/transactions"
 
 export interface InvestmentFilterValues {
@@ -48,22 +48,7 @@ export const defaultInvestmentFilters: InvestmentFilterValues = {
 
 const currencyOptions: Currency[] = ["ARS", "USD", "EUR", "BRL"]
 
-const quoteLabels: Record<InvestmentFilterValues["quote"], string> = {
-  all: "Todas",
-  quoted: "Solo cotizadas",
-  unquoted: "Solo sin cotizar",
-}
-
-const performanceLabels: Record<InvestmentFilterValues["performance"], string> = {
-  all: "Todos",
-  Gain: "Con ganancia",
-  Loss: "Con pérdida",
-}
-
-const sortDirectionLabels: Record<SortDirection, string> = {
-  Descending: "Descendente",
-  Ascending: "Ascendente",
-}
+export type InvestmentFiltersError = keyof Messages["investmentFilters"]["errors"]
 
 function toAmount(value: string): number | undefined {
   if (value.trim() === "") {
@@ -88,20 +73,20 @@ export function hasActiveFilters(values: InvestmentFilterValues): boolean {
   )
 }
 
-export function filtersError(values: InvestmentFilterValues): string | null {
+export function filtersError(values: InvestmentFilterValues): InvestmentFiltersError | null {
   if (values.purchasedFrom && values.purchasedTo && values.purchasedFrom > values.purchasedTo) {
-    return "La fecha de compra desde no puede ser posterior a la fecha hasta."
+    return "dateRange"
   }
 
   const minInvested = toAmount(values.minInvested)
   const maxInvested = toAmount(values.maxInvested)
 
   if ((minInvested ?? 0) < 0 || (maxInvested ?? 0) < 0) {
-    return "El capital no puede ser negativo."
+    return "negativeAmount"
   }
 
   if (minInvested !== undefined && maxInvested !== undefined && minInvested > maxInvested) {
-    return "El capital mínimo no puede ser mayor que el máximo."
+    return "amountRange"
   }
 
   return null
@@ -149,9 +134,11 @@ export function InvestmentFiltersBar({
   values: InvestmentFilterValues
   onChange: (values: InvestmentFilterValues) => void
   onClear: () => void
-  error: string | null
+  error: InvestmentFiltersError | null
 }) {
-  const labels = useMessages().labels
+  const messages = useMessages()
+  const labels = messages.labels
+  const t = messages.investmentFilters
   const update = <Key extends keyof InvestmentFilterValues>(key: Key, value: InvestmentFilterValues[Key]) =>
     onChange({ ...values, [key]: value })
 
@@ -159,13 +146,13 @@ export function InvestmentFiltersBar({
     <div className="mb-4 space-y-3">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <div className="sm:col-span-2">
-          <Field id="investment-filter-search" label="Buscar">
+          <Field id="investment-filter-search" label={t.search}>
             <div className="relative">
               <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="investment-filter-search"
                 className="pl-9"
-                placeholder="Nombre del activo"
+                placeholder={t.searchPlaceholder}
                 maxLength={ASSET_NAME_MAX_LENGTH}
                 value={values.search}
                 onChange={(event) => update("search", event.target.value)}
@@ -174,13 +161,13 @@ export function InvestmentFiltersBar({
           </Field>
         </div>
 
-        <Field id="investment-filter-type" label="Tipo de activo">
+        <Field id="investment-filter-type" label={t.type}>
           <Select value={values.type} onValueChange={(value) => update("type", value as InvestmentFilterValues["type"])}>
             <SelectTrigger id="investment-filter-type" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="all">{t.allTypes}</SelectItem>
               {Object.entries(labels.investmentTypes).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
@@ -190,7 +177,7 @@ export function InvestmentFiltersBar({
           </Select>
         </Field>
 
-        <Field id="investment-filter-currency" label="Moneda">
+        <Field id="investment-filter-currency" label={t.currency}>
           <Select
             value={values.currency}
             onValueChange={(value) => update("currency", value as InvestmentFilterValues["currency"])}
@@ -199,7 +186,7 @@ export function InvestmentFiltersBar({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
+              <SelectItem value="all">{t.allCurrencies}</SelectItem>
               {currencyOptions.map((currency) => (
                 <SelectItem key={currency} value={currency}>
                   {currency}
@@ -209,13 +196,13 @@ export function InvestmentFiltersBar({
           </Select>
         </Field>
 
-        <Field id="investment-filter-quote" label="Cotización">
+        <Field id="investment-filter-quote" label={t.quote}>
           <Select value={values.quote} onValueChange={(value) => update("quote", value as InvestmentFilterValues["quote"])}>
             <SelectTrigger id="investment-filter-quote" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(quoteLabels).map(([value, label]) => (
+              {Object.entries(t.quotes).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
                 </SelectItem>
@@ -224,7 +211,7 @@ export function InvestmentFiltersBar({
           </Select>
         </Field>
 
-        <Field id="investment-filter-performance" label="Resultado">
+        <Field id="investment-filter-performance" label={t.performance}>
           <Select
             value={values.performance}
             onValueChange={(value) => update("performance", value as InvestmentFilterValues["performance"])}
@@ -233,7 +220,7 @@ export function InvestmentFiltersBar({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(performanceLabels).map(([value, label]) => (
+              {Object.entries(t.performances).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
                 </SelectItem>
@@ -242,7 +229,7 @@ export function InvestmentFiltersBar({
           </Select>
         </Field>
 
-        <Field id="investment-filter-from" label="Compra desde">
+        <Field id="investment-filter-from" label={t.from}>
           <Input
             id="investment-filter-from"
             type="date"
@@ -251,7 +238,7 @@ export function InvestmentFiltersBar({
           />
         </Field>
 
-        <Field id="investment-filter-to" label="Compra hasta">
+        <Field id="investment-filter-to" label={t.to}>
           <Input
             id="investment-filter-to"
             type="date"
@@ -260,25 +247,25 @@ export function InvestmentFiltersBar({
           />
         </Field>
 
-        <Field id="investment-filter-min" label="Capital mínimo">
+        <Field id="investment-filter-min" label={t.minInvested}>
           <Input
             id="investment-filter-min"
             type="number"
             min="0"
             step="0.01"
-            placeholder="0,00"
+            placeholder={t.minPlaceholder}
             value={values.minInvested}
             onChange={(event) => update("minInvested", event.target.value)}
           />
         </Field>
 
-        <Field id="investment-filter-max" label="Capital máximo">
+        <Field id="investment-filter-max" label={t.maxInvested}>
           <Input
             id="investment-filter-max"
             type="number"
             min="0"
             step="0.01"
-            placeholder="Sin límite"
+            placeholder={t.noLimit}
             value={values.maxInvested}
             onChange={(event) => update("maxInvested", event.target.value)}
           />
@@ -286,7 +273,7 @@ export function InvestmentFiltersBar({
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
-        <Field id="investment-filter-sort" label="Ordenar por">
+        <Field id="investment-filter-sort" label={t.sortBy}>
           <Select value={values.sortBy} onValueChange={(value) => update("sortBy", value as InvestmentSortField)}>
             <SelectTrigger id="investment-filter-sort" className="w-[200px]">
               <SelectValue />
@@ -301,7 +288,7 @@ export function InvestmentFiltersBar({
           </Select>
         </Field>
 
-        <Field id="investment-filter-direction" label="Dirección">
+        <Field id="investment-filter-direction" label={t.direction}>
           <Select
             value={values.sortDirection}
             onValueChange={(value) => update("sortDirection", value as SortDirection)}
@@ -310,7 +297,7 @@ export function InvestmentFiltersBar({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(sortDirectionLabels).map(([value, label]) => (
+              {Object.entries(t.directions).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
                 </SelectItem>
@@ -322,12 +309,12 @@ export function InvestmentFiltersBar({
         {hasActiveFilters(values) && (
           <Button type="button" variant="ghost" onClick={onClear}>
             <XIcon className="size-4" />
-            Limpiar filtros
+            {t.clear}
           </Button>
         )}
       </div>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-sm text-destructive">{t.errors[error]}</p>}
     </div>
   )
 }
