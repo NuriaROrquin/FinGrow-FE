@@ -79,19 +79,18 @@ el rol: un 401 vuelve siempre a la portada, y `/login/*` redirige ahí (`next.co
   en lugar de las listas. Los textos están en `lib/i18n` (`companyTrends`), con un texto por cada
   `CompanyTrendIndicator`: un indicador nuevo en el backend necesita su texto en los tres idiomas.
   **Exportar el reporte de la empresa (HU-65)**: "Exportar reporte", en el encabezado del panel, se
-  habilita cuando terminó de cargar `/insights`. Al tocarlo pide `GET /api/company/metrics/report`
-  (`getCompanyMonthlyReport`, siempre el último mes con foto contra el anterior) y monta
-  `components/company/company-report-pdf-export.tsx`, que se captura con el mismo `lib/report-pdf.ts`
-  de HU-45. El PDF lleva el nombre de la empresa, los tres indicadores del mes (participación, puntaje
-  promedio con su nivel y cursos completados), los dos gráficos de evolución del panel
-  (`company-evolution-charts.tsx`, con los mismos datos de `GET /api/company/metrics` que ya pidió la
-  página: los meses ocultos por anonimato quedan en blanco), las tendencias (`TrendsContent` de la
-  tarjeta de HU-63) y
-  las mismas tarjetas de preocupaciones y recomendaciones que se ven en pantalla, con el estado de
-  `/insights` que ya tiene la página: la IA no se vuelve a llamar. Un indicador oculto llega en `null`
-  con su motivo (`CompanyReportValueStatus`) y el PDF muestra "Oculto" y por qué: no lo completes con
-  cero ni filtres nada en el front. Sin ningún mes cerrado no se genera el PDF y se avisa con un toast.
-  Los textos están en `lib/i18n` (`companyReportPdf`).
+  habilita cuando terminaron de cargar `/insights` y `/metrics`, y monta
+  `components/company/company-report-pdf-export.tsx`: el panel tal como se ve, fuera de pantalla, que
+  se captura con el mismo `lib/report-pdf.ts` de HU-45. Lleva el nombre de la empresa (el `userName` de
+  la sesión), las cuatro tarjetas de arriba con una nota del período de cada una (nómina de hoy,
+  participación del mes en curso, salud del último mes cerrado y cursos históricos), los dos gráficos
+  (`company-evolution-charts.tsx`, con los datos de `/metrics` que ya pidió la página), la tabla por
+  departamento sin las flechas de orden, las preocupaciones y la pestaña Análisis. Son los mismos
+  componentes del panel: lo que se oculta por anonimato lo decide el backend, igual que en pantalla.
+  Preocupaciones y recomendaciones usan el estado de `/insights` de la página (la IA no se vuelve a
+  llamar); las tarjetas, la tabla y las tendencias piden sus datos por su cuenta, y `lib/report-pdf.ts`
+  espera a que no quede ningún esqueleto (`data-slot="skeleton"`) antes de capturar. Si se agrega una
+  sección al panel, va también al PDF. Los textos están en `lib/i18n` (`companyReportPdf`).
 - **Educación** (artículos y cursos) usa la API real. La pantalla de Inversiones abre el contenido
   de cada tipo de activo (HU-35, `components/investments/related-education-dialog.tsx`) y todo
   artículo o curso con `isInvestmentContent` muestra `components/education/investment-disclaimer.tsx`:
