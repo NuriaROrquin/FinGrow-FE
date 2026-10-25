@@ -3,31 +3,23 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts"
-import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import {
-  UsersIcon,
-  TrendingUpIcon,
-  DollarSignIcon,
-  AlertCircleIcon,
-  CheckCircleIcon,
-  GraduationCapIcon,
-  BuildingIcon,
-} from "lucide-react"
+import { TrendingUpIcon, CheckCircleIcon, GraduationCapIcon, BuildingIcon } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ParticipationCards } from "@/components/company/participation-cards"
 import { DepartmentMetricsSection } from "@/components/company/department-metrics-section"
 import { EducationMetricsCard } from "@/components/company/education-metrics-card"
 import { FinancialHealthCard } from "@/components/company/financial-health-card"
-import { getCompanyMetricsComparison, isApiError, type CompanyMetricsComparisonDto } from "@/lib/api"
+import { FinancialConcernsCard } from "@/components/company/financial-concerns-card"
+import { CompanyRecommendationsCard } from "@/components/company/company-recommendations-card"
+import type { CompanyInsightsState } from "@/components/company/company-insights-state"
+import {
+  getCompanyInsights,
+  getCompanyMetricsComparison,
+  isApiError,
+  type CompanyMetricsComparisonDto,
+} from "@/lib/api"
 import { useEffect, useState } from "react"
-
-const topConcerns = [
-  { concern: "Ahorros de Emergencia", employees: 78, percentage: 38 },
-  { concern: "Planificación de Jubilación", employees: 65, percentage: 32 },
-  { concern: "Gestión de Deudas", employees: 52, percentage: 25 },
-  { concern: "Conocimiento de Inversiones", employees: 48, percentage: 23 },
-]
 
 const chartConfig = {
   active: {
@@ -83,6 +75,27 @@ export default function CompanyDashboardPage() {
       })
       .finally(() => {
         if (!controller.signal.aborted) setIsComparisonLoading(false)
+      })
+
+    return () => controller.abort()
+  }, [])
+
+  // Preocupaciones (HU-61) y recomendaciones (HU-64) salen de un solo pedido: las dos tarjetas
+  // muestran el mismo mes y la IA no se consulta dos veces.
+  const [insightsState, setInsightsState] = useState<CompanyInsightsState>({
+    insights: null,
+    isLoading: true,
+    hasFailed: false,
+  })
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    getCompanyInsights(controller.signal)
+      .then((insights) => setInsightsState({ insights, isLoading: false, hasFailed: false }))
+      .catch(() => {
+        if (controller.signal.aborted) return
+        setInsightsState({ insights: null, isLoading: false, hasFailed: true })
       })
 
     return () => controller.abort()
@@ -221,33 +234,7 @@ export default function CompanyDashboardPage() {
 
         {/* Top Concerns Tab */}
         <TabsContent value="concerns">
-          <Card>
-            <CardHeader>
-              <CardTitle>Principales Preocupaciones Financieras</CardTitle>
-              <CardDescription>Desafíos financieros más comunes entre empleados</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {topConcerns.map((concern, index) => (
-                  <div key={concern.concern} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
-                          {index + 1}
-                        </div>
-                        <span className="font-medium">{concern.concern}</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="font-semibold">{concern.employees} empleados</span>
-                        <span className="text-sm text-muted-foreground ml-2">({concern.percentage}%)</span>
-                      </div>
-                    </div>
-                    <Progress value={concern.percentage * 2.5} className="h-2" />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <FinancialConcernsCard {...insightsState} />
         </TabsContent>
 
         {/* Insights Tab */}
@@ -293,50 +280,7 @@ export default function CompanyDashboardPage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Recomendaciones</CardTitle>
-                <CardDescription>Acciones para mejorar el bienestar de empleados</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
-                    <AlertCircleIcon className="size-5 text-blue-600 dark:text-blue-500 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-blue-900 dark:text-blue-100">Enfocarse en Ahorros de Emergencia</p>
-                      <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                        38% de empleados necesitan ayuda para construir fondos de emergencia. Considerar talleres
-                        específicos.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
-                    <DollarSignIcon className="size-5 text-amber-600 dark:text-amber-500 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-amber-900 dark:text-amber-100">
-                        Apoyo en Planificación de Jubilación
-                      </p>
-                      <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                        Ofrecer sesiones informativas sobre planes de jubilación para mejorar la preparación.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
-                    <UsersIcon className="size-5 text-purple-600 dark:text-purple-500 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-purple-900 dark:text-purple-100">
-                        Aumentar Participación en Operaciones
-                      </p>
-                      <p className="text-sm text-purple-700 dark:text-purple-300 mt-1">
-                        El departamento de Operaciones tiene la menor participación. Programar presentaciones de equipo.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <CompanyRecommendationsCard {...insightsState} />
           </div>
         </TabsContent>
       </Tabs>
