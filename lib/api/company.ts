@@ -1,4 +1,5 @@
 import { api } from "./client"
+import type { FinancialRecommendationDto } from "./reports"
 import type { Currency } from "./transactions"
 
 export const DEPARTMENT_NAME_MAX_LENGTH = 120
@@ -279,6 +280,35 @@ export interface CompanyMetricsComparisonDto {
 
 export function getCompanyMetricsComparison(signal?: AbortSignal): Promise<CompanyMetricsComparisonDto> {
   return api.get<CompanyMetricsComparisonDto>("/api/company/metrics/comparison", { signal })
+}
+
+export type CompanyConcern = "LowSavings" | "ThinCushion" | "BudgetOverruns" | "MissedGoalContributions"
+
+export interface CompanyConcernDto {
+  concern: CompanyConcern
+  affectedEmployees: number
+  /** Sobre cuántos se midió: presupuesto y metas solo cuentan a quienes los tienen. */
+  evaluatedEmployees: number
+  /** Porcentaje (0 a 100) de afectados sobre evaluados. */
+  percentage: number
+}
+
+/** Preocupaciones (HU-61) y recomendaciones (HU-64) del último mes con foto. */
+export interface CompanyInsightsDto {
+  /** `YYYY-MM-DD`. `null` si todavía no hay ningún mes cerrado con foto. */
+  period: string | null
+  /** Menos empleados medidos que `minimumGroupSize`: no hay preocupaciones ni recomendaciones. */
+  isAnonymized: boolean
+  minimumGroupSize: number
+  measuredEmployees: number | null
+  /** Ordenadas de la que más pesa a la que menos; ya vienen sin las que afectan a pocos empleados. */
+  concerns: CompanyConcernDto[]
+  recommendations: FinancialRecommendationDto[]
+  recommendationsAvailable: boolean
+}
+
+export function getCompanyInsights(signal?: AbortSignal): Promise<CompanyInsightsDto> {
+  return api.get<CompanyInsightsDto>("/api/company/metrics/insights", { signal })
 }
 
 export type HealthBand = "Critical" | "Fragile" | "Stable" | "Healthy"
