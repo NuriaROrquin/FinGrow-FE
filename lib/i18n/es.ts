@@ -774,6 +774,48 @@ export const es = {
     savings: "Reporte de Ahorros",
     fileName: "reporte-financiero",
   },
+
+  companyTrends: {
+    title: "Tendencias",
+    description: "Qué mejoró y qué empeoró respecto del mes anterior",
+    comparedWith: (current: string, previous: string) => `${current} comparado con ${previous}`,
+    positiveTitle: "Tendencias positivas",
+    opportunitiesTitle: "Oportunidades de mejora",
+    noPositive: "Ningún indicador mejoró de forma significativa.",
+    noOpportunities: "Ningún indicador empeoró de forma significativa.",
+    noChanges: (current: string, previous: string) => `Sin cambios significativos entre ${previous} y ${current}.`,
+    loadFailed: "No se pudieron cargar las tendencias.",
+    noPeriod: "Todavía no hay meses cerrados para analizar.",
+    noPreviousPeriod: (month: string) =>
+      `Para ver tendencias hacen falta dos meses seguidos con datos. Por ahora solo está ${month}.`,
+    anonymized: (minimum: number) =>
+      `En alguno de los dos meses hubo menos de ${minimum} empleados activos. Las tendencias se muestran cuando hay suficientes para no identificar a nadie.`,
+    footer: "Se calculan a partir de indicadores agregados y anónimos. Un cambio menor a 2 puntos se considera estable.",
+    fromTo: (previous: string, current: string) => `De ${previous} a ${current}`,
+    indicators: {
+      ParticipationRate: "Participación",
+      AverageFinancialHealthScore: "Salud financiera promedio",
+      BudgetAdoption: "Empleados con presupuesto",
+      GoalAdoption: "Empleados con metas activas",
+      IntegrationAdoption: "Empleados con integraciones",
+      GoalsAchieved: "Metas alcanzadas",
+      CompletedCourses: "Cursos completados",
+      LowSavings: "Empleados con ahorro bajo",
+      ThinCushion: "Empleados con fondo de emergencia insuficiente",
+      BudgetOverruns: "Empleados que exceden su presupuesto",
+      MissedGoalContributions: "Empleados que no cubren la cuota de sus metas",
+    },
+    values: {
+      Percentage: (value: string) => `${value}%`,
+      Points: (value: string) => `${value}/100`,
+      Count: (value: string) => value,
+    },
+    changes: {
+      Percentage: (change: string) => `${change} p.p.`,
+      Points: (change: string) => `${change} puntos`,
+      Count: (change: string) => change,
+    },
+  },
 }
 
 export type Messages = typeof es

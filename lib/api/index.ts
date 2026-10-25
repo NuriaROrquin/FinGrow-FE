@@ -73,6 +73,8 @@ export {
   getCompanyEducationMetrics,
   getCompanyInsights,
   getCompanyMetrics,
+  getCompanyMetricsComparison,
+  getCompanyTrends,
   getCompanyProfile,
   getDepartmentMetrics,
   getCompanyPreferences,

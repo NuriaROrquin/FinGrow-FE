@@ -54,7 +54,16 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   anonimato lo decide el backend: no filtres ni reordenes en el front. Con `isAnonymized` no hay
   preocupaciones ni recomendaciones; si la IA no responde (`recommendationsAvailable = false`) las
   preocupaciones se ven igual. Las recomendaciones van sin links (`showLinks={false}`): son acciones
-  que la empresa hace fuera de FinGrow. La tarjeta "Tendencias Positivas" sigue siendo mock (HU-63).
+  que la empresa hace fuera de FinGrow.
+  **Tendencias (HU-63)**: la tarjeta "Tendencias" de "Análisis" (`components/company/company-trends-card.tsx`)
+  pide `GET /api/company/metrics/trends` por su cuenta (no usa la IA, así que no comparte el pedido de
+  `/insights`) y muestra dos bloques: tendencias positivas (verde) y oportunidades de mejora (ámbar). El
+  backend compara el último mes cerrado con el anterior y decide qué indicador entra, en qué lista, en
+  qué orden y cuáles se ocultan por anonimato: el front solo arma los textos con los números que recibe.
+  En las preocupaciones mejorar es bajar, por eso una flecha hacia abajo puede estar en verde. Sin mes
+  anterior (`previousPeriod = null`), con `isAnonymized` o sin cambios significativos se muestra un aviso
+  en lugar de las listas. Los textos están en `lib/i18n` (`companyTrends`), con un texto por cada
+  `CompanyTrendIndicator`: un indicador nuevo en el backend necesita su texto en los tres idiomas.
 - **Educación** (artículos y cursos) usa la API real. La pantalla de Inversiones abre el contenido
   de cada tipo de activo (HU-35, `components/investments/related-education-dialog.tsx`) y todo
   artículo o curso con `isInvestmentContent` muestra `components/education/investment-disclaimer.tsx`:

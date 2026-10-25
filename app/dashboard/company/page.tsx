@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { TrendingUpIcon, CheckCircleIcon, GraduationCapIcon, BuildingIcon } from "lucide-react"
+import { BuildingIcon } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ParticipationCards } from "@/components/company/participation-cards"
 import { DepartmentMetricsSection } from "@/components/company/department-metrics-section"
@@ -12,6 +12,7 @@ import { EducationMetricsCard } from "@/components/company/education-metrics-car
 import { FinancialHealthCard } from "@/components/company/financial-health-card"
 import { FinancialConcernsCard } from "@/components/company/financial-concerns-card"
 import { CompanyRecommendationsCard } from "@/components/company/company-recommendations-card"
+import { CompanyTrendsCard } from "@/components/company/company-trends-card"
 import type { CompanyInsightsState } from "@/components/company/company-insights-state"
 import {
   getCompanyMetrics,
@@ -250,45 +251,7 @@ export default function CompanyDashboardPage() {
         {/* Insights Tab */}
         <TabsContent value="insights">
           <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Tendencias Positivas</CardTitle>
-                <CardDescription>Áreas que muestran mejora</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-success/10 border border-success/20">
-                    <CheckCircleIcon className="size-5 text-success mt-0.5" />
-                    <div>
-                      <p className="font-medium">Mayor Participación</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        La participación de empleados ha crecido un 23% en los últimos 6 meses
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-success/10 border border-success/20">
-                    <TrendingUpIcon className="size-5 text-success mt-0.5" />
-                    <div>
-                      <p className="font-medium">Mejor Salud Financiera</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        El puntaje promedio de salud financiera aumentó de 62 a 73
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-success/10 border border-success/20">
-                    <GraduationCapIcon className="size-5 text-success mt-0.5" />
-                    <div>
-                      <p className="font-medium">Alta Finalización de Cursos</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        342 cursos completados con 87% de satisfacción
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <CompanyTrendsCard />
 
             <CompanyRecommendationsCard {...insightsState} />
           </div>
