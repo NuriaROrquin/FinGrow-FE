@@ -16,10 +16,11 @@ function department(overrides: Partial<DepartmentMetricsSummary> = {}): Departme
     departmentId: "1",
     departmentName: "Ventas",
     period: "2026-09-01",
-    employees: 8,
-    averageScore: 72.5,
-    participation: 75,
-    status: "Stable",
+    activeEmployees: 8,
+    participatingEmployees: 6,
+    participationRate: 75,
+    averageFinancialHealthScore: 72.5,
+    financialHealthBand: "Stable",
     isMetricsHidden: false,
     minimumGroupSize: 3,
     hiddenReason: null,
@@ -39,7 +40,13 @@ describe("DepartmentMetricsSection", () => {
 
   it("renders the real departments in the order sent by the backend, with formatted values", async () => {
     api.getDepartmentMetrics.mockResolvedValue([
-      department({ departmentId: "2", departmentName: "Zeta", employees: 11, averageScore: 66.666, participation: 80.5 }),
+      department({
+        departmentId: "2",
+        departmentName: "Zeta",
+        activeEmployees: 11,
+        averageFinancialHealthScore: 66.666,
+        participationRate: 80.5,
+      }),
       department({ departmentId: "1", departmentName: "Alfa" }),
     ])
     render(<DepartmentMetricsSection />)
@@ -74,15 +81,25 @@ describe("DepartmentMetricsSection", () => {
     ["Stable", "Estable"],
     ["Healthy", "Saludable"],
   ] as const)("translates %s as %s", async (status, label) => {
-    api.getDepartmentMetrics.mockResolvedValue([department({ status })])
+    api.getDepartmentMetrics.mockResolvedValue([department({ financialHealthBand: status })])
     render(<DepartmentMetricsSection />)
     expect(await screen.findByText(label)).not.toBeNull()
   })
 
   it("takes the status only from the backend, whatever the score", async () => {
     api.getDepartmentMetrics.mockResolvedValue([
-      department({ departmentId: "1", departmentName: "Alta", averageScore: 95, status: "Critical" }),
-      department({ departmentId: "2", departmentName: "Baja", averageScore: 10, status: "Healthy" }),
+      department({
+        departmentId: "1",
+        departmentName: "Alta",
+        averageFinancialHealthScore: 95,
+        financialHealthBand: "Critical",
+      }),
+      department({
+        departmentId: "2",
+        departmentName: "Baja",
+        averageFinancialHealthScore: 10,
+        financialHealthBand: "Healthy",
+      }),
     ])
     render(<DepartmentMetricsSection />)
 
@@ -93,7 +110,12 @@ describe("DepartmentMetricsSection", () => {
 
   it("shows a dash for null values instead of zeros", async () => {
     api.getDepartmentMetrics.mockResolvedValue([
-      department({ employees: null, averageScore: null, participation: null, status: null }),
+      department({
+        activeEmployees: null,
+        averageFinancialHealthScore: null,
+        participationRate: null,
+        financialHealthBand: null,
+      }),
     ])
     render(<DepartmentMetricsSection />)
 
@@ -109,10 +131,10 @@ describe("DepartmentMetricsSection", () => {
         departmentName: "Marketing",
         isMetricsHidden: true,
         hiddenReason: "No hay suficientes empleados para mostrar esta metrica de forma anonimizada.",
-        employees: 2,
-        averageScore: 50,
-        participation: 40,
-        status: "Fragile",
+        activeEmployees: 2,
+        averageFinancialHealthScore: 50,
+        participationRate: 40,
+        financialHealthBand: "Fragile",
       }),
     ])
     render(<DepartmentMetricsSection />)
@@ -129,7 +151,14 @@ describe("DepartmentMetricsSection", () => {
 
   it("shows a no-data state keeping the department name when there is no period", async () => {
     api.getDepartmentMetrics.mockResolvedValue([
-      department({ departmentName: "Soporte", period: null, employees: null, averageScore: null, participation: null, status: null }),
+      department({
+        departmentName: "Soporte",
+        period: null,
+        activeEmployees: null,
+        averageFinancialHealthScore: null,
+        participationRate: null,
+        financialHealthBand: null,
+      }),
     ])
     render(<DepartmentMetricsSection />)
 

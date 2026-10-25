@@ -33,7 +33,7 @@ function formatNumber(value: number, maximumFractionDigits: number) {
   return value.toLocaleString("es-AR", { maximumFractionDigits })
 }
 
-function HealthBandBadge({ band }: { band: HealthBand | null }) {
+export function HealthBandBadge({ band }: { band: HealthBand | null }) {
   const label = band ? healthBandLabels[band] : undefined
   if (!band || !label) return <span className="text-muted-foreground">{NOT_AVAILABLE}</span>
 
@@ -83,22 +83,26 @@ function DepartmentRow({ department }: { department: DepartmentMetricsSummary })
         </TableCell>
       ) : (
         <>
-          <TableCell>{department.employees === null ? NOT_AVAILABLE : formatNumber(department.employees, 0)}</TableCell>
           <TableCell>
-            {department.averageScore === null ? (
+            {department.activeEmployees === null ? NOT_AVAILABLE : formatNumber(department.activeEmployees, 0)}
+          </TableCell>
+          <TableCell>
+            {department.averageFinancialHealthScore === null ? (
               <span className="text-muted-foreground">{NOT_AVAILABLE}</span>
             ) : (
               <div className="flex items-center gap-2">
-                <span className="font-semibold whitespace-nowrap">{formatNumber(department.averageScore, 2)}/100</span>
-                <Progress value={department.averageScore} className="h-2 w-20" />
+                <span className="font-semibold whitespace-nowrap">
+                  {formatNumber(department.averageFinancialHealthScore, 2)}/100
+                </span>
+                <Progress value={department.averageFinancialHealthScore} className="h-2 w-20" />
               </div>
             )}
           </TableCell>
           <TableCell>
-            {department.participation === null ? NOT_AVAILABLE : `${formatNumber(department.participation, 2)}%`}
+            {department.participationRate === null ? NOT_AVAILABLE : `${formatNumber(department.participationRate, 2)}%`}
           </TableCell>
           <TableCell>
-            <HealthBandBadge band={department.status} />
+            <HealthBandBadge band={department.financialHealthBand} />
           </TableCell>
         </>
       )}

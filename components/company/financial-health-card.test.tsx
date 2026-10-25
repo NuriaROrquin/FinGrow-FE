@@ -17,6 +17,7 @@ function month(period: string, averageFinancialHealthScore: number | null): Comp
     period,
     fiscalYear: 2026,
     activeEmployees: 8,
+    participatingEmployees: 6,
     participationRate: 75,
     confirmedTransactions: 120,
     employeesWithBudget: 5,
@@ -24,6 +25,10 @@ function month(period: string, averageFinancialHealthScore: number | null): Comp
     goalsAchieved: 1,
     employeesWithIntegration: 3,
     averageFinancialHealthScore,
+    financialHealthBand: averageFinancialHealthScore === null ? null : "Stable",
+    isMetricsHidden: averageFinancialHealthScore === null,
+    minimumGroupSize: 3,
+    hiddenReason: averageFinancialHealthScore === null ? "hidden" : null,
   }
 }
 
@@ -36,6 +41,7 @@ describe("FinancialHealthCard", () => {
     render(<FinancialHealthCard />)
 
     expect(await screen.findByText("72,25/100")).not.toBeNull()
+    expect(screen.getByText("Estable")).not.toBeNull()
     expect(screen.getByText("+3,5 puntos vs. agosto")).not.toBeNull()
     expect(screen.getByText("Promedio de septiembre de 2026")).not.toBeNull()
   })
@@ -45,14 +51,19 @@ describe("FinancialHealthCard", () => {
     render(<FinancialHealthCard />)
 
     expect(await screen.findByText("69/100")).not.toBeNull()
+    expect(screen.getByText("Estable")).not.toBeNull()
     expect(screen.getByText("−1 punto vs. agosto")).not.toBeNull()
   })
 
   it("omits the change when the previous month has its score hidden", async () => {
-    api.getCompanyMetrics.mockResolvedValue([month("2026-08-01", null), month("2026-09-01", 64)])
+    api.getCompanyMetrics.mockResolvedValue([
+      month("2026-08-01", null),
+      month("2026-09-01", 64),
+    ])
     render(<FinancialHealthCard />)
 
     expect(await screen.findByText("64/100")).not.toBeNull()
+    expect(screen.getByText("Estable")).not.toBeNull()
     expect(screen.queryByText(/vs\./)).toBeNull()
   })
 
@@ -93,7 +104,8 @@ describe("FinancialHealthCard", () => {
     render(<FinancialHealthCard />)
 
     expect(await screen.findByText("55/100")).not.toBeNull()
-    expect(screen.queryByText("73/100")).toBeNull()
+    expect(screen.getByText("Estable")).not.toBeNull()
+    expect(screen.queryByText(/73\/100/)).toBeNull()
     expect(screen.queryByText(/este trimestre/)).toBeNull()
   })
 })
