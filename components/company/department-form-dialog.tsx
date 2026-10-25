@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { ManagerPicker } from "@/components/company/manager-picker"
+import { useMessages } from "@/lib/i18n"
 import {
   createDepartment,
   DEPARTMENT_DESCRIPTION_MAX_LENGTH,
@@ -60,6 +61,8 @@ export function DepartmentFormDialog({
   onOpenChange: (open: boolean) => void
   onSaved: (department: DepartmentDto) => void
 }) {
+  const messages = useMessages()
+  const t = messages.departments
   const isEditing = department !== undefined
   const [draft, setDraft] = useState<Draft>(() => toDraft(department))
   const [nameError, setNameError] = useState<string | null>(null)
@@ -79,7 +82,7 @@ export function DepartmentFormDialog({
 
     const name = draft.name.trim()
     if (!name) {
-      setNameError("El nombre del departamento es obligatorio.")
+      setNameError(t.nameRequired)
       return
     }
 
@@ -93,7 +96,7 @@ export function DepartmentFormDialog({
     try {
       const saved = isEditing ? await updateDepartment(department.id, payload) : await createDepartment(payload)
       onSaved(saved)
-      toast.success(isEditing ? `Departamento "${saved.name}" actualizado` : `Departamento "${saved.name}" creado`)
+      toast.success(isEditing ? t.updated(saved.name) : t.created(saved.name))
       onOpenChange(false)
     } catch (error) {
       if (isApiError(error) && error.code === "Department.NameTaken") {
@@ -106,7 +109,7 @@ export function DepartmentFormDialog({
         return
       }
 
-      toastApiError(error, isEditing ? "No se pudo actualizar el departamento." : "No se pudo crear el departamento.")
+      toastApiError(error, isEditing ? t.updateFailed : t.createFailed)
     } finally {
       setIsSaving(false)
     }
@@ -117,20 +120,20 @@ export function DepartmentFormDialog({
       <DialogContent className="sm:max-w-[500px]">
         <form onSubmit={handleSubmit} noValidate>
           <DialogHeader>
-            <DialogTitle>{isEditing ? "Editar departamento" : "Agregar departamento"}</DialogTitle>
+            <DialogTitle>{isEditing ? t.editTitle : t.addTitle}</DialogTitle>
             <DialogDescription>
-              {isEditing ? "Modificá los datos del departamento." : "Solo el nombre es obligatorio."}
+              {isEditing ? t.editDescription : t.addDescription}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="department-name">Nombre</Label>
+              <Label htmlFor="department-name">{t.name}</Label>
               <div className="relative">
                 <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="department-name"
-                  placeholder="Ventas, Marketing, IT..."
+                  placeholder={t.namePlaceholder}
                   maxLength={DEPARTMENT_NAME_MAX_LENGTH}
                   value={draft.name}
                   onChange={(event) => {
@@ -146,10 +149,10 @@ export function DepartmentFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="department-description">Descripción</Label>
+              <Label htmlFor="department-description">{t.description}</Label>
               <Textarea
                 id="department-description"
-                placeholder="Qué hace el departamento"
+                placeholder={t.descriptionPlaceholder}
                 maxLength={DEPARTMENT_DESCRIPTION_MAX_LENGTH}
                 value={draft.description}
                 onChange={(event) => setDraft({ ...draft, description: event.target.value })}
@@ -158,7 +161,7 @@ export function DepartmentFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="department-manager">Responsable</Label>
+              <Label htmlFor="department-manager">{t.manager}</Label>
               <ManagerPicker
                 id="department-manager"
                 employees={employees}
@@ -173,17 +176,17 @@ export function DepartmentFormDialog({
               {managerError ? (
                 <p className="text-sm text-destructive">{managerError}</p>
               ) : (
-                <p className="text-xs text-muted-foreground">Un empleado con acceso activo, de cualquier departamento.</p>
+                <p className="text-xs text-muted-foreground">{t.managerHint}</p>
               )}
             </div>
           </div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
-              Cancelar
+              {messages.common.cancel}
             </Button>
             <Button type="submit" disabled={isSaving}>
-              {isSaving ? "Guardando..." : isEditing ? "Guardar cambios" : "Agregar departamento"}
+              {isSaving ? t.saving : isEditing ? t.saveChanges : t.addSubmit}
             </Button>
           </DialogFooter>
         </form>

@@ -16,8 +16,8 @@ import {
   defaultEmployeeFilters,
   defaultEmployeeSort,
   filterEmployees,
-  filtersError,
   hasActiveFilters,
+  hasHiredRangeError,
   nextSort,
   NO_DEPARTMENT_FILTER,
   sortEmployees,
@@ -39,13 +39,14 @@ import {
   type DepartmentDto,
 } from "@/lib/api"
 import { formatDate, formatRelativeTime } from "@/lib/format"
-import { plural } from "@/lib/utils"
+import { useMessages } from "@/lib/i18n"
 
 function Placeholder() {
   return <span className="text-muted-foreground">—</span>
 }
 
 export default function EmpleadosPage() {
+  const t = useMessages().employees
   const [employees, setEmployees] = useState<CompanyEmployeeDto[] | null>(null)
   const [departments, setDepartments] = useState<DepartmentDto[]>([])
   const [loadFailed, setLoadFailed] = useState(false)
@@ -68,9 +69,9 @@ export default function EmpleadosPage() {
         return
       }
       setLoadFailed(true)
-      toastApiError(error, "No se pudieron cargar los empleados.")
+      toastApiError(error, t.loadFailed)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -88,7 +89,7 @@ export default function EmpleadosPage() {
       (employees ?? []).filter((employee) => employee.departmentId === departmentId).length
 
     return [
-      { id: NO_DEPARTMENT_FILTER, name: "Sin departamento", employees: countFor(null), isActive: true },
+      { id: NO_DEPARTMENT_FILTER, name: t.noDepartment, employees: countFor(null), isActive: true },
       ...[...departments]
         .sort((a, b) => a.name.localeCompare(b.name, "es", { sensitivity: "base" }))
         .map((department) => ({
@@ -98,7 +99,7 @@ export default function EmpleadosPage() {
           isActive: department.isActive,
         })),
     ]
-  }, [departments, employees])
+  }, [departments, employees, t])
 
   const replaceEmployee = (saved: CompanyEmployeeDto) => {
     setEmployees((current) => [...(current ?? []).filter((employee) => employee.id !== saved.id), saved])
@@ -113,9 +114,9 @@ export default function EmpleadosPage() {
     setReactivatingId(employee.id)
     try {
       replaceEmployee(await changeEmployeeAccess(employee.id, true))
-      toast.success(`Se reactivó el acceso de ${employee.fullName}`)
+      toast.success(t.reactivated(employee.fullName))
     } catch (error) {
-      toastApiError(error, "No se pudo reactivar el acceso.")
+      toastApiError(error, t.reactivateFailed)
     } finally {
       setReactivatingId(null)
     }
@@ -139,36 +140,34 @@ export default function EmpleadosPage() {
   const isFiltered = hasActiveFilters(filters)
 
   const listDescription = isLoading
-    ? "Cargando empleados..."
+    ? t.loading
     : isFiltered
-      ? `${visibleEmployees.length} de ${totalEmployees} ${plural(totalEmployees, "empleado", "empleados")}`
-      : `${totalEmployees} ${plural(totalEmployees, "empleado", "empleados")}`
+      ? t.filteredCount(visibleEmployees.length, totalEmployees)
+      : t.count(totalEmployees)
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Gestión de Empleados</h1>
-          <p className="text-muted-foreground mt-1">
-            Administrá los empleados que tienen acceso al beneficio de bienestar financiero
-          </p>
+          <h1 className="text-3xl font-bold text-foreground">{t.title}</h1>
+          <p className="text-muted-foreground mt-1">{t.subtitle}</p>
         </div>
         <Button className="gap-2 self-start sm:self-auto" onClick={() => setFormState({ open: true })} disabled={loadFailed}>
           <UserPlus className="h-4 w-4" />
-          Agregar Empleado
+          {t.add}
         </Button>
       </div>
 
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <FilterStatCard
-          label="Total Empleados"
+          label={t.total}
           value={totalEmployees}
           isLoading={isLoading}
           isSelected={filters.status === "all"}
           onSelect={() => setFilters((current) => ({ ...current, status: "all" }))}
         />
         <FilterStatCard
-          label="Empleados Activos"
+          label={t.active}
           value={activeEmployees}
           valueClassName="text-green-600"
           isLoading={isLoading}
@@ -176,7 +175,7 @@ export default function EmpleadosPage() {
           onSelect={() => selectStatus("active")}
         />
         <FilterStatCard
-          label="Empleados Inactivos"
+          label={t.inactive}
           value={inactiveEmployees}
           valueClassName="text-orange-600"
           isLoading={isLoading}
@@ -192,14 +191,14 @@ export default function EmpleadosPage() {
             departmentOptions={departmentOptions}
             onChange={setFilters}
             onClear={clearFilters}
-            error={filtersError(filters)}
+            error={hasHiredRangeError(filters)}
           />
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Empleados</CardTitle>
+          <CardTitle>{t.listTitle}</CardTitle>
           <CardDescription>{listDescription}</CardDescription>
         </CardHeader>
         <CardContent>
@@ -207,14 +206,14 @@ export default function EmpleadosPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <SortableTableHead label="Nombre" field="fullName" sort={sort} onSort={handleSort} />
-                  <SortableTableHead label="Email" field="email" sort={sort} onSort={handleSort} />
-                  <SortableTableHead label="Teléfono" field="phoneNumber" sort={sort} onSort={handleSort} />
-                  <SortableTableHead label="Departamento" field="departmentName" sort={sort} onSort={handleSort} />
-                  <SortableTableHead label="Fecha Alta" field="hiredOn" sort={sort} onSort={handleSort} />
-                  <SortableTableHead label="Último Ingreso" field="lastLoginAt" sort={sort} onSort={handleSort} />
-                  <SortableTableHead label="Estado" field="isActive" sort={sort} onSort={handleSort} />
-                  <TableHead className="text-right">Acciones</TableHead>
+                  <SortableTableHead label={t.columnName} field="fullName" sort={sort} onSort={handleSort} />
+                  <SortableTableHead label={t.columnEmail} field="email" sort={sort} onSort={handleSort} />
+                  <SortableTableHead label={t.columnPhone} field="phoneNumber" sort={sort} onSort={handleSort} />
+                  <SortableTableHead label={t.columnDepartment} field="departmentName" sort={sort} onSort={handleSort} />
+                  <SortableTableHead label={t.columnHiredOn} field="hiredOn" sort={sort} onSort={handleSort} />
+                  <SortableTableHead label={t.columnLastLogin} field="lastLoginAt" sort={sort} onSort={handleSort} />
+                  <SortableTableHead label={t.columnStatus} field="isActive" sort={sort} onSort={handleSort} />
+                  <TableHead className="text-right">{t.columnActions}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -229,9 +228,9 @@ export default function EmpleadosPage() {
                 ) : loadFailed ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                      <p>No pudimos cargar los empleados.</p>
+                      <p>{t.listLoadFailed}</p>
                       <Button variant="outline" size="sm" className="mt-3" onClick={() => void loadStaff()}>
-                        Reintentar
+                        {t.retry}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -239,12 +238,12 @@ export default function EmpleadosPage() {
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       {totalEmployees === 0 ? (
-                        "Todavía no diste de alta a ningún empleado"
+                        t.empty
                       ) : (
                         <>
-                          <p>Ningún empleado coincide con los filtros.</p>
+                          <p>{t.noMatches}</p>
                           <Button variant="outline" size="sm" className="mt-3" onClick={clearFilters}>
-                            Limpiar filtros
+                            {t.clearFilters}
                           </Button>
                         </>
                       )}
@@ -262,7 +261,7 @@ export default function EmpleadosPage() {
                         {employee.lastLoginAt ? (
                           formatRelativeTime(employee.lastLoginAt)
                         ) : (
-                          <span className="text-muted-foreground">Nunca</span>
+                          <span className="text-muted-foreground">{t.never}</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -273,10 +272,10 @@ export default function EmpleadosPage() {
                             onCheckedChange={(checked) =>
                               checked ? void reactivate(employee) : setEmployeeToDeactivate(employee)
                             }
-                            aria-label={`${employee.isActive ? "Desactivar" : "Reactivar"} el acceso de ${employee.fullName}`}
+                            aria-label={employee.isActive ? t.deactivateAccessAria(employee.fullName) : t.reactivateAccessAria(employee.fullName)}
                           />
                           <span className={employee.isActive ? "text-sm" : "text-sm text-muted-foreground"}>
-                            {employee.isActive ? "Activo" : "Inactivo"}
+                            {employee.isActive ? t.statusActive : t.statusInactive}
                           </span>
                         </div>
                       </TableCell>
@@ -286,8 +285,8 @@ export default function EmpleadosPage() {
                             variant="ghost"
                             size="icon"
                             onClick={() => setFormState({ open: true, employee })}
-                            title="Editar"
-                            aria-label={`Editar ${employee.fullName}`}
+                            title={t.edit}
+                            aria-label={t.editAria(employee.fullName)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -295,8 +294,8 @@ export default function EmpleadosPage() {
                             variant="ghost"
                             size="icon"
                             onClick={() => setEmployeeToDelete(employee)}
-                            title="Eliminar"
-                            aria-label={`Eliminar ${employee.fullName}`}
+                            title={t.delete}
+                            aria-label={t.deleteAria(employee.fullName)}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>

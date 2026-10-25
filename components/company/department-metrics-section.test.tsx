@@ -10,6 +10,10 @@ const api = vi.hoisted(() => ({
 }))
 
 vi.mock("@/lib/api", () => api)
+vi.mock("@/lib/i18n", async () => {
+  const { es } = await import("@/lib/i18n/es")
+  return { useMessages: () => es }
+})
 
 function department(overrides: Partial<DepartmentMetricsSummary> = {}): DepartmentMetricsSummary {
   return {

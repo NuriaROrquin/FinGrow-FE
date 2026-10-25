@@ -20,34 +20,26 @@ import {
   type CompanyMetricsDto,
 } from "@/lib/api"
 import { getCompanyInsights } from "@/lib/api/company"
+import { formatDateText, formatNumber } from "@/lib/format"
+import { useMessages } from "@/lib/i18n"
 import { useEffect, useState } from "react"
 
-const chartConfig = {
-  active: {
-    label: "Tasa de participación",
-    color: "#8b5cf6",
-  },
-  enrolled: {
-    label: "Empleados participantes",
-    color: "#a78bfa",
-  },
-  score: {
-    label: "Puntaje de Salud",
-    color: "#8b5cf6",
-  },
-}
-
 function formatPeriod(period: string): string {
-  const [year, month, day] = period.split("-").map(Number)
-  const label = new Intl.DateTimeFormat("es-AR", { month: "short" }).format(new Date(year, month - 1, day))
-  return label.charAt(0).toLocaleUpperCase("es-AR") + label.slice(1)
+  const label = formatDateText(period, { month: "short" })
+  return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
 function formatRate(rate: number): string {
-  return `${rate.toLocaleString("es-AR", { maximumFractionDigits: 1 })}%`
+  return `${formatNumber(rate, { maximumFractionDigits: 1 })}%`
 }
 
 export default function CompanyDashboardPage() {
+  const t = useMessages().companyPanel
+  const chartConfig = {
+    active: { label: t.chartParticipationRate, color: "#8b5cf6" },
+    enrolled: { label: t.chartParticipatingEmployees, color: "#a78bfa" },
+    score: { label: t.chartHealthScore, color: "#8b5cf6" },
+  }
   const [metrics, setMetrics] = useState<CompanyMetricsDto[]>([])
   const [comparisonError, setComparisonError] = useState<string | null>(null)
   const [isComparisonLoading, setIsComparisonLoading] = useState(true)
@@ -62,16 +54,16 @@ export default function CompanyDashboardPage() {
 
         if (isApiError(error)) {
           if (error.status === 400) {
-            setComparisonError("Se necesitan al menos dos períodos con datos para mostrar la evolución.")
+            setComparisonError(t.needTwoPeriods)
           } else if (error.status === 403) {
-            setComparisonError(error.description || "No tenés permiso para consultar estas métricas.")
+            setComparisonError(error.description || t.noPermission)
           } else if (error.status === 503) {
-            setComparisonError("Las métricas no están disponibles para preservar el anonimato de grupos pequeños.")
+            setComparisonError(t.metricsAnonymized)
           } else {
             setComparisonError(error.description)
           }
         } else {
-          setComparisonError("No se pudieron cargar las métricas de participación y bienestar.")
+          setComparisonError(t.metricsLoadFailed)
         }
       })
       .finally(() => {
@@ -79,7 +71,7 @@ export default function CompanyDashboardPage() {
       })
 
     return () => controller.abort()
-  }, [])
+  }, [t])
 
   // Preocupaciones (HU-61) y recomendaciones (HU-64) salen de un solo pedido: las dos tarjetas
   // muestran el mismo mes y la IA no se consulta dos veces.
@@ -121,8 +113,8 @@ export default function CompanyDashboardPage() {
           <BuildingIcon className="size-6" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-balance">Panel Empresarial</h1>
-          <p className="text-muted-foreground mt-1">Resumen de bienestar financiero de empleados</p>
+          <h1 className="text-3xl font-bold text-balance">{t.title}</h1>
+          <p className="text-muted-foreground mt-1">{t.subtitle}</p>
         </div>
       </div>
 
@@ -139,8 +131,8 @@ export default function CompanyDashboardPage() {
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Participación de Empleados</CardTitle>
-            <CardDescription>Usuarios activos vs empleados inscritos en el tiempo</CardDescription>
+            <CardTitle>{t.participationTitle}</CardTitle>
+            <CardDescription>{t.participationDescription}</CardDescription>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             {isComparisonLoading ? (
@@ -149,7 +141,7 @@ export default function CompanyDashboardPage() {
               <p className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">{comparisonError}</p>
             ) : periods.length === 0 ? (
               <p className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
-                No hay períodos para mostrar.
+                {t.noPeriods}
               </p>
             ) : (
               <ChartContainer config={chartConfig} className="h-[300px] w-full min-w-[300px]">
@@ -163,7 +155,7 @@ export default function CompanyDashboardPage() {
                       <ChartTooltipContent
                         formatter={(value, name) => {
                           if (typeof value !== "number") return "—"
-                          return name === chartConfig.enrolled.label ? value.toLocaleString("es-AR") : formatRate(value)
+                          return name === chartConfig.enrolled.label ? formatNumber(value) : formatRate(value)
                         }}
                       />
                     }
@@ -191,8 +183,8 @@ export default function CompanyDashboardPage() {
 
         <Card className="w-full">
           <CardHeader>
-            <CardTitle>Tendencia de Salud Financiera</CardTitle>
-            <CardDescription>Puntaje promedio de salud financiera de empleados</CardDescription>
+            <CardTitle>{t.healthTrendTitle}</CardTitle>
+            <CardDescription>{t.healthTrendDescription}</CardDescription>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             {isComparisonLoading ? (
@@ -201,11 +193,11 @@ export default function CompanyDashboardPage() {
               <p className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">{comparisonError}</p>
             ) : periods.length === 0 ? (
               <p className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
-                No hay períodos para mostrar.
+                {t.noPeriods}
               </p>
             ) : financialHealthChartData.every(({ score }) => score === null) ? (
               <p className="flex h-[300px] items-center justify-center text-center text-sm text-muted-foreground">
-                El puntaje se oculta en los meses con pocos empleados con actividad, para no identificar a nadie.
+                {t.scoreHiddenAll}
               </p>
             ) : (
               <ChartContainer config={chartConfig} className="h-[300px] w-full min-w-[300px]">
@@ -214,7 +206,13 @@ export default function CompanyDashboardPage() {
                   <XAxis dataKey="month" />
                   <YAxis domain={[0, 100]} />
                   <ChartTooltip
-                    content={<ChartTooltipContent formatter={(value) => typeof value === "number" ? `${value.toLocaleString("es-AR", { maximumFractionDigits: 2 })}/100` : "Oculto"} />}
+                    content={
+                      <ChartTooltipContent
+                        formatter={(value) =>
+                          typeof value === "number" ? `${formatNumber(value, { maximumFractionDigits: 2 })}/100` : t.hidden
+                        }
+                      />
+                    }
                     cursor={{ stroke: "rgba(0, 0, 0, 0.2)" }}
                   />
                   <Line
@@ -233,9 +231,9 @@ export default function CompanyDashboardPage() {
       {/* Tabs for detailed views */}
       <Tabs defaultValue="departments" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="departments">Por Departamento</TabsTrigger>
-          <TabsTrigger value="concerns">Principales Preocupaciones</TabsTrigger>
-          <TabsTrigger value="insights">Análisis</TabsTrigger>
+          <TabsTrigger value="departments">{t.tabDepartments}</TabsTrigger>
+          <TabsTrigger value="concerns">{t.tabConcerns}</TabsTrigger>
+          <TabsTrigger value="insights">{t.tabInsights}</TabsTrigger>
         </TabsList>
 
         {/* Departments Tab */}

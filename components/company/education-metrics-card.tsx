@@ -10,6 +10,8 @@ import {
   toastApiError,
   type CompanyEducationMetricsResponse,
 } from "@/lib/api"
+import { formatNumber } from "@/lib/format"
+import { useMessages } from "@/lib/i18n"
 
 const ANONYMIZED_ERROR_CODE = "Metrics.Anonymized"
 
@@ -41,14 +43,15 @@ function toEducationMetrics(value: unknown): CompanyEducationMetricsResponse | n
 }
 
 function formatCount(value: number) {
-  return value.toLocaleString("es-AR")
+  return formatNumber(value)
 }
 
 function formatPercentage(value: number) {
-  return `${value.toLocaleString("es-AR", { maximumFractionDigits: 1 })}%`
+  return `${formatNumber(value, { maximumFractionDigits: 1 })}%`
 }
 
 export function EducationMetricsCard() {
+  const t = useMessages().companyPanel
   const [state, setState] = useState<EducationMetricsState>({ status: "loading" })
 
   useEffect(() => {
@@ -68,16 +71,16 @@ export function EducationMetricsCard() {
         }
 
         setState({ status: "error" })
-        toastApiError(error, "No se pudieron cargar las métricas de cursos.")
+        toastApiError(error, t.educationLoadFailed)
       })
 
     return () => controller.abort()
-  }, [])
+  }, [t])
 
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardDescription>Cursos Completados</CardDescription>
+        <CardDescription>{t.completedCourses}</CardDescription>
         <CardTitle className="text-2xl">
           {state.status === "loading" ? (
             <Skeleton className="h-8 w-20" />
@@ -91,32 +94,30 @@ export function EducationMetricsCard() {
       <CardContent>
         {state.status === "loading" && <Skeleton className="h-5 w-full" />}
 
-        {state.status === "error" && <p className="text-sm text-muted-foreground">No disponible</p>}
+        {state.status === "error" && <p className="text-sm text-muted-foreground">{t.notAvailable}</p>}
 
         {state.status === "noCourses" && (
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <GraduationCapIcon className="size-4" />
-            <span>No hay cursos completados.</span>
+            <span>{t.noCompletedCourses}</span>
           </div>
         )}
 
         {state.status === "anonymized" && (
           <div className="flex items-start gap-1 text-sm text-muted-foreground">
             <ShieldCheckIcon className="size-4 mt-0.5 shrink-0" />
-            <span>
-              No hay suficientes empleados activos para mostrar esta métrica de forma anonimizada.
-            </span>
+            <span>{t.educationAnonymized}</span>
           </div>
         )}
 
         {state.status === "ready" && (
           <div className="space-y-1 text-sm text-muted-foreground">
             {state.metrics.satisfactionPercentage !== null && (
-              <p>{formatPercentage(state.metrics.satisfactionPercentage)} de satisfacción</p>
+              <p>{t.satisfaction(formatPercentage(state.metrics.satisfactionPercentage))}</p>
             )}
             <div className="flex items-center gap-1">
               <GraduationCapIcon className="size-4" />
-              <span>{formatCount(state.metrics.last30DaysCompletedCourses)} completados en los últimos 30 días</span>
+              <span>{t.completedLast30Days(formatCount(state.metrics.last30DaysCompletedCourses))}</span>
             </div>
           </div>
         )}

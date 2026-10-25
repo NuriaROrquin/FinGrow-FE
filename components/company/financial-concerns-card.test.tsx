@@ -1,8 +1,13 @@
 import { cleanup, render, screen, within } from "@testing-library/react"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { CompanyInsightsDto } from "@/lib/api"
 import { FinancialConcernsCard } from "./financial-concerns-card"
+
+vi.mock("@/lib/i18n", async () => {
+  const { es } = await import("@/lib/i18n/es")
+  return { useMessages: () => es }
+})
 
 function insights(overrides: Partial<CompanyInsightsDto> = {}): CompanyInsightsDto {
   return {
