@@ -40,7 +40,8 @@ describe("FinancialHealthCard", () => {
     api.getCompanyMetrics.mockResolvedValue([month("2026-09-01", 72.25), month("2026-08-01", 68.75)])
     render(<FinancialHealthCard />)
 
-    expect(await screen.findByText("72,25/100 · Estable")).not.toBeNull()
+    expect(await screen.findByText("72,25/100")).not.toBeNull()
+    expect(screen.getByText("Estable")).not.toBeNull()
     expect(screen.getByText("+3,5 puntos vs. agosto")).not.toBeNull()
     expect(screen.getByText("Promedio de septiembre de 2026")).not.toBeNull()
   })
@@ -49,7 +50,8 @@ describe("FinancialHealthCard", () => {
     api.getCompanyMetrics.mockResolvedValue([month("2026-08-01", 70), month("2026-09-01", 69)])
     render(<FinancialHealthCard />)
 
-    expect(await screen.findByText("69/100 · Estable")).not.toBeNull()
+    expect(await screen.findByText("69/100")).not.toBeNull()
+    expect(screen.getByText("Estable")).not.toBeNull()
     expect(screen.getByText("−1 punto vs. agosto")).not.toBeNull()
   })
 
@@ -60,7 +62,8 @@ describe("FinancialHealthCard", () => {
     ])
     render(<FinancialHealthCard />)
 
-    expect(await screen.findByText("64/100 · Estable")).not.toBeNull()
+    expect(await screen.findByText("64/100")).not.toBeNull()
+    expect(screen.getByText("Estable")).not.toBeNull()
     expect(screen.queryByText(/vs\./)).toBeNull()
   })
 
@@ -100,7 +103,8 @@ describe("FinancialHealthCard", () => {
     api.getCompanyMetrics.mockResolvedValue([month("2026-09-01", 55)])
     render(<FinancialHealthCard />)
 
-    expect(await screen.findByText("55/100 · Estable")).not.toBeNull()
+    expect(await screen.findByText("55/100")).not.toBeNull()
+    expect(screen.getByText("Estable")).not.toBeNull()
     expect(screen.queryByText(/73\/100/)).toBeNull()
     expect(screen.queryByText(/este trimestre/)).toBeNull()
   })
