@@ -202,15 +202,6 @@ export default function EmpleadoLoginPage() {
             </CardContent>
           </Card>
         )}
-
-        {/* Demo Info */}
-        <Card className="mt-4 bg-muted/50">
-          <CardContent className="pt-6">
-            <p className="text-xs text-muted-foreground text-center">
-              <strong>Demo:</strong> Usa cualquier email y contraseña para acceder
-            </p>
-          </CardContent>
-        </Card>
       </div>
     </div>
   )
