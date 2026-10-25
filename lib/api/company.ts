@@ -254,32 +254,34 @@ export interface CompanyMetricsDto {
   fiscalYear: number
   activeEmployees: number
   participationRate: number | null
-  confirmedTransactions: number
-  employeesWithBudget: number
-  employeesWithActiveGoal: number
-  goalsAchieved: number
-  employeesWithIntegration: number
+  participatingEmployees: number | null
+  confirmedTransactions: number | null
+  employeesWithBudget: number | null
+  employeesWithActiveGoal: number | null
+  goalsAchieved: number | null
+  employeesWithIntegration: number | null
   averageFinancialHealthScore: number | null
+  financialHealthBand: HealthBand | null
+  isMetricsHidden: boolean
+  minimumGroupSize: number
+  hiddenReason: string | null
 }
 
-export function getCompanyMetrics(signal?: AbortSignal): Promise<CompanyMetricsDto[]> {
-  return api.get<CompanyMetricsDto[]>("/api/company/metrics", { signal })
+export type CompanyMetricsQuery = {
+  fromDate?: string
+  toDate?: string
 }
 
-export interface CompanyMetricsComparisonPeriodDto {
-  period: string
-  participationRate: number | null
-  averageFinancialHealthScore: number | null
-}
+export function getCompanyMetrics(
+  query: CompanyMetricsQuery = {},
+  signal?: AbortSignal,
+): Promise<CompanyMetricsDto[]> {
+  const params = new URLSearchParams()
+  if (query.fromDate) params.set("fromDate", query.fromDate)
+  if (query.toDate) params.set("toDate", query.toDate)
+  const search = params.toString()
 
-export interface CompanyMetricsComparisonDto {
-  periods: CompanyMetricsComparisonPeriodDto[]
-  participationRateChange: number | null
-  averageFinancialHealthScoreChange: number | null
-}
-
-export function getCompanyMetricsComparison(signal?: AbortSignal): Promise<CompanyMetricsComparisonDto> {
-  return api.get<CompanyMetricsComparisonDto>("/api/company/metrics/comparison", { signal })
+  return api.get<CompanyMetricsDto[]>(`/api/company/metrics${search ? `?${search}` : ""}`, { signal })
 }
 
 export type CompanyConcern = "LowSavings" | "ThinCushion" | "BudgetOverruns" | "MissedGoalContributions"
@@ -317,10 +319,11 @@ export type DepartmentMetricsSummary = {
   departmentId: string
   departmentName: string
   period: string | null
-  employees: number | null
-  averageScore: number | null
-  participation: number | null
-  status: HealthBand | null
+  activeEmployees: number | null
+  participatingEmployees: number | null
+  participationRate: number | null
+  averageFinancialHealthScore: number | null
+  financialHealthBand: HealthBand | null
   isMetricsHidden: boolean
   minimumGroupSize: number
   hiddenReason: string | null

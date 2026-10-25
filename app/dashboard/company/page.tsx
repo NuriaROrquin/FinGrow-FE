@@ -14,20 +14,20 @@ import { FinancialConcernsCard } from "@/components/company/financial-concerns-c
 import { CompanyRecommendationsCard } from "@/components/company/company-recommendations-card"
 import type { CompanyInsightsState } from "@/components/company/company-insights-state"
 import {
-  getCompanyInsights,
-  getCompanyMetricsComparison,
+  getCompanyMetrics,
   isApiError,
-  type CompanyMetricsComparisonDto,
+  type CompanyMetricsDto,
 } from "@/lib/api"
+import { getCompanyInsights } from "@/lib/api/company"
 import { useEffect, useState } from "react"
 
 const chartConfig = {
   active: {
-    label: "Usuarios Activos",
+    label: "Tasa de participación",
     color: "#8b5cf6",
   },
   enrolled: {
-    label: "Inscritos",
+    label: "Empleados participantes",
     color: "#a78bfa",
   },
   score: {
@@ -47,15 +47,15 @@ function formatRate(rate: number): string {
 }
 
 export default function CompanyDashboardPage() {
-  const [comparison, setComparison] = useState<CompanyMetricsComparisonDto | null>(null)
+  const [metrics, setMetrics] = useState<CompanyMetricsDto[]>([])
   const [comparisonError, setComparisonError] = useState<string | null>(null)
   const [isComparisonLoading, setIsComparisonLoading] = useState(true)
 
   useEffect(() => {
     const controller = new AbortController()
 
-    getCompanyMetricsComparison(controller.signal)
-      .then(setComparison)
+    getCompanyMetrics({}, controller.signal)
+      .then(setMetrics)
       .catch((error: unknown) => {
         if (controller.signal.aborted) return
 
@@ -101,15 +101,15 @@ export default function CompanyDashboardPage() {
     return () => controller.abort()
   }, [])
 
-  const periods = comparison?.periods ?? []
-  const participationChartData = periods.map(({ period, participationRate }) => ({
-    month: formatPeriod(period),
-    active: participationRate,
-    enrolled: null,
+  const periods = metrics
+  const participationChartData = periods.map((metric) => ({
+    month: formatPeriod(metric.period),
+    active: metric.isMetricsHidden ? null : metric.participationRate,
+    enrolled: metric.isMetricsHidden ? null : metric.participatingEmployees,
   }))
-  const financialHealthChartData = periods.map(({ period, averageFinancialHealthScore }) => ({
-    month: formatPeriod(period),
-    score: averageFinancialHealthScore,
+  const financialHealthChartData = periods.map((metric) => ({
+    month: formatPeriod(metric.period),
+    score: metric.isMetricsHidden ? null : metric.averageFinancialHealthScore,
   }))
 
   return (
@@ -155,20 +155,30 @@ export default function CompanyDashboardPage() {
                 <LineChart data={participationChartData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
-                  <YAxis tickFormatter={(value: number) => formatRate(value)} />
+                  <YAxis yAxisId="rate" tickFormatter={(value: number) => formatRate(value)} />
+                  <YAxis yAxisId="employees" orientation="right" />
                   <ChartTooltip
-                    content={<ChartTooltipContent formatter={(value) => typeof value === "number" ? formatRate(value) : "—"} />}
+                    content={
+                      <ChartTooltipContent
+                        formatter={(value, name) => {
+                          if (typeof value !== "number") return "—"
+                          return name === chartConfig.enrolled.label ? value.toLocaleString("es-AR") : formatRate(value)
+                        }}
+                      />
+                    }
                     cursor={{ stroke: "rgba(0, 0, 0, 0.2)" }}
                   />
                   <Line
                     type="monotone"
                     dataKey="active"
+                    yAxisId="rate"
                     stroke={chartConfig.active.color}
                     strokeWidth={2}
                   />
                   <Line
                     type="monotone"
                     dataKey="enrolled"
+                    yAxisId="employees"
                     stroke={chartConfig.enrolled.color}
                     strokeWidth={2}
                   />
