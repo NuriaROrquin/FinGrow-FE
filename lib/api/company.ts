@@ -400,6 +400,7 @@ export type DepartmentMetricsSummary = {
   participationRate: number | null
   averageFinancialHealthScore: number | null
   financialHealthBand: HealthBand | null
+  needsAttention: boolean
   isMetricsHidden: boolean
   minimumGroupSize: number
   hiddenReason: string | null

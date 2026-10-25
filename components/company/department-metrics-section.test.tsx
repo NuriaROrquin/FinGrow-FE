@@ -21,6 +21,7 @@ function department(overrides: Partial<DepartmentMetricsSummary> = {}): Departme
     participationRate: 75,
     averageFinancialHealthScore: 72.5,
     financialHealthBand: "Stable",
+    needsAttention: false,
     isMetricsHidden: false,
     minimumGroupSize: 3,
     hiddenReason: null,
@@ -239,5 +240,142 @@ describe("DepartmentMetricsSection", () => {
 
     await screen.findByText("Ventas")
     expect(api.getDepartmentMetrics).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    ["Empleados", ["Logística", "Ventas", "Administración"]],
+    ["Participación", ["Administración", "Ventas", "Logística"]],
+    ["Estado", ["Logística", "Administración", "Ventas"]],
+  ] as const)("sorts by %s with the fields the backend sends", async (column, expected) => {
+    api.getDepartmentMetrics.mockResolvedValue([
+      department({
+        departmentId: "1",
+        departmentName: "Ventas",
+        activeEmployees: 8,
+        participationRate: 75,
+        financialHealthBand: "Healthy",
+      }),
+      department({
+        departmentId: "2",
+        departmentName: "Administración",
+        activeEmployees: 4,
+        participationRate: 90,
+        financialHealthBand: "Stable",
+      }),
+      department({
+        departmentId: "3",
+        departmentName: "Logística",
+        activeEmployees: 12,
+        participationRate: 40,
+        financialHealthBand: "Critical",
+      }),
+    ])
+    render(<DepartmentMetricsSection />)
+    await screen.findAllByTestId("department-metrics-row")
+
+    fireEvent.click(screen.getByRole("button", { name: column }))
+
+    const rowNames = screen
+      .getAllByTestId("department-metrics-row")
+      .map((row) => within(row).getAllByRole("cell")[0].textContent?.replace("(necesita atención)", ""))
+    expect(rowNames).toEqual(expected)
+  })
+
+  it("lists the departments that need attention from the lowest score and highlights their rows", async () => {
+    api.getDepartmentMetrics.mockResolvedValue([
+      department({
+        departmentId: "1",
+        departmentName: "Finanzas",
+        averageFinancialHealthScore: 81,
+        financialHealthBand: "Healthy",
+      }),
+      department({
+        departmentId: "2",
+        departmentName: "Ventas",
+        averageFinancialHealthScore: 55,
+        financialHealthBand: "Fragile",
+        needsAttention: true,
+      }),
+      department({
+        departmentId: "3",
+        departmentName: "Logística",
+        averageFinancialHealthScore: 38,
+        participationRate: 40,
+        financialHealthBand: "Critical",
+        needsAttention: true,
+      }),
+    ])
+    render(<DepartmentMetricsSection />)
+
+    const summary = await screen.findByTestId("departments-attention")
+    expect(within(summary).getByRole("heading", { name: "Necesitan atención (2)" })).not.toBeNull()
+
+    const items = within(summary).getAllByTestId("department-attention-item")
+    expect(items.map((item) => item.querySelector("span")?.textContent)).toEqual(["Logística", "Ventas"])
+    expect(within(items[0]).getByText("38/100")).not.toBeNull()
+    expect(within(items[0]).getByText("40% de participación")).not.toBeNull()
+    expect(within(items[0]).getByText("Crítica")).not.toBeNull()
+    expect(within(items[1]).getByText("Frágil")).not.toBeNull()
+
+    const highlighted = screen
+      .getAllByTestId("department-metrics-row")
+      .filter((row) => row.dataset.needsAttention === "true")
+      .map((row) => within(row).getAllByRole("cell")[0].textContent)
+    expect(highlighted).toEqual(["Ventas(necesita atención)", "Logística(necesita atención)"])
+    expect(screen.queryByTestId("departments-attention-none")).toBeNull()
+  })
+
+  it("never highlights a department whose metrics are restricted", async () => {
+    api.getDepartmentMetrics.mockResolvedValue([
+      department({
+        departmentId: "1",
+        departmentName: "Marketing",
+        isMetricsHidden: true,
+        averageFinancialHealthScore: 20,
+        financialHealthBand: "Critical",
+        needsAttention: true,
+      }),
+      department({ departmentId: "2", departmentName: "Ventas" }),
+    ])
+    render(<DepartmentMetricsSection />)
+
+    await screen.findAllByTestId("department-metrics-row")
+    expect(screen.queryByTestId("departments-attention")).toBeNull()
+    expect(screen.queryByText(/necesita atención/)).toBeNull()
+    expect(
+      screen.getAllByTestId("department-metrics-row").some((row) => row.dataset.needsAttention === "true"),
+    ).toBe(false)
+  })
+
+  it("says that no department needs attention when every visible one is stable or healthy", async () => {
+    api.getDepartmentMetrics.mockResolvedValue([
+      department({ departmentId: "1", departmentName: "Ventas", financialHealthBand: "Stable" }),
+      department({ departmentId: "2", departmentName: "Finanzas", financialHealthBand: "Healthy" }),
+    ])
+    render(<DepartmentMetricsSection />)
+
+    expect(await screen.findByTestId("departments-attention-none")).not.toBeNull()
+    expect(screen.getByText("Ningún departamento está en banda crítica o frágil.")).not.toBeNull()
+    expect(screen.queryByTestId("departments-attention")).toBeNull()
+  })
+
+  it("shows no attention summary when no department has a visible band", async () => {
+    api.getDepartmentMetrics.mockResolvedValue([
+      department({ departmentId: "1", departmentName: "Marketing", isMetricsHidden: true }),
+      department({
+        departmentId: "2",
+        departmentName: "Soporte",
+        period: null,
+        activeEmployees: null,
+        averageFinancialHealthScore: null,
+        participationRate: null,
+        financialHealthBand: null,
+      }),
+    ])
+    render(<DepartmentMetricsSection />)
+
+    await screen.findAllByTestId("department-metrics-row")
+    expect(screen.queryByTestId("departments-attention")).toBeNull()
+    expect(screen.queryByTestId("departments-attention-none")).toBeNull()
   })
 })
