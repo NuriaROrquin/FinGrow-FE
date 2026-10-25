@@ -349,46 +349,6 @@ export function getCompanyTrends(signal?: AbortSignal): Promise<CompanyTrendsDto
   return api.get<CompanyTrendsDto>("/api/company/metrics/trends", { signal })
 }
 
-/**
- * Por qué un dato del reporte mensual viaja o no. Un dato oculto llega en `null` con su motivo:
- * nunca se completa con cero en el front.
- */
-export type CompanyReportValueStatus = "Visible" | "NoData" | "TooFewActiveEmployees" | "TooFewScoredEmployees"
-
-export interface CompanyReportIndicatorDto {
-  indicator: CompanyTrendIndicator
-  unit: CompanyTrendUnit
-  status: CompanyReportValueStatus
-  value: number | null
-  previousStatus: CompanyReportValueStatus
-  previousValue: number | null
-  /** Solo cuando el valor del mes y el del mes anterior son visibles. */
-  change: number | null
-}
-
-/** Reporte agregado y anónimo del último mes con foto, para exportar a PDF (HU-65). */
-export interface CompanyMonthlyReportDto {
-  companyName: string
-  /** `YYYY-MM-DD`. `null` si todavía no hay ningún mes cerrado con foto. */
-  period: string | null
-  /** `YYYY-MM-DD`, el mes inmediatamente anterior a `period`. */
-  previousPeriod: string | null
-  minimumGroupSize: number
-  /** El mes tuvo menos empleados activos que `minimumGroupSize`: todos los indicadores vienen ocultos. */
-  isAnonymized: boolean
-  activeEmployees: number | null
-  participatingEmployees: number | null
-  averageScoreBand: HealthBand | null
-  /** Participación, puntaje promedio y cursos completados, en ese orden. */
-  indicators: CompanyReportIndicatorDto[]
-  /** Las mismas reglas y la misma forma que `GET /api/company/metrics/trends`. */
-  trends: CompanyTrendsDto
-}
-
-export function getCompanyMonthlyReport(signal?: AbortSignal): Promise<CompanyMonthlyReportDto> {
-  return api.get<CompanyMonthlyReportDto>("/api/company/metrics/report", { signal })
-}
-
 export type HealthBand = "Critical" | "Fragile" | "Stable" | "Healthy"
 
 export type DepartmentMetricsSummary = {

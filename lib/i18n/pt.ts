@@ -785,43 +785,18 @@ export const pt: Messages = {
     export: "Exportar relatório",
     exporting: "Gerando PDF...",
     exportFailed: "Não foi possível gerar o relatório. Tente novamente.",
-    noPeriod: "Ainda não há meses fechados para exportar.",
     title: "Relatório de Bem-Estar Financeiro",
     company: "Empresa",
-    period: "Período",
-    comparedWith: "Comparado com",
     generatedAt: "Gerado em",
-    summaryTitle: "Resumo do mês",
+    indicatorsTitle: "Indicadores",
+    indicatorsNote:
+      "O total de funcionários é o quadro de hoje, a participação é a do mês em curso (ainda parcial), a saúde financeira é a do último mês fechado e os cursos são os concluídos desde o início.",
     evolutionTitle: "Evolução",
-    trendsTitle: "Tendências",
-    anonymized: (month: string, minimum: number) =>
-      `Em ${month} houve menos de ${minimum} funcionários ativos. Os indicadores ficam ocultos para não identificar ninguém.`,
-    participants: (participating: number, active: number) =>
-      `${participating} de ${active} funcionários ativos participaram`,
-    band: (label: string) => `Nível: ${label}`,
-    bands: {
-      Critical: "Crítica",
-      Fragile: "Frágil",
-      Stable: "Estável",
-      Healthy: "Saudável",
-    },
-    hidden: "Oculto",
-    hiddenReasons: {
-      TooFewActiveEmployees: (minimum: number) => `Menos de ${minimum} funcionários ativos no mês.`,
-      TooFewScoredEmployees: (minimum: number) =>
-        `Menos de ${minimum} funcionários com atividade suficiente para medir a saúde financeira.`,
-    },
-    change: (change: string, month: string) => `${change} em relação a ${month}`,
-    noChange: (month: string) => `Sem mudanças em relação a ${month}`,
-    previousReasons: {
-      NoData: (month: string) => `Sem dados de ${month} para comparar.`,
-      TooFewActiveEmployees: (month: string, minimum: number) =>
-        `Sem comparação: em ${month} houve menos de ${minimum} funcionários ativos.`,
-      TooFewScoredEmployees: (month: string, minimum: number) =>
-        `Sem comparação: em ${month} houve menos de ${minimum} funcionários com pontuação.`,
-    },
-    privacyNote: (minimum: number) =>
-      `Este relatório contém apenas métricas agregadas e anônimas da equipe: nenhum dado identifica um funcionário. Os indicadores de grupos com menos de ${minimum} funcionários não são exibidos.`,
+    departmentsTitle: "Por Departamento",
+    concernsTitle: "Principais Preocupações",
+    insightsTitle: "Análise",
+    privacyNote:
+      "Este relatório contém apenas métricas agregadas e anônimas da equipe: nenhum dado identifica um funcionário. Os dados de grupos com poucos funcionários não são exibidos.",
     fileName: "relatorio-empresa",
   },
 

@@ -3,25 +3,21 @@
 import Image from "next/image"
 import { useEffect, useRef, type ReactNode } from "react"
 import { ShieldCheckIcon } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import type { CompanyMonthlyReportDto, CompanyReportIndicatorDto } from "@/lib/api"
-import { formatDateText, formatDateTime } from "@/lib/format"
-import { useMessages, type Messages } from "@/lib/i18n"
-import { exportReportPdf } from "@/lib/report-pdf"
 import { ReportExportProvider } from "@/components/reports/report-export-context"
+import { formatDateTime } from "@/lib/format"
+import { useMessages } from "@/lib/i18n"
+import { exportReportPdf } from "@/lib/report-pdf"
 import { CompanyEvolutionCharts, type CompanyMetricsState } from "./company-evolution-charts"
-import { CompanyRecommendationsCard } from "./company-recommendations-card"
 import type { CompanyInsightsState } from "./company-insights-state"
-import { TrendsContent, formatTrendChange, formatTrendValue } from "./company-trends-card"
+import { CompanyRecommendationsCard } from "./company-recommendations-card"
+import { CompanyTrendsCard } from "./company-trends-card"
+import { DepartmentMetricsSection } from "./department-metrics-section"
+import { EducationMetricsCard } from "./education-metrics-card"
 import { FinancialConcernsCard } from "./financial-concerns-card"
+import { FinancialHealthCard } from "./financial-health-card"
+import { ParticipationCards } from "./participation-cards"
 
 const PDF_WIDTH_PX = 900
-
-type ReportTexts = Messages["companyReportPdf"]
-
-function monthAndYear(period: string) {
-  return formatDateText(period, { month: "long", year: "numeric" })
-}
 
 function PdfBlock({ children }: { children: ReactNode }) {
   return (
@@ -39,103 +35,43 @@ function HeaderField({ label, value }: { label: string; value: string }) {
   return (
     <>
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className="font-medium first-letter:uppercase">{value}</dd>
+      <dd className="font-medium">{value}</dd>
     </>
   )
 }
 
-function hiddenReason(indicator: CompanyReportIndicatorDto, minimum: number, texts: ReportTexts) {
-  switch (indicator.status) {
-    case "TooFewActiveEmployees":
-    case "TooFewScoredEmployees":
-      return texts.hiddenReasons[indicator.status](minimum)
-    default:
-      return null
-  }
-}
-
-function comparisonText(indicator: CompanyReportIndicatorDto, report: CompanyMonthlyReportDto, texts: Messages) {
-  const previousMonth = report.previousPeriod ? monthAndYear(report.previousPeriod) : ""
-  const reportTexts = texts.companyReportPdf
-
-  if (indicator.status !== "Visible") return null
-
-  switch (indicator.previousStatus) {
-    case "NoData":
-      return reportTexts.previousReasons.NoData(previousMonth)
-    case "TooFewActiveEmployees":
-    case "TooFewScoredEmployees":
-      return reportTexts.previousReasons[indicator.previousStatus](previousMonth, report.minimumGroupSize)
-  }
-
-  if (indicator.change === null) return null
-  if (indicator.change === 0) return reportTexts.noChange(previousMonth)
-
-  const change = texts.companyTrends.changes[indicator.unit](formatTrendChange(indicator.change, indicator.unit))
-  return reportTexts.change(change, previousMonth)
-}
-
-function IndicatorCard({ indicator, report }: { indicator: CompanyReportIndicatorDto; report: CompanyMonthlyReportDto }) {
-  const texts = useMessages()
-  const reportTexts = texts.companyReportPdf
-  const isVisible = indicator.status === "Visible" && indicator.value !== null
-  const detail =
-    !isVisible
-      ? null
-      : indicator.indicator === "ParticipationRate" && report.participatingEmployees !== null && report.activeEmployees !== null
-        ? reportTexts.participants(report.participatingEmployees, report.activeEmployees)
-        : indicator.indicator === "AverageFinancialHealthScore" && report.averageScoreBand
-          ? reportTexts.band(reportTexts.bands[report.averageScoreBand])
-          : null
-
-  return (
-    <Card data-testid={`report-indicator-${indicator.indicator}`}>
-      <CardHeader>
-        <CardDescription>{texts.companyTrends.indicators[indicator.indicator]}</CardDescription>
-        <CardTitle className="text-3xl">
-          {isVisible && indicator.value !== null
-            ? texts.companyTrends.values[indicator.unit](formatTrendValue(indicator.value, indicator.unit))
-            : reportTexts.hidden}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-1 text-sm text-muted-foreground">
-        {detail && <p>{detail}</p>}
-        <p>{isVisible ? comparisonText(indicator, report, texts) : hiddenReason(indicator, report.minimumGroupSize, reportTexts)}</p>
-      </CardContent>
-    </Card>
-  )
+function dateStamp(date: Date) {
+  const pad = (value: number) => String(value).padStart(2, "0")
+  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}`
 }
 
 interface CompanyReportPdfExportProps {
   generatedAt: Date
-  /** Siempre con `period`: sin mes cerrado no se exporta nada. */
-  report: CompanyMonthlyReportDto
-  /** Lo mismo que muestran las pestañas del panel: no se vuelve a llamar a la IA. */
+  companyName: string
+  /** Lo que ya muestran las pestañas del panel: la IA no se vuelve a llamar. */
   insights: CompanyInsightsState
-  /** Los meses que ya muestran los gráficos del panel, con los ocultos marcados por el backend. */
+  /** Los meses que ya muestran los gráficos del panel. */
   metrics: CompanyMetricsState
   onComplete: () => void
   onError: (error: unknown) => void
 }
 
 /**
- * Versión del reporte de la empresa fuera de pantalla, de 900 px fijos, que `lib/report-pdf.ts`
- * captura bloque por bloque (HU-65). Todo lo que muestra ya viene agregado y anonimizado por el
- * backend: acá no se calcula ni se filtra nada.
+ * El Panel Empresarial tal como se ve, fuera de pantalla y de 900 px fijos, para que `lib/report-pdf.ts`
+ * lo capture bloque por bloque (HU-65). Son los mismos componentes del panel: lo que muestra, lo que
+ * oculta por anonimato y el período de cada tarjeta lo decide el backend, igual que en pantalla.
  */
 export function CompanyReportPdfExport({
   generatedAt,
-  report,
+  companyName,
   insights,
   metrics,
   onComplete,
   onError,
 }: CompanyReportPdfExportProps) {
-  const texts = useMessages()
-  const reportTexts = texts.companyReportPdf
+  const texts = useMessages().companyReportPdf
   const rootRef = useRef<HTMLDivElement>(null)
-  const period = report.period ?? ""
-  const fileName = `${reportTexts.fileName}_${period.slice(0, 7).replace("-", "")}.pdf`
+  const fileName = `${texts.fileName}_${dateStamp(generatedAt)}.pdf`
 
   useEffect(() => {
     const root = rootRef.current
@@ -160,68 +96,64 @@ export function CompanyReportPdfExport({
       className="pointer-events-none text-foreground"
       style={{ position: "fixed", top: 0, left: -10000, width: PDF_WIDTH_PX }}
     >
-      <PdfBlock>
-        <div className="flex items-center justify-between gap-6 border-b pb-4">
-          <div className="flex items-center gap-3">
-            <Image src="/9.png" alt="FinGrow" width={48} height={50} className="object-contain" unoptimized priority />
-            <div>
-              <p className="text-2xl font-bold text-secondary-foreground">FinGrow</p>
-              <p className="text-muted-foreground">{reportTexts.title}</p>
+      <ReportExportProvider value>
+        <PdfBlock>
+          <div className="flex items-center justify-between gap-6 border-b pb-4">
+            <div className="flex items-center gap-3">
+              <Image src="/9.png" alt="FinGrow" width={48} height={50} className="object-contain" unoptimized priority />
+              <div>
+                <p className="text-2xl font-bold text-secondary-foreground">FinGrow</p>
+                <p className="text-muted-foreground">{texts.title}</p>
+              </div>
             </div>
+            <dl className="grid grid-cols-[auto_auto] gap-x-4 gap-y-1 text-sm">
+              <HeaderField label={texts.company} value={companyName} />
+              <HeaderField label={texts.generatedAt} value={formatDateTime(generatedAt)} />
+            </dl>
           </div>
-          <dl className="grid grid-cols-[auto_auto] gap-x-4 gap-y-1 text-sm">
-            <HeaderField label={reportTexts.company} value={report.companyName} />
-            {report.period && <HeaderField label={reportTexts.period} value={monthAndYear(report.period)} />}
-            {report.previousPeriod && (
-              <HeaderField label={reportTexts.comparedWith} value={monthAndYear(report.previousPeriod)} />
-            )}
-            <HeaderField label={reportTexts.generatedAt} value={formatDateTime(generatedAt)} />
-          </dl>
-        </div>
-      </PdfBlock>
+        </PdfBlock>
 
-      <PdfBlock>
-        <SectionTitle>{reportTexts.summaryTitle}</SectionTitle>
-        {report.isAnonymized && report.period && (
-          <div className="flex items-start gap-2 rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
-            <ShieldCheckIcon className="mt-0.5 size-4 shrink-0" />
-            <span>{reportTexts.anonymized(monthAndYear(report.period), report.minimumGroupSize)}</span>
+        <PdfBlock>
+          <SectionTitle>{texts.indicatorsTitle}</SectionTitle>
+          <p className="text-sm text-muted-foreground">{texts.indicatorsNote}</p>
+          <div className="grid grid-cols-2 gap-4">
+            <ParticipationCards />
+            <FinancialHealthCard />
+            <EducationMetricsCard />
           </div>
-        )}
-        <div className="grid grid-cols-3 gap-4">
-          {report.indicators.map((indicator) => (
-            <IndicatorCard key={indicator.indicator} indicator={indicator} report={report} />
-          ))}
-        </div>
-      </PdfBlock>
+        </PdfBlock>
 
-      <PdfBlock>
-        <SectionTitle>{reportTexts.evolutionTitle}</SectionTitle>
-        <ReportExportProvider value>
+        <PdfBlock>
+          <SectionTitle>{texts.evolutionTitle}</SectionTitle>
           <CompanyEvolutionCharts {...metrics} />
-        </ReportExportProvider>
-      </PdfBlock>
+        </PdfBlock>
 
-      <PdfBlock>
-        <SectionTitle>{reportTexts.trendsTitle}</SectionTitle>
-        <TrendsContent trends={report.trends} texts={texts.companyTrends} />
-        <p className="text-xs text-muted-foreground">{texts.companyTrends.footer}</p>
-      </PdfBlock>
+        <PdfBlock>
+          <SectionTitle>{texts.departmentsTitle}</SectionTitle>
+          {/* El orden por columna es de la pantalla: en el PDF las flechas no significan nada. */}
+          <div className="[&_th_svg]:hidden">
+            <DepartmentMetricsSection />
+          </div>
+        </PdfBlock>
 
-      <PdfBlock>
-        <FinancialConcernsCard {...insights} />
-      </PdfBlock>
+        <PdfBlock>
+          <SectionTitle>{texts.concernsTitle}</SectionTitle>
+          <FinancialConcernsCard {...insights} />
+        </PdfBlock>
 
-      <PdfBlock>
-        <CompanyRecommendationsCard {...insights} />
-      </PdfBlock>
+        <PdfBlock>
+          <SectionTitle>{texts.insightsTitle}</SectionTitle>
+          <CompanyTrendsCard />
+          <CompanyRecommendationsCard {...insights} />
+        </PdfBlock>
 
-      <PdfBlock>
-        <p className="flex items-start gap-2 border-t pt-3 text-xs text-muted-foreground">
-          <ShieldCheckIcon className="mt-0.5 size-3.5 shrink-0" />
-          <span>{reportTexts.privacyNote(report.minimumGroupSize)}</span>
-        </p>
-      </PdfBlock>
+        <PdfBlock>
+          <p className="flex items-start gap-2 border-t pt-3 text-xs text-muted-foreground">
+            <ShieldCheckIcon className="mt-0.5 size-3.5 shrink-0" />
+            <span>{texts.privacyNote}</span>
+          </p>
+        </PdfBlock>
+      </ReportExportProvider>
     </div>
   )
 }

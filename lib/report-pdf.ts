@@ -61,13 +61,18 @@ async function waitUntilRendered(root: HTMLElement, signal: AbortSignal): Promis
   await Promise.all(Array.from(root.querySelectorAll("img")).map((image) => image.decode().catch(() => undefined)))
 
   const deadline = Date.now() + RENDER_TIMEOUT_MS
-  while (!areChartsRendered(root) && Date.now() < deadline) {
+  while (!isReady(root) && Date.now() < deadline) {
     signal.throwIfAborted()
     await wait(RENDER_POLL_MS)
   }
 
   await wait(RENDER_POLL_MS)
   signal.throwIfAborted()
+}
+
+// Una tarjeta que todavía muestra su esqueleto está esperando datos: capturarla dejaría el PDF a medias.
+function isReady(root: HTMLElement): boolean {
+  return areChartsRendered(root) && root.querySelector('[data-slot="skeleton"]') === null
 }
 
 function areChartsRendered(root: HTMLElement): boolean {

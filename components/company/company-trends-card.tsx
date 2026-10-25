@@ -20,17 +20,17 @@ function monthAndYear(period: string) {
   return formatDateText(period, { month: "long", year: "numeric" })
 }
 
-export function formatTrendValue(value: number, unit: CompanyTrendUnit) {
+function formatValue(value: number, unit: CompanyTrendUnit) {
   return formatNumber(value, { maximumFractionDigits: fractionDigits[unit] })
 }
 
-export function formatTrendChange(change: number, unit: CompanyTrendUnit) {
-  return `${change > 0 ? "+" : "-"}${formatTrendValue(Math.abs(change), unit)}`
+function formatChange(change: number, unit: CompanyTrendUnit) {
+  return `${change > 0 ? "+" : "-"}${formatValue(Math.abs(change), unit)}`
 }
 
 function TrendItem({ trend, tone, texts }: { trend: CompanyTrendDto; tone: Tone; texts: Messages["companyTrends"] }) {
   const Icon = trend.change > 0 ? TrendingUpIcon : TrendingDownIcon
-  const value = (amount: number) => texts.values[trend.unit](formatTrendValue(amount, trend.unit))
+  const value = (amount: number) => texts.values[trend.unit](formatValue(amount, trend.unit))
 
   return (
     <li
@@ -48,7 +48,7 @@ function TrendItem({ trend, tone, texts }: { trend: CompanyTrendDto; tone: Tone;
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-3">
           <p className="font-medium">{texts.indicators[trend.indicator]}</p>
-          <span className="shrink-0 text-sm font-semibold">{texts.changes[trend.unit](formatTrendChange(trend.change, trend.unit))}</span>
+          <span className="shrink-0 text-sm font-semibold">{texts.changes[trend.unit](formatChange(trend.change, trend.unit))}</span>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
           {texts.fromTo(value(trend.previousValue), value(trend.currentValue))}
@@ -87,8 +87,7 @@ function TrendSection({
   )
 }
 
-/** Las dos listas de tendencias o el aviso que corresponda. También la usa el PDF del reporte (HU-65). */
-export function TrendsContent({ trends, texts }: { trends: CompanyTrendsDto; texts: Messages["companyTrends"] }) {
+function TrendsContent({ trends, texts }: { trends: CompanyTrendsDto; texts: Messages["companyTrends"] }) {
   if (!trends.period) return <EmptyNotice>{texts.noPeriod}</EmptyNotice>
 
   if (!trends.previousPeriod) return <EmptyNotice>{texts.noPreviousPeriod(monthAndYear(trends.period))}</EmptyNotice>
