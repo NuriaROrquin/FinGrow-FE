@@ -17,7 +17,6 @@ vi.mock("@/lib/api", () => ({
   ...api,
   PASSWORD_MIN_LENGTH: 8,
   PASSWORD_RESET_INVALID_LINK: "PasswordReset.EnlaceInvalido",
-  parsePasswordResetRole: (value: string | null) => (value === "empresa" ? "empresa" : "empleado"),
   isApiError: (error: unknown) => typeof error === "object" && error !== null && "code" in error,
 }))
 vi.mock("next/navigation", () => ({ useSearchParams: () => navigation.params }))
@@ -28,16 +27,16 @@ describe("ResetPasswordForm", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    navigation.params = new URLSearchParams({ token: "abc", tipo: "empresa" })
+    navigation.params = new URLSearchParams({ token: "abc" })
   })
 
-  it("offers a new link to the same account type when the link no longer works", async () => {
+  it("offers a new link when the link no longer works", async () => {
     api.validatePasswordResetToken.mockRejectedValue({ code: INVALID_LINK })
 
     render(<ResetPasswordForm />)
 
     const retry = await screen.findByRole("link", { name: "Pedir un enlace nuevo" })
-    expect(retry.getAttribute("href")).toBe("/recuperar-password?tipo=empresa")
+    expect(retry.getAttribute("href")).toBe("/recuperar-password")
     expect(api.toastApiError).not.toHaveBeenCalled()
   })
 
@@ -50,9 +49,9 @@ describe("ResetPasswordForm", () => {
     expect(api.validatePasswordResetToken).not.toHaveBeenCalled()
   })
 
-  it("only submits when both passwords match and returns to the login of the account", async () => {
-    api.validatePasswordResetToken.mockResolvedValue("empresa")
-    api.resetPassword.mockResolvedValue("empresa")
+  it("only submits when both passwords match and returns to the home login", async () => {
+    api.validatePasswordResetToken.mockResolvedValue(undefined)
+    api.resetPassword.mockResolvedValue(undefined)
     const user = userEvent.setup()
 
     render(<ResetPasswordForm />)
@@ -70,11 +69,11 @@ describe("ResetPasswordForm", () => {
 
     expect(api.resetPassword).toHaveBeenCalledWith("abc", "nueva-1234")
     const login = await screen.findByRole("link", { name: "Iniciar sesión" })
-    expect(login.getAttribute("href")).toBe("/login/empresa")
+    expect(login.getAttribute("href")).toBe("/")
   })
 
   it("switches to the invalid state when the link expires while typing", async () => {
-    api.validatePasswordResetToken.mockResolvedValue("empleado")
+    api.validatePasswordResetToken.mockResolvedValue(undefined)
     api.resetPassword.mockRejectedValue({ code: INVALID_LINK })
     const user = userEvent.setup()
 
