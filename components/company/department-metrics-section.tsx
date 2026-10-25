@@ -41,10 +41,14 @@ function visibleMetric<Value>(department: DepartmentMetricsSummary, value: Value
 
 const departmentMetricsSortValues: SortAccessors<DepartmentMetricsSummary, DepartmentMetricsSortField> = {
   departmentName: (department) => department.departmentName,
-  employees: (department) => visibleMetric(department, department.employees),
-  averageScore: (department) => visibleMetric(department, department.averageScore),
-  participation: (department) => visibleMetric(department, department.participation),
-  status: (department) => visibleMetric(department, department.status && healthBandRank[department.status]),
+  employees: (department) => visibleMetric(department, department.activeEmployees),
+  averageScore: (department) => visibleMetric(department, department.averageFinancialHealthScore),
+  participation: (department) => visibleMetric(department, department.participationRate),
+  status: (department) =>
+    visibleMetric(
+      department,
+      department.financialHealthBand === null ? null : healthBandRank[department.financialHealthBand],
+    ),
 }
 
 type DepartmentMetricsState =

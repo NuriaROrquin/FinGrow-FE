@@ -191,9 +191,9 @@ describe("DepartmentMetricsSection", () => {
 
   it("sorts by a column on click and inverts the order on a second click", async () => {
     api.getDepartmentMetrics.mockResolvedValue([
-      department({ departmentId: "1", departmentName: "Ventas", averageScore: 72.5 }),
-      department({ departmentId: "2", departmentName: "Administración", averageScore: 40 }),
-      department({ departmentId: "3", departmentName: "Logística", averageScore: 91 }),
+      department({ departmentId: "1", departmentName: "Ventas", averageFinancialHealthScore: 72.5 }),
+      department({ departmentId: "2", departmentName: "Administración", averageFinancialHealthScore: 40 }),
+      department({ departmentId: "3", departmentName: "Logística", averageFinancialHealthScore: 91 }),
     ])
     render(<DepartmentMetricsSection />)
     await screen.findAllByTestId("department-metrics-row")
@@ -216,9 +216,9 @@ describe("DepartmentMetricsSection", () => {
 
   it("puts departments with restricted metrics last, without using their hidden values", async () => {
     api.getDepartmentMetrics.mockResolvedValue([
-      department({ departmentId: "1", departmentName: "Oculto", isMetricsHidden: true, averageScore: 99 }),
-      department({ departmentId: "2", departmentName: "Bajo", averageScore: 20 }),
-      department({ departmentId: "3", departmentName: "Alto", averageScore: 80 }),
+      department({ departmentId: "1", departmentName: "Oculto", isMetricsHidden: true, averageFinancialHealthScore: 99 }),
+      department({ departmentId: "2", departmentName: "Bajo", averageFinancialHealthScore: 20 }),
+      department({ departmentId: "3", departmentName: "Alto", averageFinancialHealthScore: 80 }),
     ])
     render(<DepartmentMetricsSection />)
     await screen.findAllByTestId("department-metrics-row")
