@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { SortableTableHead } from "@/components/ui/sortable-table-head"
 import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DeactivateEmployeeDialog } from "@/components/company/deactivate-employee-dialog"
@@ -27,7 +28,6 @@ import {
 } from "@/components/company/employee-filters"
 import { EmployeeFormDialog } from "@/components/company/employee-form-dialog"
 import { FilterStatCard } from "@/components/company/filter-stat-card"
-import { SortableTableHead } from "@/components/company/sortable-table-head"
 import { TemporaryPasswordDialog } from "@/components/company/temporary-password-dialog"
 import {
   changeEmployeeAccess,
@@ -207,37 +207,13 @@ export default function EmpleadosPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <SortableTableHead
-                    label="Nombre"
-                    field="fullName"
-                    sortField={sort.field}
-                    sortDirection={sort.direction}
-                    onSort={handleSort}
-                  />
-                  <TableHead>Email</TableHead>
-                  <TableHead>Teléfono</TableHead>
-                  <SortableTableHead
-                    label="Departamento"
-                    field="departmentName"
-                    sortField={sort.field}
-                    sortDirection={sort.direction}
-                    onSort={handleSort}
-                  />
-                  <SortableTableHead
-                    label="Fecha Alta"
-                    field="hiredOn"
-                    sortField={sort.field}
-                    sortDirection={sort.direction}
-                    onSort={handleSort}
-                  />
-                  <SortableTableHead
-                    label="Último Ingreso"
-                    field="lastLoginAt"
-                    sortField={sort.field}
-                    sortDirection={sort.direction}
-                    onSort={handleSort}
-                  />
-                  <TableHead>Estado</TableHead>
+                  <SortableTableHead label="Nombre" field="fullName" sort={sort} onSort={handleSort} />
+                  <SortableTableHead label="Email" field="email" sort={sort} onSort={handleSort} />
+                  <SortableTableHead label="Teléfono" field="phoneNumber" sort={sort} onSort={handleSort} />
+                  <SortableTableHead label="Departamento" field="departmentName" sort={sort} onSort={handleSort} />
+                  <SortableTableHead label="Fecha Alta" field="hiredOn" sort={sort} onSort={handleSort} />
+                  <SortableTableHead label="Último Ingreso" field="lastLoginAt" sort={sort} onSort={handleSort} />
+                  <SortableTableHead label="Estado" field="isActive" sort={sort} onSort={handleSort} />
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>

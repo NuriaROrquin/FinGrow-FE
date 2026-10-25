@@ -195,6 +195,18 @@ export const es = {
           label: "Logros desbloqueados",
           hint: "Cuando conseguís una medalla nueva",
         },
+        InvestmentValueChanged: {
+          label: "Cambio en tus inversiones",
+          hint: "Cuando el valor de tu portafolio sube o baja de golpe entre dos valuaciones",
+        },
+        InvestmentMaturing: {
+          label: "Inversión por vencer",
+          hint: "Cuando se acerca el vencimiento de un plazo fijo o una caución",
+        },
+        NewEducationContent: {
+          label: "Contenido educativo nuevo",
+          hint: "Cuando se publica un curso o un artículo nuevo",
+        },
       },
       channels: {
         title: "Por dónde recibirlas",
@@ -762,6 +774,11 @@ export const es = {
       `Esta sección muestra ${count === 1 ? "el último mes" : `los últimos ${count} meses`} (${range}): siempre termina en el mes en curso, así que no sigue el período elegido.`,
   },
 
+  otherCurrencyNotice: {
+    description: (currencies: string) =>
+      `Tenés movimientos en ${currencies}. No se incluyen en los totales en pesos ni en dólares y no se convierten automáticamente.`,
+  },
+
   reportPdf: {
     export: "Exportar PDF",
     exporting: "Generando PDF...",
@@ -775,6 +792,48 @@ export const es = {
     spending: "Análisis de Gastos",
     savings: "Reporte de Ahorros",
     fileName: "reporte-financiero",
+  },
+
+  companyTrends: {
+    title: "Tendencias",
+    description: "Qué mejoró y qué empeoró respecto del mes anterior",
+    comparedWith: (current: string, previous: string) => `${current} comparado con ${previous}`,
+    positiveTitle: "Tendencias positivas",
+    opportunitiesTitle: "Oportunidades de mejora",
+    noPositive: "Ningún indicador mejoró de forma significativa.",
+    noOpportunities: "Ningún indicador empeoró de forma significativa.",
+    noChanges: (current: string, previous: string) => `Sin cambios significativos entre ${previous} y ${current}.`,
+    loadFailed: "No se pudieron cargar las tendencias.",
+    noPeriod: "Todavía no hay meses cerrados para analizar.",
+    noPreviousPeriod: (month: string) =>
+      `Para ver tendencias hacen falta dos meses seguidos con datos. Por ahora solo está ${month}.`,
+    anonymized: (minimum: number) =>
+      `En alguno de los dos meses hubo menos de ${minimum} empleados activos. Las tendencias se muestran cuando hay suficientes para no identificar a nadie.`,
+    footer: "Se calculan a partir de indicadores agregados y anónimos. Un cambio menor a 2 puntos se considera estable.",
+    fromTo: (previous: string, current: string) => `De ${previous} a ${current}`,
+    indicators: {
+      ParticipationRate: "Participación",
+      AverageFinancialHealthScore: "Salud financiera promedio",
+      BudgetAdoption: "Empleados con presupuesto",
+      GoalAdoption: "Empleados con metas activas",
+      IntegrationAdoption: "Empleados con integraciones",
+      GoalsAchieved: "Metas alcanzadas",
+      CompletedCourses: "Cursos completados",
+      LowSavings: "Empleados con ahorro bajo",
+      ThinCushion: "Empleados con fondo de emergencia insuficiente",
+      BudgetOverruns: "Empleados que exceden su presupuesto",
+      MissedGoalContributions: "Empleados que no cubren la cuota de sus metas",
+    },
+    values: {
+      Percentage: (value: string) => `${value}%`,
+      Points: (value: string) => `${value}/100`,
+      Count: (value: string) => value,
+    },
+    changes: {
+      Percentage: (change: string) => `${change} p.p.`,
+      Points: (change: string) => `${change} puntos`,
+      Count: (change: string) => change,
+    },
   },
 }
 

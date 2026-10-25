@@ -8,6 +8,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
+import { SortableTableHead } from "@/components/ui/sortable-table-head"
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
 import {
   Dialog,
@@ -74,6 +75,7 @@ import {
   type PendingTransactionDto,
   type TransactionDto,
   type TransactionListStatus,
+  type TransactionSortField,
   type TransactionSummaryResponse,
   type TransactionsResponse,
   removeTransactionReceipt,
@@ -97,6 +99,8 @@ import {
 import { formatDate, formatMoney } from "@/lib/format"
 import { usePreferences } from "@/lib/preferences-context"
 import { useMessages } from "@/lib/i18n"
+import { toggleSort, type SortState } from "@/lib/sort"
+import { OtherCurrencyNotice } from "@/components/transactions/other-currency-notice"
 
 const emptyTransactionsResponse: TransactionsResponse = {
   items: [],
@@ -107,13 +111,8 @@ const emptyTransactionsResponse: TransactionsResponse = {
 }
 
 const emptyTransactionSummary: TransactionSummaryResponse = {
-  totalExpenseArs: 0,
-  totalExpenseUsd: 0,
-  totalIncomeArs: 0,
-  totalIncomeUsd: 0,
-  totalTransactions: 0,
-  totalExpenseTransactions: 0,
-  totalIncomeTransactions: 0,
+  currencies: {},
+  otherCurrencies: [],
 }
 
 // Métodos de pago para el filtro, ordenados alfabéticamente
@@ -126,6 +125,8 @@ const transactionStatusFilterOptions: [TransactionListStatus, string][] = [
   ["Eliminated", "Eliminada"],
 ]
 const defaultTransactionStatuses: TransactionListStatus[] = ["Confirmed"]
+
+const defaultTransactionSort: SortState<TransactionSortField> = { field: "OccurredOn", direction: "desc" }
 
 type TransactionsView = "movements" | "pending"
 
@@ -158,6 +159,7 @@ export default function TransactionsPage() {
   const [summaryCurrency, setSummaryCurrency] = useState<"ARS" | "USD">(preferences.currency === "USD" ? "USD" : "ARS")
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [sort, setSort] = useState<SortState<TransactionSortField>>(defaultTransactionSort)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<TransactionDto | null>(null)
   const [transactionToDelete, setTransactionToDelete] = useState<TransactionDto | null>(null)
@@ -190,6 +192,7 @@ export default function TransactionsPage() {
     filterType,
     pageSize,
     searchQuery,
+    sort,
   ])
 
   useEffect(() => {
@@ -248,6 +251,8 @@ export default function TransactionsPage() {
         paymentMethod: filterPaymentMethod === "all" ? undefined : (filterPaymentMethod as PaymentMethod),
         dateFrom: dateFrom || undefined,
         dateTo: dateTo || undefined,
+        sortBy: sort.field,
+        sortDirection: sort.direction === "asc" ? "Ascending" : "Descending",
       })
         .then(setTransactionsResponse)
         .catch((error: unknown) => {
@@ -278,6 +283,7 @@ export default function TransactionsPage() {
     listRefreshKey,
     pageSize,
     searchQuery,
+    sort,
     toast,
   ])
 
@@ -328,6 +334,11 @@ export default function TransactionsPage() {
     setFilterPaymentMethod("all")
     setDateFrom(defaultDateFrom)
     setDateTo(defaultDateTo)
+    setCurrentPage(1)
+  }
+
+  const handleSort = (field: TransactionSortField) => {
+    setSort((current) => toggleSort(current, field, ["OccurredOn", "Amount"]))
     setCurrentPage(1)
   }
 
@@ -426,17 +437,13 @@ export default function TransactionsPage() {
     setSummaryRefreshKey((key) => key + 1)
   }
 
-  const totalIncome = {
-    ARS: transactionSummary.totalIncomeArs,
-    USD: transactionSummary.totalIncomeUsd,
-  }
-  const totalExpense = {
-    ARS: transactionSummary.totalExpenseArs,
-    USD: transactionSummary.totalExpenseUsd,
-  }
-  const balanceByCurrency = {
-    ARS: totalIncome.ARS - totalExpense.ARS,
-    USD: totalIncome.USD - totalExpense.USD,
+  const selectedSummary = transactionSummary.currencies?.[summaryCurrency] ?? {
+    income: 0,
+    expenses: 0,
+    balance: 0,
+    transactions: 0,
+    incomeTransactions: 0,
+    expenseTransactions: 0,
   }
   const formatCurrency = (amount: number, currency: Currency) => formatMoney(amount, currency)
 
@@ -641,6 +648,10 @@ export default function TransactionsPage() {
         </AlertDescription>
       </Alert>
 
+      <div className="order-2">
+        <OtherCurrencyNotice currencies={transactionSummary.otherCurrencies ?? []} />
+      </div>
+
       <div className="order-3 grid gap-4 md:grid-cols-3">
         <Card className="border border-border bg-card shadow-sm">
           <CardContent className="p-6">
@@ -650,12 +661,12 @@ export default function TransactionsPage() {
                 <CardDescription className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
                   Ingresos
                 </CardDescription>
-                <CardTitle className="mt-1 text-2xl text-foreground">{formatCurrency(totalIncome[summaryCurrency], summaryCurrency)}</CardTitle>
+                <CardTitle className="mt-1 text-2xl text-foreground">{formatCurrency(selectedSummary.income, summaryCurrency)}</CardTitle>
               </div>
             </div>
             <div className="mt-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
               <ArrowUpIcon className="size-3.5" />
-              <span>{transactionSummary.totalIncomeTransactions} ingresos</span>
+              <span>{selectedSummary.incomeTransactions} ingresos</span>
             </div>
           </CardContent>
         </Card>
@@ -668,12 +679,12 @@ export default function TransactionsPage() {
                 <CardDescription className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
                   Gastos
                 </CardDescription>
-                <CardTitle className="mt-1 text-2xl text-foreground">{formatCurrency(totalExpense[summaryCurrency], summaryCurrency)}</CardTitle>
+                <CardTitle className="mt-1 text-2xl text-foreground">{formatCurrency(selectedSummary.expenses, summaryCurrency)}</CardTitle>
               </div>
             </div>
             <div className="mt-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
               <ArrowDownIcon className="size-3.5" />
-              <span>{transactionSummary.totalExpenseTransactions} gastos</span>
+              <span>{selectedSummary.expenseTransactions} gastos</span>
             </div>
           </CardContent>
         </Card>
@@ -686,12 +697,12 @@ export default function TransactionsPage() {
                 <CardDescription className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
                   Balance Neto
                 </CardDescription>
-                <CardTitle className="mt-1 text-2xl text-foreground">{formatCurrency(balanceByCurrency[summaryCurrency], summaryCurrency)}</CardTitle>
+                <CardTitle className="mt-1 text-2xl text-foreground">{formatCurrency(selectedSummary.balance, summaryCurrency)}</CardTitle>
               </div>
             </div>
             <div className="mt-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
-              {balanceByCurrency[summaryCurrency] >= 0 ? <ArrowUpIcon className="size-3.5" /> : <ArrowDownIcon className="size-3.5" />}
-              <span>{transactionSummary.totalTransactions} transacciones totales</span>
+              {selectedSummary.balance >= 0 ? <ArrowUpIcon className="size-3.5" /> : <ArrowDownIcon className="size-3.5" />}
+              <span>{selectedSummary.transactions} transacciones totales</span>
             </div>
           </CardContent>
         </Card>
@@ -926,13 +937,55 @@ export default function TransactionsPage() {
             <Table className="w-full table-auto">
               <TableHeader>
                 <TableRow>
-                  <TableHead className={transactionTableHeadClassName}>Fecha</TableHead>
-                  <TableHead className={transactionTableHeadClassName}>Descripción</TableHead>
-                  <TableHead className={transactionTableHeadClassName}>Categoría</TableHead>
-                  <TableHead className={transactionTableHeadClassName}>Método de Pago</TableHead>
-                  <TableHead className={transactionTableHeadClassName}>{t.pendingInbox.columnSource}</TableHead>
-                  <TableHead className={transactionTableHeadClassName}>Estado</TableHead>
-                  <TableHead className={transactionTableHeadClassName}>Monto</TableHead>
+                  <SortableTableHead
+                    className={transactionTableHeadClassName}
+                    label="Fecha"
+                    field="OccurredOn"
+                    sort={sort}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    className={transactionTableHeadClassName}
+                    label="Descripción"
+                    field="Description"
+                    sort={sort}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    className={transactionTableHeadClassName}
+                    label="Categoría"
+                    field="Category"
+                    sort={sort}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    className={transactionTableHeadClassName}
+                    label="Método de Pago"
+                    field="PaymentMethod"
+                    sort={sort}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    className={transactionTableHeadClassName}
+                    label={t.pendingInbox.columnSource}
+                    field="Source"
+                    sort={sort}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    className={transactionTableHeadClassName}
+                    label="Estado"
+                    field="Status"
+                    sort={sort}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    className={transactionTableHeadClassName}
+                    label="Monto"
+                    field="Amount"
+                    sort={sort}
+                    onSort={handleSort}
+                  />
                   <TableHead className={transactionTableHeadClassName}>Acción</TableHead>
                 </TableRow>
               </TableHeader>

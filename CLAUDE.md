@@ -24,11 +24,14 @@ Salvo el login, WhatsApp, Telegram y lo que se lista abajo, no hay llamadas real
 un bug, revisá si no es simplemente esto:
 
 - **`lib/auth-context.tsx`** (T-05, SCRUM-23; login de empresa: HU-46) mantiene la sesión real:
-`login()` llama a `POST /login/empleado` o `POST /login/empresa` según el rol, el backend
-responde con la cookie **HttpOnly** `fingrow-session` (que lleva el JWT) y un `SessionResponse`
-con `userId`, `companyId`, `fullName`, `role` y `expiresAt`. Al cargar la página se rehidrata
-con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve el token: en
-`localStorage` solo queda `fingrow-role`, para saber a qué login volver ante un 401.
+hay un solo login, en la portada (`components/home/login-form.tsx`): `login()` llama a
+`POST /login` sin rol, porque el email es único entre empleados y empresas y el backend lo
+resuelve. Responde con la cookie **HttpOnly** `fingrow-session` (que lleva el JWT) y un
+`SessionResponse` con `userId`, `companyId`, `fullName`, `role` y `expiresAt`; con el doble
+factor activo responde un desafío que se completa en `POST /login/2fa`. Con la sesión iniciada,
+`AuthenticatedRedirect` manda a cada rol a su panel. Al cargar la página se rehidrata con
+`GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve el token ni guarda
+el rol: un 401 vuelve siempre a la portada, y `/login/*` redirige ahí (`next.config.mjs`).
 - **Sesiones abiertas (HU-73)**: en Configuración → Seguridad, `components/security/active-sessions-card.tsx`
   lista las sesiones reales del usuario, empleado o empresa (`GET /session/all`), y cierra una
   (`DELETE /session/{id}`) o todas menos la actual (`DELETE /session/others`). Cuelgan de `/session`
@@ -47,7 +50,29 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   participación (HU-56, `components/company/participation-cards.tsx`,
   `GET /api/company/metrics/participation`); el resto sigue mock. Cuando el backend manda
   `isParticipationHidden`, la tasa no se muestra ni se calcula en el front: es la protección
-  de anonimato para grupos chicos.
+  de anonimato para grupos chicos. La tarjeta de salud financiera promedio (HU-57,
+  `components/company/financial-health-card.tsx`) también es real: toma el último mes cerrado
+  de `GET /api/company/metrics` y lo compara con el anterior. El backend manda el puntaje en
+  `null` cuando hay menos de tres empleados con puntaje: la tarjeta lo muestra como oculto por
+  anonimato, nunca como cero, y el gráfico de tendencia deja ese mes en blanco.
+  **Preocupaciones y recomendaciones (HU-61 y HU-64)**: la pestaña "Principales Preocupaciones"
+  (`components/company/financial-concerns-card.tsx`) y la tarjeta "Recomendaciones" de "Análisis"
+  (`company-recommendations-card.tsx`) son reales. La página pide una sola vez
+  `GET /api/company/metrics/insights` y les pasa el mismo estado a las dos: así muestran el mismo
+  mes y la IA no se consulta dos veces. Qué es una preocupación, su orden y cuáles se ocultan por
+  anonimato lo decide el backend: no filtres ni reordenes en el front. Con `isAnonymized` no hay
+  preocupaciones ni recomendaciones; si la IA no responde (`recommendationsAvailable = false`) las
+  preocupaciones se ven igual. Las recomendaciones van sin links (`showLinks={false}`): son acciones
+  que la empresa hace fuera de FinGrow.
+  **Tendencias (HU-63)**: la tarjeta "Tendencias" de "Análisis" (`components/company/company-trends-card.tsx`)
+  pide `GET /api/company/metrics/trends` por su cuenta (no usa la IA, así que no comparte el pedido de
+  `/insights`) y muestra dos bloques: tendencias positivas (verde) y oportunidades de mejora (ámbar). El
+  backend compara el último mes cerrado con el anterior y decide qué indicador entra, en qué lista, en
+  qué orden y cuáles se ocultan por anonimato: el front solo arma los textos con los números que recibe.
+  En las preocupaciones mejorar es bajar, por eso una flecha hacia abajo puede estar en verde. Sin mes
+  anterior (`previousPeriod = null`), con `isAnonymized` o sin cambios significativos se muestra un aviso
+  en lugar de las listas. Los textos están en `lib/i18n` (`companyTrends`), con un texto por cada
+  `CompanyTrendIndicator`: un indicador nuevo en el backend necesita su texto en los tres idiomas.
 - **Educación** (artículos y cursos) usa la API real. La pantalla de Inversiones abre el contenido
   de cada tipo de activo (HU-35, `components/investments/related-education-dialog.tsx`) y todo
   artículo o curso con `isInvestmentContent` muestra `components/education/investment-disclaimer.tsx`:
@@ -68,7 +93,7 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   (`/api/notifications/types` y `/api/notifications/channels`). Conviven dos niveles: el **tipo**
   de alerta decide si existe (apagado, no llega a ningún canal ni a la bandeja) y el **canal**
   decide por dónde viaja (la app es fija; Telegram y correo se apagan). Cada switch guarda al
-  instante y vuelve atrás si falla. Los 7 tipos son los de `NotificationType`: uno nuevo en el
+  instante y vuelve atrás si falla. Los 10 tipos son los de `NotificationType`: uno nuevo en el
   backend necesita su texto en `settings.notifications.alertTypes` de los tres idiomas. La
   pestaña de la empresa sigue siendo mock: la empresa no tiene preferencias en el backend.
 - **Logros (T-22, SCRUM-106)**: `components/achievements/achievement-celebrator.tsx`, montado en el
@@ -123,6 +148,17 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   `/insights` ya no se muestran: los meses destacados son de HU-41. El link de cada recomendación sale
   de `action`, una lista cerrada; la IA nunca manda URLs. La aclaración de que no es asesoramiento
   financiero certificado va fija al pie de la card de recomendaciones: no la saques.
+- **Análisis de Presupuesto (HU-25)**: al pie de la pestaña Presupuestos,
+  `components/budgets/budget-analysis-card.tsx` pide `GET /api/budgets/analysis` con su propio selector
+  de moneda (arranca en la moneda preferida; no hay todavía un selector de moneda general). Mira los
+  últimos 6 meses y el mes en curso con presupuesto en esa moneda, y no depende del mes elegido en la
+  pestaña. Con menos de 2 meses con presupuesto (el mes en curso cuenta) muestra cuánto falta, con los
+  números del backend. Los datos calculados son de los meses cerrados y cada cartel dice qué mes o qué
+  período mira; si la IA no responde, se muestran igual. `MonthlyBudgetSection` avisa con
+  `onBudgetsChanged` cada cambio guardado (y cada alerta de presupuesto) y la card se recarga sin volver
+  al esqueleto. Las recomendaciones se dibujan con `components/recommendations/recommendation-list.tsx`,
+  la misma lista que usa la card de HU-44; acá sin el link "Ver presupuestos", porque ya se está en esa
+  pantalla.
 - **Exportar el reporte a PDF (HU-45)**. La página de Reportes pide los cuatro endpoints al entrar
   (`useReportRequest`, `components/reports/use-report-request.ts`) y les pasa los datos a las secciones,
   que ya no piden nada por su cuenta. Así el PDF sale con los mismos datos que se ven, sin volver a
@@ -181,7 +217,7 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
 ## Arquitectura y estructura
 
 ```
-app/            Rutas (App Router): dashboard, login/empleado, login/empresa
+app/            Rutas (App Router): la portada con el login y dashboard
 components/ui/  Componentes shadcn — generados, no reescribir el estilo base a mano
 lib/            Contexts (auth, preferencias), utils y la capa de acceso HTTP (lib/api)
 hooks/          Hooks compartidos (use-mobile, use-toast)

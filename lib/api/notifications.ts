@@ -9,6 +9,9 @@ export type NotificationType =
   | "BudgetWarning"
   | "BudgetExceeded"
   | "AchievementUnlocked"
+  | "InvestmentValueChanged"
+  | "InvestmentMaturing"
+  | "NewEducationContent"
 
 export type CompanyNotificationType =
   | "FinancialWellbeingLow"

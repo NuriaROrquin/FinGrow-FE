@@ -47,6 +47,7 @@ import { AddTransactionForm } from "@/components/transactions/add-transaction-fo
 import { PeriodFilter, getCurrentMonthStart, getToday } from "@/components/period-filter"
 import { formatDateText, formatMoney, formatNumber } from "@/lib/format"
 import { usePreferences } from "@/lib/preferences-context"
+import { OtherCurrencyNotice } from "@/components/transactions/other-currency-notice"
 
 const categoryColors = ["#3b5998", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#ef4444", "#14b8a6"]
 
@@ -278,6 +279,8 @@ export default function DashboardPage() {
           </TabsList>
         </Tabs>
       </div>
+
+      <OtherCurrencyNotice currencies={dashboardSummary?.otherCurrencies ?? []} />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
