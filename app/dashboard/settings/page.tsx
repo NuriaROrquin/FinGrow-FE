@@ -21,6 +21,7 @@ import { changePassword, PASSWORD_MIN_LENGTH, toastApiError } from "@/lib/api"
 import { ProfileCard } from "@/components/profile/profile-card"
 import { CompanyProfileCard } from "@/components/company/company-profile-card"
 import { TwoFactorCard } from "@/components/security/two-factor-card"
+import { ActiveSessionsCard } from "@/components/security/active-sessions-card"
 import { NotificationPreferences } from "@/components/notifications/notification-preferences"
 import { CompanyNotificationPreferences } from "@/components/notifications/company-notification-preferences"
 import { PreferencesCard } from "@/components/preferences/preferences-card"
@@ -250,20 +251,7 @@ export default function SettingsPage() {
 
               <Separator />
 
-              <div className="space-y-4">
-                <h3 className="font-semibold">{t.settings.security.activeSessions}</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 rounded-lg border">
-                    <div>
-                      <p className="font-medium">{t.settings.security.currentSession}</p>
-                      <p className="text-sm text-muted-foreground">{t.settings.security.currentSessionDevice}</p>
-                    </div>
-                    <Button variant="outline" size="sm">
-                      {t.settings.security.revoke}
-                    </Button>
-                  </div>
-                </div>
-              </div>
+              <ActiveSessionsCard />
             </CardContent>
           </Card>
 
