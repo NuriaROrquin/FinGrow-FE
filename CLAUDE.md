@@ -69,7 +69,10 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   (`getCompanyMonthlyReport`, siempre el último mes con foto contra el anterior) y monta
   `components/company/company-report-pdf-export.tsx`, que se captura con el mismo `lib/report-pdf.ts`
   de HU-45. El PDF lleva el nombre de la empresa, los tres indicadores del mes (participación, puntaje
-  promedio con su nivel y cursos completados), las tendencias (`TrendsContent` de la tarjeta de HU-63) y
+  promedio con su nivel y cursos completados), los dos gráficos de evolución del panel
+  (`company-evolution-charts.tsx`, con los mismos datos de `GET /api/company/metrics` que ya pidió la
+  página: los meses ocultos por anonimato quedan en blanco), las tendencias (`TrendsContent` de la
+  tarjeta de HU-63) y
   las mismas tarjetas de preocupaciones y recomendaciones que se ven en pantalla, con el estado de
   `/insights` que ya tiene la página: la IA no se vuelve a llamar. Un indicador oculto llega en `null`
   con su motivo (`CompanyReportValueStatus`) y el PDF muestra "Oculto" y por qué: no lo completes con
