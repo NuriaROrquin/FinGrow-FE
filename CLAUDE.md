@@ -78,6 +78,13 @@ el rol: un 401 vuelve siempre a la portada, y `/login/*` redirige ahí (`next.co
   anterior (`previousPeriod = null`), con `isAnonymized` o sin cambios significativos se muestra un aviso
   en lugar de las listas. Los textos están en `lib/i18n` (`companyTrends`), con un texto por cada
   `CompanyTrendIndicator`: un indicador nuevo en el backend necesita su texto en los tres idiomas.
+  **Departamentos que necesitan atención (HU-62)**: la pestaña "Por Departamento"
+  (`components/company/department-metrics-section.tsx`) muestra arriba de la tabla el bloque
+  "Necesitan atención", del puntaje más bajo al más alto, y resalta esas filas. Qué departamento
+  entra lo decide el backend con `needsAttention` de `GET /api/company/metrics/departments` (hoy,
+  banda crítica o frágil): no lo calcules con umbrales propios. Un departamento con las métricas
+  restringidas nunca se destaca. Si ninguno lo necesita y alguno tiene banda visible, se avisa que
+  ninguno está en banda crítica o frágil.
   **Exportar el reporte de la empresa (HU-65)**: "Exportar reporte", en el encabezado del panel, se
   habilita cuando terminaron de cargar `/insights` y `/metrics`, y monta
   `components/company/company-report-pdf-export.tsx`: el panel tal como se ve, fuera de pantalla, que
