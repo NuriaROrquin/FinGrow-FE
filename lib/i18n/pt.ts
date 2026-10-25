@@ -517,6 +517,11 @@ export const pt: Messages = {
     enabledToastDescription: "A partir de agora vamos pedir o código do app quando você entrar.",
     enableFailed: "Não conseguimos ativar a autenticação em dois fatores.",
     secretCopied: "Chave copiada para a área de transferência",
+    disable: "Desativar dois fatores",
+    disableCodeLabel: "Para desativá-lo, digite o código exibido no seu app autenticador",
+    disabledToast: "Autenticação em dois fatores desativada",
+    disabledToastDescription: "Não vamos mais pedir o código ao entrar.",
+    disableFailed: "Não conseguimos desativar a autenticação em dois fatores.",
   },
 
   linkCode: {

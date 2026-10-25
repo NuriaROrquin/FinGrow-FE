@@ -517,6 +517,11 @@ export const en: Messages = {
     enabledToastDescription: "From now on we'll ask for your app's code when you log in.",
     enableFailed: "We couldn't enable two-factor.",
     secretCopied: "Key copied to clipboard",
+    disable: "Turn off two-factor",
+    disableCodeLabel: "To turn it off, enter the code shown in your authenticator app",
+    disabledToast: "Two-factor turned off",
+    disabledToastDescription: "We'll no longer ask for the code when you sign in.",
+    disableFailed: "We couldn't turn off two-factor authentication.",
   },
 
   linkCode: {

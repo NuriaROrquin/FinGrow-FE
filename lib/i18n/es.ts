@@ -543,6 +543,11 @@ export const es = {
     enabledToastDescription: "Desde ahora te vamos a pedir el código de la app al iniciar sesión.",
     enableFailed: "No pudimos activar el doble factor.",
     secretCopied: "Clave copiada al portapapeles",
+    disable: "Desactivar doble factor",
+    disableCodeLabel: "Para desactivarlo, ingresá el código que muestra tu app de autenticación",
+    disabledToast: "Doble factor desactivado",
+    disabledToastDescription: "Ya no te vamos a pedir el código al iniciar sesión.",
+    disableFailed: "No pudimos desactivar el doble factor.",
   },
 
   linkCode: {
