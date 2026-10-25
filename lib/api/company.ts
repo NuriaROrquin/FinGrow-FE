@@ -311,6 +311,42 @@ export function getCompanyInsights(signal?: AbortSignal): Promise<CompanyInsight
   return api.get<CompanyInsightsDto>("/api/company/metrics/insights", { signal })
 }
 
+export type CompanyTrendIndicator =
+  | "ParticipationRate"
+  | "AverageFinancialHealthScore"
+  | "BudgetAdoption"
+  | "GoalAdoption"
+  | "IntegrationAdoption"
+  | "GoalsAchieved"
+  | "CompletedCourses"
+  | "LowSavings"
+  | "ThinCushion"
+  | "BudgetOverruns"
+  | "MissedGoalContributions"
+
+export type CompanyTrendUnit = "Percentage" | "Points" | "Count"
+
+export interface CompanyTrendDto {
+  indicator: CompanyTrendIndicator
+  unit: CompanyTrendUnit
+  previousValue: number
+  currentValue: number
+  change: number
+}
+
+export interface CompanyTrendsDto {
+  period: string | null
+  previousPeriod: string | null
+  isAnonymized: boolean
+  minimumGroupSize: number
+  positiveTrends: CompanyTrendDto[]
+  opportunities: CompanyTrendDto[]
+}
+
+export function getCompanyTrends(signal?: AbortSignal): Promise<CompanyTrendsDto> {
+  return api.get<CompanyTrendsDto>("/api/company/metrics/trends", { signal })
+}
+
 export type HealthBand = "Critical" | "Fragile" | "Stable" | "Healthy"
 
 export type DepartmentMetricsSummary = {
