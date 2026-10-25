@@ -44,34 +44,12 @@ import {
 import { GoalForm } from "@/components/goals/goal-form"
 import { AddTransactionForm } from "@/components/transactions/add-transaction-form"
 import { PeriodFilter, getCurrentMonthStart, getToday } from "@/components/period-filter"
-import { formatDateText, formatMoney, formatNumber } from "@/lib/format"
+import { formatDateText, formatMoney, formatNumber, formatSignedPercentage } from "@/lib/format"
 import { useMessages, type Messages } from "@/lib/i18n"
 import { usePreferences } from "@/lib/preferences-context"
 import { OtherCurrencyNotice } from "@/components/transactions/other-currency-notice"
 
 const categoryColors = ["#3b5998", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#ef4444", "#14b8a6"]
-
-const chartConfig = {
-  amount: {
-    label: "Monto",
-    color: "#8b5cf6",
-  },
-  income: {
-    label: "Ingresos",
-    color: "#a78bfa",
-  },
-  expense: {
-    label: "Gastos",
-    color: "#8b5cf6",
-  },
-}
-
-const categoryChartConfig = {
-  value: {
-    label: "Gastos",
-    color: "#8b5cf6",
-  },
-}
 
 function formatMonth(month: string): string {
   const [year, monthNumber] = month.split("-").map(Number)
@@ -80,14 +58,13 @@ function formatMonth(month: string): string {
   return formatDateText(new Date(year, monthNumber - 1, 1), { month: "short" }).replace(".", "")
 }
 
-function getCategoryLabel(category: string, labels: Messages["labels"]): string {
-  const categoryLabels: Record<string, string> = labels.expenseCategories
+function getCategoryLabel(category: string, categoryLabels: Record<string, string>): string {
   return categoryLabels[category] ?? category
 }
 
 function toCategoryChartData(items: ExpenseCategoryTotalDto[], labels: Messages["labels"]) {
   return items.map((item, index) => ({
-    name: getCategoryLabel(item.category, labels),
+    name: getCategoryLabel(item.category, labels.expenseCategories),
     value: item.totalExpense,
     color: categoryColors[index % categoryColors.length],
   }))
@@ -111,7 +88,8 @@ function ChartEmptyState({ title, description }: { title: string; description: s
 export default function DashboardPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const t = useMessages()
+  const messages = useMessages()
+  const t = messages.dashboard
   const [openTransaction, setOpenTransaction] = useState(false)
   const [openSavings, setOpenSavings] = useState(false)
   const [recentTransactions, setRecentTransactions] = useState<TransactionDto[]>([])
@@ -119,7 +97,7 @@ export default function DashboardPage() {
   const [monthlySpendingData, setMonthlySpendingData] = useState<{ month: string; amount: number }[]>([])
   const [incomeVsExpenseData, setIncomeVsExpenseData] = useState<{ month: string; income: number; expense: number }[]>([])
   const [categoryItems, setCategoryItems] = useState<ExpenseCategoryTotalDto[]>([])
-  const categoryData = toCategoryChartData(categoryItems, t.labels)
+  const categoryData = toCategoryChartData(categoryItems, messages.labels)
   const [isLoadingCharts, setIsLoadingCharts] = useState(true)
   const [chartsError, setChartsError] = useState<string | null>(null)
   const [chartsRefreshKey, setChartsRefreshKey] = useState(0)
@@ -132,6 +110,13 @@ export default function DashboardPage() {
   const [dateFrom, setDateFrom] = useState(() => getCurrentMonthStart())
   const [dateTo, setDateTo] = useState(() => getToday())
   const [summaryRefreshKey, setSummaryRefreshKey] = useState(0)
+
+  const chartConfig = {
+    amount: { label: t.chartAmount, color: "#8b5cf6" },
+    income: { label: t.chartIncome, color: "#a78bfa" },
+    expense: { label: t.chartExpenses, color: "#8b5cf6" },
+  }
+  const categoryChartConfig = { value: { label: t.chartExpenses, color: "#8b5cf6" } }
 
   const refreshRecentTransactions = () => {
     setRecentTransactionsRefreshKey((current) => current + 1)
@@ -154,14 +139,14 @@ export default function DashboardPage() {
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return
         setDashboardSummary(null)
-        setSummaryError(error instanceof Error ? error.message : "No se pudo cargar el resumen financiero.")
+        setSummaryError(error instanceof Error ? error.message : t.summaryLoadFailed)
       })
       .finally(() => {
         if (!controller.signal.aborted) setIsLoadingSummary(false)
       })
 
     return () => controller.abort()
-  }, [currency, dateFrom, dateTo, summaryRefreshKey])
+  }, [currency, dateFrom, dateTo, summaryRefreshKey, t])
 
   useEffect(() => {
     listTransactions(1, 5)
@@ -170,12 +155,12 @@ export default function DashboardPage() {
       })
       .catch((error: unknown) => {
         toast({
-          title: "No se pudo cargar las transacciones recientes",
-          description: error instanceof Error ? error.message : "Intenta de nuevo en unos segundos.",
+          title: t.recentLoadFailed,
+          description: error instanceof Error ? error.message : t.tryAgainShortly,
           variant: "destructive",
         })
       })
-  }, [recentTransactionsRefreshKey, toast])
+  }, [recentTransactionsRefreshKey, toast, t])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -206,18 +191,18 @@ export default function DashboardPage() {
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return
 
-        setChartsError(error instanceof Error ? error.message : "No se pudieron cargar los datos de los gráficos.")
+        setChartsError(error instanceof Error ? error.message : t.chartsLoadFailed)
       })
       .finally(() => {
         if (!controller.signal.aborted) setIsLoadingCharts(false)
       })
 
     return () => controller.abort()
-  }, [chartsRefreshKey, currency, dateFrom, dateTo])
+  }, [chartsRefreshKey, currency, dateFrom, dateTo, t])
 
   const formatRelativeDate = (value: string) => {
     const transactionDate = new Date(value)
-    if (Number.isNaN(transactionDate.getTime())) return "Fecha inválida"
+    if (Number.isNaN(transactionDate.getTime())) return t.invalidDate
 
     const today = new Date()
     const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate())
@@ -231,11 +216,11 @@ export default function DashboardPage() {
       (startOfToday.getTime() - startOfTransactionDate.getTime()) / (1000 * 60 * 60 * 24),
     )
 
-    if (diffInDays === 0) return "Hoy"
-    if (diffInDays === 1) return "Ayer"
-    if (diffInDays > 1) return `Hace ${diffInDays} días`
+    if (diffInDays === 0) return t.today
+    if (diffInDays === 1) return t.yesterday
+    if (diffInDays > 1) return t.daysAgo(diffInDays)
 
-    return `En ${Math.abs(diffInDays)} días`
+    return t.inDays(Math.abs(diffInDays))
   }
 
   const hasMonthlySpendingData = monthlySpendingData.some((entry) => entry.amount > 0)
@@ -253,17 +238,11 @@ export default function DashboardPage() {
         100
       : null
 
-  const formatPercentageVariation = (value: number | null) => {
-    if (value === null) return null
-    const sign = value > 0 ? "+" : ""
-    return `${sign}${value.toFixed(2)}%`
-  }
-
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-balance">Resumen Financiero</h1>
-        <p className="text-muted-foreground mt-1">Monitorea tu salud financiera y progreso</p>
+        <h1 className="text-3xl font-bold text-balance">{t.title}</h1>
+        <p className="text-muted-foreground mt-1">{t.subtitle}</p>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -277,8 +256,8 @@ export default function DashboardPage() {
         />
         <Tabs value={currency} onValueChange={(value) => setCurrency(value as "ARS" | "USD")} className="w-fit">
           <TabsList>
-            <TabsTrigger value="ARS">Pesos (ARS)</TabsTrigger>
-            <TabsTrigger value="USD">Dólares (USD)</TabsTrigger>
+            <TabsTrigger value="ARS">{t.currencyArs}</TabsTrigger>
+            <TabsTrigger value="USD">{t.currencyUsd}</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -288,43 +267,43 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Saldo Total</CardDescription>
+            <CardDescription>{t.balance}</CardDescription>
             <CardTitle className="text-2xl">
               {isLoadingSummary ? <Skeleton className="h-8 w-36" /> : formatMetric(dashboardSummary?.balance)}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">Saldo acumulado hasta el período</p>
+            <p className="text-sm text-muted-foreground">{t.balanceHint}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Ingresos Mensuales</CardDescription>
+            <CardDescription>{t.income}</CardDescription>
             <CardTitle className="text-2xl">
               {isLoadingSummary ? <Skeleton className="h-8 w-36" /> : formatMetric(dashboardSummary?.income)}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">En el período seleccionado</p>
+            <p className="text-sm text-muted-foreground">{t.inSelectedPeriod}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Gastos Mensuales</CardDescription>
+            <CardDescription>{t.expenses}</CardDescription>
             <CardTitle className="text-2xl">
               {isLoadingSummary ? <Skeleton className="h-8 w-36" /> : formatMetric(dashboardSummary?.expenses === null || dashboardSummary?.expenses === undefined ? null : -dashboardSummary.expenses)}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">En el período seleccionado</p>
+            <p className="text-sm text-muted-foreground">{t.inSelectedPeriod}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Tasa de Ahorro</CardDescription>
+            <CardDescription>{t.savingsRate}</CardDescription>
             <CardTitle className="text-2xl">
               {isLoadingSummary ? <Skeleton className="h-8 w-24" /> : dashboardSummary?.savingsRate === null || dashboardSummary?.savingsRate === undefined ? "—" : `${formatNumber(dashboardSummary.savingsRate, { maximumFractionDigits: 2 })}%`}
             </CardTitle>
@@ -332,8 +311,8 @@ export default function DashboardPage() {
           <CardContent>
             <p className="text-sm text-muted-foreground">
               {savingsRateVariation === null
-                ? "Sin variación calculable"
-                : `${formatPercentageVariation(savingsRateVariation)} vs período anterior`}
+                ? t.noVariation
+                : t.vsPreviousPeriod(formatSignedPercentage(savingsRateVariation))}
             </p>
           </CardContent>
         </Card>
@@ -343,7 +322,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between gap-4 rounded-md border border-destructive/30 p-3 text-sm">
           <span className="text-destructive">{summaryError}</span>
           <Button variant="outline" size="sm" onClick={() => setSummaryRefreshKey((current) => current + 1)}>
-            Reintentar
+            {t.retry}
           </Button>
         </div>
       )}
@@ -351,13 +330,13 @@ export default function DashboardPage() {
       {!isLoadingSummary && !summaryError && dashboardSummary && !dashboardSummary.hasMovements && (
         <Empty className="border">
           <EmptyHeader>
-            <EmptyTitle>Todavía no hay movimientos</EmptyTitle>
-            <EmptyDescription>Cargá tu primer ingreso o gasto para ver tu resumen financiero.</EmptyDescription>
+            <EmptyTitle>{t.noMovementsTitle}</EmptyTitle>
+            <EmptyDescription>{t.noMovementsDescription}</EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
             <Button onClick={() => setOpenTransaction(true)}>
               <PlusIcon className="size-4" />
-              Cargar primer movimiento
+              {t.firstMovement}
             </Button>
           </EmptyContent>
         </Empty>
@@ -365,8 +344,8 @@ export default function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Acciones Rápidas</CardTitle>
-          <CardDescription>Gestiona tus finanzas rápidamente</CardDescription>
+          <CardTitle>{t.quickActions}</CardTitle>
+          <CardDescription>{t.quickActionsDescription}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
@@ -374,21 +353,21 @@ export default function DashboardPage() {
               <DialogTrigger asChild>
                 <Button className="h-auto flex-col gap-2 py-4">
                   <PlusIcon className="size-5" />
-                  <span>Agregar Transacción</span>
+                  <span>{t.addTransaction}</span>
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Nueva Transacción</DialogTitle>
-                  <DialogDescription>Registra un nuevo ingreso o gasto</DialogDescription>
+                  <DialogTitle>{t.newTransaction}</DialogTitle>
+                  <DialogDescription>{t.newTransactionDescription}</DialogDescription>
                 </DialogHeader>
                 <AddTransactionForm
                   onSubmit={async (payload) => {
                     await createTransaction(payload)
                     refreshRecentTransactions()
                     toast({
-                      title: "Transacción guardada",
-                      description: "La transacción ha sido agregada exitosamente",
+                      title: t.transactionSaved,
+                      description: t.transactionSavedDescription,
                     })
                   }}
                   onClose={() => setOpenTransaction(false)}
@@ -402,20 +381,20 @@ export default function DashboardPage() {
               onClick={() => router.push("/dashboard/budgets")}
             >
               <WalletIcon className="size-5" />
-              <span>Ver Presupuestos</span>
+              <span>{t.viewBudgets}</span>
             </Button>
 
             <Dialog open={openSavings} onOpenChange={setOpenSavings}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="h-auto flex-col gap-2 py-4 bg-transparent">
                   <PiggyBankIcon className="size-5" />
-                  <span>Crear Meta de Ahorro</span>
+                  <span>{t.createGoal}</span>
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Crear Meta de Ahorro</DialogTitle>
-                  <DialogDescription>Establece un monto objetivo y fecha límite para tu ahorro</DialogDescription>
+                  <DialogTitle>{t.createGoal}</DialogTitle>
+                  <DialogDescription>{t.createGoalDescription}</DialogDescription>
                 </DialogHeader>
                 <GoalForm onClose={() => setOpenSavings(false)} />
               </DialogContent>
@@ -427,7 +406,7 @@ export default function DashboardPage() {
               onClick={() => router.push("/dashboard/investments")}
             >
               <TrendingUpIcon className="size-5" />
-              <span>Seguir Inversiones</span>
+              <span>{t.trackInvestments}</span>
             </Button>
           </div>
         </CardContent>
@@ -436,19 +415,19 @@ export default function DashboardPage() {
       <Tabs defaultValue="spending" className="space-y-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <TabsList>
-            <TabsTrigger value="spending">Tendencias de Gasto</TabsTrigger>
-            <TabsTrigger value="income-expense">Ingresos vs Gastos</TabsTrigger>
-            <TabsTrigger value="categories">Categorías</TabsTrigger>
+            <TabsTrigger value="spending">{t.tabSpending}</TabsTrigger>
+            <TabsTrigger value="income-expense">{t.tabIncomeExpense}</TabsTrigger>
+            <TabsTrigger value="categories">{t.tabCategories}</TabsTrigger>
           </TabsList>
 
         </div>
 
-        {isLoadingCharts && <p className="text-sm text-muted-foreground">Cargando datos de los gráficos...</p>}
+        {isLoadingCharts && <p className="text-sm text-muted-foreground">{t.loadingCharts}</p>}
         {chartsError && (
           <div className="flex items-center justify-between gap-4 rounded-md border border-destructive/30 p-3 text-sm">
             <span className="text-destructive">{chartsError}</span>
             <Button variant="outline" size="sm" onClick={() => setChartsRefreshKey((current) => current + 1)}>
-              Reintentar
+              {t.retry}
             </Button>
           </div>
         )}
@@ -456,14 +435,14 @@ export default function DashboardPage() {
         <TabsContent value="spending" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Gastos Mensuales</CardTitle>
-              <CardDescription>Tus gastos durante los 6 meses hasta el período elegido</CardDescription>
+              <CardTitle>{t.monthlyExpensesTitle}</CardTitle>
+              <CardDescription>{t.monthlyExpensesDescription}</CardDescription>
             </CardHeader>
             <CardContent>
               {!hasMonthlySpendingData && !isLoadingCharts ? (
                 <ChartEmptyState
-                  title="Todavía no hay gastos mensuales"
-                  description={`Este gráfico mostrará tus gastos confirmados en ${currency} durante los seis meses hasta el período elegido.`}
+                  title={t.monthlyExpensesEmptyTitle}
+                  description={t.monthlyExpensesEmpty(currency)}
                 />
               ) : (
                 <ChartContainer config={chartConfig} className="h-[350px] w-full">
@@ -496,14 +475,14 @@ export default function DashboardPage() {
         <TabsContent value="income-expense" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Ingresos vs Gastos</CardTitle>
-              <CardDescription>Compara tus ingresos y gastos a lo largo del tiempo</CardDescription>
+              <CardTitle>{t.incomeVsExpensesTitle}</CardTitle>
+              <CardDescription>{t.incomeVsExpensesDescription}</CardDescription>
             </CardHeader>
             <CardContent>
               {!hasIncomeVsExpenseData && !isLoadingCharts ? (
                 <ChartEmptyState
-                  title="Todavía no hay ingresos o gastos"
-                  description={`Este gráfico comparará tus movimientos confirmados en ${currency} por mes.`}
+                  title={t.incomeVsExpensesEmptyTitle}
+                  description={t.incomeVsExpensesEmpty(currency)}
                 />
               ) : (
                 <ChartContainer config={chartConfig} className="h-[300px] w-full">
@@ -524,14 +503,14 @@ export default function DashboardPage() {
         <TabsContent value="categories" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Gastos por Categoría</CardTitle>
-              <CardDescription>Desglose de tus gastos por categoría</CardDescription>
+              <CardTitle>{t.byCategoryTitle}</CardTitle>
+              <CardDescription>{t.byCategoryDescription}</CardDescription>
             </CardHeader>
             <CardContent>
               {categoryData.length === 0 && !isLoadingCharts ? (
                 <ChartEmptyState
-                  title="Todavía no hay gastos por categoría"
-                  description={`Este gráfico mostrará cómo se distribuyen tus gastos confirmados en ${currency}.`}
+                  title={t.byCategoryEmptyTitle}
+                  description={t.byCategoryEmpty(currency)}
                 />
               ) : (
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -578,17 +557,18 @@ export default function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Transacciones Recientes</CardTitle>
-          <CardDescription>Tus últimas actividades financieras</CardDescription>
+          <CardTitle>{t.recentTitle}</CardTitle>
+          <CardDescription>{t.recentDescription}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {recentTransactions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No hay transacciones recientes.</p>
+              <p className="text-sm text-muted-foreground">{t.recentEmpty}</p>
             ) : (
               recentTransactions.map((transaction) => {
                 const isIncome = transaction.type === "Income"
                 const transactionDate = formatRelativeDate(transaction.occurredOn)
+                const categoryLabels = isIncome ? messages.labels.incomeCategories : messages.labels.expenseCategories
 
                 return (
                   <div key={transaction.id} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
@@ -601,7 +581,7 @@ export default function DashboardPage() {
                       <div>
                         <p className="font-medium">{transaction.description}</p>
                         <p className="text-sm text-muted-foreground">
-                          {transactionDate} • {getCategoryLabel(transaction.category, t.labels)}
+                          {transactionDate} • {getCategoryLabel(transaction.category, categoryLabels)}
                         </p>
                       </div>
                     </div>
