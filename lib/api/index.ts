@@ -33,6 +33,12 @@ export {
   type TwoFactorChallenge,
 } from "./auth"
 export {
+  PASSWORD_RESET_INVALID_LINK,
+  requestPasswordReset,
+  resetPassword,
+  validatePasswordResetToken,
+} from "./password-reset"
+export {
   ADDRESS_MAX_LENGTH,
   changePassword,
   disableTwoFactor,
@@ -75,6 +81,7 @@ export {
   getCompanyEducationMetrics,
   getCompanyInsights,
   getCompanyMetrics,
+  getCompanyMonthlyReport,
   getCompanyTrends,
   getCompanyProfile,
   getDepartmentMetrics,
@@ -93,6 +100,13 @@ export {
   type CompanyEducationMetricsResponse,
   type CompanyInsightsDto,
   type CompanyMetricsDto,
+  type CompanyMonthlyReportDto,
+  type CompanyReportIndicatorDto,
+  type CompanyReportValueStatus,
+  type CompanyTrendDto,
+  type CompanyTrendIndicator,
+  type CompanyTrendsDto,
+  type CompanyTrendUnit,
   type CompanyIndustry,
   type CompanyProfileDto,
   type CompanyPreferencesDto,
