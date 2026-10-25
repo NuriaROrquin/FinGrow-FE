@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { getCompanyMonthlyReport, getDepartmentMetrics } from "./company"
+import { getDepartmentMetrics } from "./company"
 
 const client = vi.hoisted(() => ({ api: { get: vi.fn() } }))
 
@@ -38,21 +38,5 @@ describe("getDepartmentMetrics", () => {
     expect(requestedUrl()).not.toContain("overview")
     expect(requestedUrl()).not.toContain("/api/company/departments/metrics")
     expect(requestedUrl()).not.toMatch(/departments\/[^/?]+\/metrics/)
-  })
-})
-
-describe("getCompanyMonthlyReport", () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    client.api.get.mockResolvedValue({})
-  })
-
-  it("requests the report of the last photographed month, without query string", async () => {
-    const controller = new AbortController()
-
-    await getCompanyMonthlyReport(controller.signal)
-
-    expect(client.api.get).toHaveBeenCalledTimes(1)
-    expect(client.api.get).toHaveBeenCalledWith("/api/company/metrics/report", { signal: controller.signal })
   })
 })

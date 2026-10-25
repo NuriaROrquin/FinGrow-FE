@@ -1,8 +1,8 @@
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react"
+import { cleanup, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { es } from "@/lib/i18n/es"
-import type { CompanyInsightsDto, CompanyMonthlyReportDto, CompanyReportIndicatorDto } from "@/lib/api"
+import type { CompanyInsightsDto } from "@/lib/api"
 import type { CompanyMetricsState } from "./company-evolution-charts"
 import { CompanyReportPdfExport } from "./company-report-pdf-export"
 
@@ -13,58 +13,27 @@ vi.mock("@/lib/report-pdf", () => pdf)
 vi.mock("@/lib/i18n", () => ({ useMessages: i18n.useMessages }))
 vi.mock("next/image", () => ({ default: () => null }))
 
-function report(overrides: Partial<CompanyMonthlyReportDto> = {}): CompanyMonthlyReportDto {
-  return {
-    companyName: "Acme S.A.",
-    period: "2026-09-01",
-    previousPeriod: "2026-08-01",
-    minimumGroupSize: 3,
-    isAnonymized: false,
-    activeEmployees: 10,
-    participatingEmployees: 8,
-    averageScoreBand: "Stable",
-    indicators: [
-      {
-        indicator: "ParticipationRate",
-        unit: "Percentage",
-        status: "Visible",
-        value: 80,
-        previousStatus: "Visible",
-        previousValue: 50,
-        change: 30,
-      },
-      {
-        indicator: "AverageFinancialHealthScore",
-        unit: "Points",
-        status: "Visible",
-        value: 70,
-        previousStatus: "TooFewScoredEmployees",
-        previousValue: null,
-        change: null,
-      },
-      {
-        indicator: "CompletedCourses",
-        unit: "Count",
-        status: "Visible",
-        value: 6,
-        previousStatus: "Visible",
-        previousValue: 6,
-        change: 0,
-      },
-    ],
-    trends: {
-      period: "2026-09-01",
-      previousPeriod: "2026-08-01",
-      isAnonymized: false,
-      minimumGroupSize: 3,
-      positiveTrends: [
-        { indicator: "ParticipationRate", unit: "Percentage", previousValue: 50, currentValue: 80, change: 30 },
-      ],
-      opportunities: [],
-    },
-    ...overrides,
-  }
-}
+// Las tarjetas que piden sus datos por su cuenta tienen sus propios tests: acá solo importa que estén.
+vi.mock("./participation-cards", async () => {
+  const { createElement } = await import("react")
+  return { ParticipationCards: () => createElement("div", null, "Tarjetas de participación") }
+})
+vi.mock("./financial-health-card", async () => {
+  const { createElement } = await import("react")
+  return { FinancialHealthCard: () => createElement("div", null, "Tarjeta de salud financiera") }
+})
+vi.mock("./education-metrics-card", async () => {
+  const { createElement } = await import("react")
+  return { EducationMetricsCard: () => createElement("div", null, "Tarjeta de cursos") }
+})
+vi.mock("./department-metrics-section", async () => {
+  const { createElement } = await import("react")
+  return { DepartmentMetricsSection: () => createElement("div", null, "Tabla por departamento") }
+})
+vi.mock("./company-trends-card", async () => {
+  const { createElement } = await import("react")
+  return { CompanyTrendsCard: () => createElement("div", null, "Tarjeta de tendencias") }
+})
 
 const insights: CompanyInsightsDto = {
   period: "2026-09-01",
@@ -78,16 +47,15 @@ const insights: CompanyInsightsDto = {
 
 const noMetrics: CompanyMetricsState = { metrics: [], error: null, isLoading: false }
 
-function renderExport(
-  value: CompanyMonthlyReportDto,
+function renderExport({
   onComplete = vi.fn(),
   onError = vi.fn(),
-  metrics: CompanyMetricsState = noMetrics,
-) {
+  metrics = noMetrics,
+}: { onComplete?: () => void; onError?: (error: unknown) => void; metrics?: CompanyMetricsState } = {}) {
   render(
     <CompanyReportPdfExport
       generatedAt={new Date(2026, 9, 25, 15, 30)}
-      report={value}
+      companyName="Acme S.A."
       insights={{ insights, isLoading: false, hasFailed: false }}
       metrics={metrics}
       onComplete={onComplete}
@@ -105,87 +73,59 @@ describe("CompanyReportPdfExport", () => {
     pdf.exportReportPdf.mockResolvedValue(undefined)
   })
 
-  it("puts the company and the compared months in the header", () => {
-    renderExport(report())
+  it("puts the company and the generation date in the header", () => {
+    renderExport()
 
-    expect(screen.getByText("Acme S.A.")).not.toBeNull()
-    expect(screen.getByText("septiembre de 2026")).not.toBeNull()
-    expect(screen.getByText("agosto de 2026")).not.toBeNull()
     expect(screen.getByText("Reporte de Bienestar Financiero")).not.toBeNull()
+    expect(screen.getByText("Acme S.A.")).not.toBeNull()
+    expect(screen.getByText("Generado el")).not.toBeNull()
   })
 
-  it("shows each indicator with its comparison, or why there is no comparison", () => {
-    renderExport(report())
+  it("has the same sections as the panel, in the same order", () => {
+    renderExport()
 
-    const participation = screen.getByTestId("report-indicator-ParticipationRate")
-    expect(within(participation).getByText("80%")).not.toBeNull()
-    expect(within(participation).getByText("8 de 10 empleados activos participaron")).not.toBeNull()
-    expect(within(participation).getByText("+30 p.p. respecto de agosto de 2026")).not.toBeNull()
-
-    const score = screen.getByTestId("report-indicator-AverageFinancialHealthScore")
-    expect(within(score).getByText("70/100")).not.toBeNull()
-    expect(within(score).getByText("Nivel: Estable")).not.toBeNull()
-    expect(
-      within(score).getByText("Sin comparación: en agosto de 2026 hubo menos de 3 empleados con puntaje."),
-    ).not.toBeNull()
-
-    const courses = screen.getByTestId("report-indicator-CompletedCourses")
-    expect(within(courses).getByText("Sin cambios respecto de agosto de 2026")).not.toBeNull()
+    const titles = screen.getAllByRole("heading", { level: 2, hidden: true }).map((heading) => heading.textContent)
+    expect(titles).toEqual(["Indicadores", "Evolución", "Por Departamento", "Principales Preocupaciones", "Análisis"])
+    expect(screen.getByText("Tarjetas de participación")).not.toBeNull()
+    expect(screen.getByText("Tarjeta de salud financiera")).not.toBeNull()
+    expect(screen.getByText("Tarjeta de cursos")).not.toBeNull()
+    expect(screen.getByText("Tabla por departamento")).not.toBeNull()
+    expect(screen.getByText("Tarjeta de tendencias")).not.toBeNull()
   })
 
-  it("explains why the indicators are hidden in a small month, without showing any value", () => {
-    renderExport(
-      report({
-        isAnonymized: true,
-        participatingEmployees: null,
-        averageScoreBand: null,
-        indicators: report().indicators.map((indicator): CompanyReportIndicatorDto => ({
-          ...indicator,
-          status: "TooFewActiveEmployees",
-          value: null,
-          change: null,
-        })),
-        trends: { ...report().trends, isAnonymized: true, positiveTrends: [] },
-      }),
-    )
+  it("explains which period each indicator card looks at", () => {
+    renderExport()
 
-    expect(screen.getByText(/En septiembre de 2026 hubo menos de 3 empleados activos/)).not.toBeNull()
-    expect(screen.getAllByText("Oculto")).toHaveLength(3)
-    expect(screen.getAllByText("Menos de 3 empleados activos en el mes.")).toHaveLength(3)
-    expect(screen.queryByText("80%")).toBeNull()
-    expect(screen.queryByText(/empleados activos participaron/)).toBeNull()
+    expect(screen.getByText(/la participación es la del mes en curso \(todavía parcial\)/)).not.toBeNull()
+    expect(screen.getByText(/la salud financiera es la del último mes cerrado/)).not.toBeNull()
   })
 
-  it("includes the trends, the concerns and the privacy note", () => {
-    renderExport(report())
+  it("shows the concerns the panel already loaded and the charts with what the panel shows", () => {
+    const message = "Las métricas no están disponibles para preservar el anonimato de grupos pequeños."
+    renderExport({ metrics: { metrics: [], error: message, isLoading: false } })
 
-    expect(screen.getByText("Tendencias positivas")).not.toBeNull()
     expect(screen.getByText("Ahorro bajo")).not.toBeNull()
+    expect(screen.getByText("Participación de Empleados")).not.toBeNull()
+    expect(screen.getAllByText(message)).toHaveLength(2)
     expect(screen.getByText(/ningún dato identifica a un empleado/)).not.toBeNull()
   })
 
-  it("includes the evolution charts section with what the panel shows", () => {
-    const message = "Las métricas no están disponibles para preservar el anonimato de grupos pequeños."
-    renderExport(report(), vi.fn(), vi.fn(), { metrics: [], error: message, isLoading: false })
-
-    expect(screen.getByText("Evolución")).not.toBeNull()
-    expect(screen.getByText("Participación de Empleados")).not.toBeNull()
-    expect(screen.getByText("Tendencia de Salud Financiera")).not.toBeNull()
-    expect(screen.getAllByText(message)).toHaveLength(2)
-  })
-
-  it("exports the PDF named after the month and reports when it finished", async () => {
+  it("exports the PDF named after the generation date and reports when it finished", async () => {
     const onComplete = vi.fn()
-    renderExport(report(), onComplete)
+    renderExport({ onComplete })
 
     await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1))
-    expect(pdf.exportReportPdf).toHaveBeenCalledWith(expect.any(HTMLElement), "reporte-empresa_202609.pdf", expect.any(AbortSignal))
+    expect(pdf.exportReportPdf).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      "reporte-empresa_20261025.pdf",
+      expect.any(AbortSignal),
+    )
   })
 
   it("reports a failure to generate the PDF", async () => {
     const onError = vi.fn()
     pdf.exportReportPdf.mockRejectedValue(new Error("canvas"))
-    renderExport(report(), vi.fn(), onError)
+    renderExport({ onError })
 
     await waitFor(() => expect(onError).toHaveBeenCalledTimes(1))
   })
