@@ -201,7 +201,13 @@ export function getPortfolioEvolution(
   return api.get<PortfolioEvolutionDto>("/api/investments/evolution", { query: { currency, range }, signal })
 }
 
-export type InvestmentSortField = "PurchasedOn" | "AssetName" | "InvestedAmount" | "CurrentValue" | "ReturnPercentage"
+export type InvestmentSortField =
+  | "PurchasedOn"
+  | "AssetName"
+  | "AssetType"
+  | "InvestedAmount"
+  | "CurrentValue"
+  | "ReturnPercentage"
 
 export type SortDirection = "Ascending" | "Descending"
 
@@ -210,6 +216,7 @@ export type InvestmentPerformance = "Gain" | "Loss"
 export const investmentSortFieldLabels: Record<InvestmentSortField, string> = {
   PurchasedOn: "Fecha de compra",
   AssetName: "Nombre del activo",
+  AssetType: "Tipo de activo",
   InvestedAmount: "Capital invertido",
   CurrentValue: "Valor actual",
   ReturnPercentage: "Rendimiento",

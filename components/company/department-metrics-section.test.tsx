@@ -160,6 +160,50 @@ describe("DepartmentMetricsSection", () => {
     expect(api.getDepartmentMetrics).toHaveBeenCalledTimes(2)
   })
 
+  it("sorts by a column on click and inverts the order on a second click", async () => {
+    api.getDepartmentMetrics.mockResolvedValue([
+      department({ departmentId: "1", departmentName: "Ventas", averageScore: 72.5 }),
+      department({ departmentId: "2", departmentName: "Administración", averageScore: 40 }),
+      department({ departmentId: "3", departmentName: "Logística", averageScore: 91 }),
+    ])
+    render(<DepartmentMetricsSection />)
+    await screen.findAllByTestId("department-metrics-row")
+
+    const rowNames = () =>
+      screen.getAllByTestId("department-metrics-row").map((row) => within(row).getAllByRole("cell")[0].textContent)
+    const header = () => screen.getByRole("columnheader", { name: /Departamento/ })
+
+    fireEvent.click(screen.getByRole("button", { name: "Departamento" }))
+    expect(rowNames()).toEqual(["Administración", "Logística", "Ventas"])
+    expect(header().getAttribute("aria-sort")).toBe("ascending")
+
+    fireEvent.click(screen.getByRole("button", { name: "Departamento" }))
+    expect(rowNames()).toEqual(["Ventas", "Logística", "Administración"])
+    expect(header().getAttribute("aria-sort")).toBe("descending")
+
+    fireEvent.click(screen.getByRole("button", { name: "Puntaje Promedio" }))
+    expect(rowNames()).toEqual(["Logística", "Ventas", "Administración"])
+  })
+
+  it("puts departments with restricted metrics last, without using their hidden values", async () => {
+    api.getDepartmentMetrics.mockResolvedValue([
+      department({ departmentId: "1", departmentName: "Oculto", isMetricsHidden: true, averageScore: 99 }),
+      department({ departmentId: "2", departmentName: "Bajo", averageScore: 20 }),
+      department({ departmentId: "3", departmentName: "Alto", averageScore: 80 }),
+    ])
+    render(<DepartmentMetricsSection />)
+    await screen.findAllByTestId("department-metrics-row")
+
+    const rowNames = () =>
+      screen.getAllByTestId("department-metrics-row").map((row) => within(row).getAllByRole("cell")[0].textContent)
+
+    fireEvent.click(screen.getByRole("button", { name: "Puntaje Promedio" }))
+    expect(rowNames()).toEqual(["Alto", "Bajo", "Oculto"])
+
+    fireEvent.click(screen.getByRole("button", { name: "Puntaje Promedio" }))
+    expect(rowNames()).toEqual(["Bajo", "Alto", "Oculto"])
+  })
+
   it("calls the overview endpoint only once on load", async () => {
     api.getDepartmentMetrics.mockResolvedValue([department()])
     render(<DepartmentMetricsSection />)

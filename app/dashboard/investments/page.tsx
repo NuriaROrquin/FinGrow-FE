@@ -26,6 +26,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SortableTableHead } from "@/components/ui/sortable-table-head"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   AlertDialog,
@@ -69,6 +70,7 @@ import {
   type CreateInvestmentPayload,
   type CurrencyPortfolioDto,
   type InvestmentDto,
+  type InvestmentSortField,
   type InvestmentType,
   type MepQuoteDto,
   type PagedResultDto,
@@ -84,6 +86,7 @@ import {
   formatSignedPercentage,
 } from "@/lib/format"
 import { useMessages } from "@/lib/i18n"
+import { toggleSort, type SortState } from "@/lib/sort"
 
 const investmentTypeColors: Record<InvestmentType, string> = {
   Stock: "#3b5998",
@@ -474,6 +477,21 @@ export default function InvestmentsPage() {
     setPageNumber(1)
   }
 
+  const sort: SortState<InvestmentSortField> = {
+    field: filterValues.sortBy,
+    direction: filterValues.sortDirection === "Ascending" ? "asc" : "desc",
+  }
+
+  const handleSort = (field: InvestmentSortField) => {
+    const next = toggleSort(sort, field, ["PurchasedOn", "InvestedAmount", "CurrentValue", "ReturnPercentage"])
+
+    handleFiltersChange({
+      ...filterValues,
+      sortBy: next.field,
+      sortDirection: next.direction === "asc" ? "Ascending" : "Descending",
+    })
+  }
+
   const clearFilters = () =>
     handleFiltersChange({
       ...defaultInvestmentFilters,
@@ -826,12 +844,24 @@ export default function InvestmentsPage() {
           <Table className={isLoading && rows.length > 0 ? "opacity-60" : undefined}>
             <TableHeader>
               <TableRow>
-                <TableHead>Activo</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Fecha de compra</TableHead>
-                <TableHead className="text-right">Capital invertido</TableHead>
-                <TableHead className="text-right">Valor actual</TableHead>
-                <TableHead className="text-right">Rendimiento</TableHead>
+                <SortableTableHead label="Activo" field="AssetName" sort={sort} onSort={handleSort} />
+                <SortableTableHead label="Tipo" field="AssetType" sort={sort} onSort={handleSort} />
+                <SortableTableHead label="Fecha de compra" field="PurchasedOn" sort={sort} onSort={handleSort} />
+                <SortableTableHead
+                  label="Capital invertido"
+                  field="InvestedAmount"
+                  sort={sort}
+                  onSort={handleSort}
+                  align="right"
+                />
+                <SortableTableHead label="Valor actual" field="CurrentValue" sort={sort} onSort={handleSort} align="right" />
+                <SortableTableHead
+                  label="Rendimiento"
+                  field="ReturnPercentage"
+                  sort={sort}
+                  onSort={handleSort}
+                  align="right"
+                />
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
