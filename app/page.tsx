@@ -19,7 +19,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       <AuthenticatedRedirect />
-      <div className="container mx-auto flex min-h-screen flex-col px-4 py-10">
+      <div className="container mx-auto flex min-h-screen flex-col px-4 py-6">
         <main className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-10 lg:grid-cols-2 lg:gap-16">
           <section className="space-y-6 text-center lg:text-left">
             <div className="flex items-center justify-center gap-3 lg:justify-start">
@@ -29,6 +29,16 @@ export default function HomePage() {
             <p className="mx-auto max-w-md text-lg text-muted-foreground lg:mx-0">
               Plataforma de bienestar financiero para individuos y empresas
             </p>
+            <div className="hidden overflow-hidden rounded-2xl border shadow-sm lg:block">
+              <Image
+                src="/login-hero.webp"
+                alt="Empleada revisando sus finanzas en el celular, con el panel de FinGrow abierto en la notebook"
+                width={1024}
+                height={687}
+                className="h-auto w-full"
+                priority
+              />
+            </div>
             <div className="hidden gap-6 pt-4 lg:grid lg:grid-cols-2">
               {audiences.map((audience) => (
                 <div key={audience.title} className="space-y-3">
@@ -60,7 +70,7 @@ export default function HomePage() {
           </section>
         </main>
 
-        <footer className="mt-10 text-center text-sm text-muted-foreground">
+        <footer className="mt-6 text-center text-sm text-muted-foreground">
           <p>© <CurrentYear /> FinGrow. Plataforma de educación y bienestar financiero.</p>
         </footer>
       </div>
