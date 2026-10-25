@@ -1,6 +1,7 @@
 "use client"
 
 import { useSearchParams } from "next/navigation"
+import { useMessages } from "@/lib/i18n"
 
 const FROM_INVESTMENTS = "investments"
 
@@ -15,8 +16,9 @@ export function relatedContentHref(kind: "articles" | "courses", slug: string): 
 
 export function useBackTarget(fallback: BackTarget): BackTarget {
   const searchParams = useSearchParams()
+  const t = useMessages().education
 
   return searchParams.get("from") === FROM_INVESTMENTS
-    ? { href: "/dashboard/investments", label: "Volver a Inversiones" }
+    ? { href: "/dashboard/investments", label: t.backToInvestments }
     : fallback
 }

@@ -52,7 +52,9 @@ const categoryIcons: Record<EducationCategory, LucideIcon> = {
 }
 
 export function CoursesCatalog() {
-  const labels = useMessages().labels
+  const messages = useMessages()
+  const labels = messages.labels
+  const t = messages.education
   const router = useRouter()
   const [level, setLevel] = useState<CourseLevel | typeof ALL>(ALL)
   const [maxDuration, setMaxDuration] = useState<string>(ALL)
@@ -77,12 +79,12 @@ export function CoursesCatalog() {
       .then(setCourses)
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return
-        toastApiError(error, "No se pudieron cargar los cursos.")
+        toastApiError(error, t.coursesLoadFailed)
         setLoadFailed(true)
       })
 
     return () => controller.abort()
-  }, [level, maxDuration, status, retryCount])
+  }, [level, maxDuration, status, retryCount, t])
 
   const updateRating = (updated: CourseDetailDto) => {
     setCourses((current) =>
@@ -112,11 +114,11 @@ export function CoursesCatalog() {
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-3 sm:flex-row">
           <Select value={level} onValueChange={(value) => setLevel(value as CourseLevel | typeof ALL)}>
-            <SelectTrigger className="w-full sm:w-44" aria-label="Filtrar por nivel">
+            <SelectTrigger className="w-full sm:w-44" aria-label={t.filterByLevel}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>Todos los niveles</SelectItem>
+              <SelectItem value={ALL}>{t.allLevels}</SelectItem>
               {Object.entries(labels.courseLevels).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
@@ -126,11 +128,11 @@ export function CoursesCatalog() {
           </Select>
 
           <Select value={status} onValueChange={(value) => setStatus(value as CourseProgressStatus | typeof ALL)}>
-            <SelectTrigger className="w-full sm:w-44" aria-label="Filtrar por progreso">
+            <SelectTrigger className="w-full sm:w-44" aria-label={t.filterByProgress}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>Todo el progreso</SelectItem>
+              <SelectItem value={ALL}>{t.allProgress}</SelectItem>
               {Object.entries(labels.courseProgressStatuses).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
@@ -145,14 +147,14 @@ export function CoursesCatalog() {
           variant="outline"
           value={maxDuration}
           onValueChange={(value) => setMaxDuration(value || ALL)}
-          aria-label="Filtrar por duración"
+          aria-label={t.filterByDuration}
         >
           <ToggleGroupItem value={ALL} className="flex-none px-3">
-            Cualquier duración
+            {t.anyDuration}
           </ToggleGroupItem>
           {durationOptions.map((minutes) => (
             <ToggleGroupItem key={minutes} value={String(minutes)} className="flex-none px-3">
-              ≤ {minutes} min
+              {t.upToMinutes(minutes)}
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
@@ -166,11 +168,11 @@ export function CoursesCatalog() {
                 <EmptyMedia variant="icon">
                   <AlertCircleIcon />
                 </EmptyMedia>
-                <EmptyTitle>No se pudieron cargar los cursos</EmptyTitle>
-                <EmptyDescription>Probá de nuevo en un momento.</EmptyDescription>
+                <EmptyTitle>{t.coursesFailedTitle}</EmptyTitle>
+                <EmptyDescription>{t.tryAgainShortly}</EmptyDescription>
               </EmptyHeader>
               <Button variant="outline" onClick={() => setRetryCount((count) => count + 1)}>
-                Reintentar
+                {t.retry}
               </Button>
             </Empty>
           </CardContent>
@@ -188,16 +190,12 @@ export function CoursesCatalog() {
                 <EmptyMedia variant="icon">
                   <GraduationCapIcon />
                 </EmptyMedia>
-                <EmptyTitle>No hay cursos para mostrar</EmptyTitle>
-                <EmptyDescription>
-                  {hasFilters
-                    ? "Probá con otro nivel, otro progreso o más duración."
-                    : "Todavía no hay cursos publicados."}
-                </EmptyDescription>
+                <EmptyTitle>{t.noCourses}</EmptyTitle>
+                <EmptyDescription>{hasFilters ? t.noCoursesFiltered : t.noCoursesPublished}</EmptyDescription>
               </EmptyHeader>
               {hasFilters && (
                 <Button variant="outline" onClick={clearFilters}>
-                  Limpiar filtros
+                  {t.clearFilters}
                 </Button>
               )}
             </Empty>
@@ -230,7 +228,7 @@ export function CoursesCatalog() {
                     </div>
                     <div className="flex items-center gap-1">
                       <BookOpenIcon className="size-4" />
-                      <span>{course.lessonCount} lecciones</span>
+                      <span>{messages.educationContent.lessons(course.lessonCount)}</span>
                     </div>
                     <Badge variant="outline">{labels.courseLevels[course.level]}</Badge>
                   </div>
@@ -238,7 +236,7 @@ export function CoursesCatalog() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">
-                        Progreso · {course.completedLessons} de {course.lessonCount} lecciones
+                        {t.progressOf(course.completedLessons, course.lessonCount)}
                       </span>
                       <span className="font-medium">{course.progressPercentage}%</span>
                     </div>
@@ -264,17 +262,17 @@ export function CoursesCatalog() {
                     {isCompleted ? (
                       <>
                         <CheckCircleIcon className="size-4" />
-                        Completado
+                        {t.courseDone}
                       </>
                     ) : course.progressStatus === "InProgress" ? (
                       <>
                         <PlayCircleIcon className="size-4" />
-                        Continuar Aprendiendo
+                        {t.continueLearning}
                       </>
                     ) : (
                       <>
                         <PlayCircleIcon className="size-4" />
-                        Iniciar Curso
+                        {t.startCourse}
                       </>
                     )}
                   </Button>

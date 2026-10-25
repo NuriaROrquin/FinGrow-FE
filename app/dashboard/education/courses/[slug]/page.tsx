@@ -42,13 +42,15 @@ type LoadState =
   | { status: "error" }
 
 export default function CoursePage() {
-  const labels = useMessages().labels
+  const messages = useMessages()
+  const labels = messages.labels
+  const t = messages.education
   const params = useParams<{ slug: string }>()
   const router = useRouter()
   const [state, setState] = useState<LoadState>({ status: "loading" })
   const [currentLessonId, setCurrentLessonId] = useState<string | null>(null)
   const [isCompleting, setIsCompleting] = useState(false)
-  const back = useBackTarget({ href: BACK_TO_COURSES, label: "Volver a los cursos" })
+  const back = useBackTarget({ href: BACK_TO_COURSES, label: t.backToCourses })
 
   useEffect(() => {
     const controller = new AbortController()
@@ -65,12 +67,12 @@ export default function CoursePage() {
           setState({ status: "not-found" })
           return
         }
-        toastApiError(error, "No se pudo cargar el curso.")
+        toastApiError(error, t.courseLoadFailed)
         setState({ status: "error" })
       })
 
     return () => controller.abort()
-  }, [params.slug])
+  }, [params.slug, t])
 
   const backButton = (
     <Button variant="ghost" size="icon" aria-label={back.label} onClick={() => router.push(back.href)}>
@@ -103,7 +105,7 @@ export default function CoursePage() {
         <div className="flex items-center gap-4">
           {backButton}
           <h1 className="text-3xl font-bold">
-            {state.status === "not-found" ? "Curso no encontrado" : "No se pudo cargar el curso"}
+            {state.status === "not-found" ? t.courseNotFound : t.courseFailedTitle}
           </h1>
         </div>
       </div>
@@ -128,13 +130,13 @@ export default function CoursePage() {
       const updated = await completeLesson(course.slug, currentLesson.id)
       setState({ status: "loaded", course: updated })
       if (updated.progressStatus === "Completed" && !isCourseCompleted) {
-        toast.success(`Completaste "${updated.title}"`)
+        toast.success(t.courseCompletedToast(updated.title))
       }
       if (nextLesson) {
         setCurrentLessonId(nextLesson.id)
       }
     } catch (error) {
-      toastApiError(error, "No se pudo guardar tu avance.")
+      toastApiError(error, t.progressSaveFailed)
     } finally {
       setIsCompleting(false)
     }
@@ -156,7 +158,7 @@ export default function CoursePage() {
             </span>
             <span className="flex items-center gap-1 text-muted-foreground">
               <BookOpenIcon className="size-3" />
-              {course.lessonCount} lecciones
+              {messages.educationContent.lessons(course.lessonCount)}
             </span>
           </div>
         </div>
@@ -168,7 +170,7 @@ export default function CoursePage() {
         <CardContent className="space-y-2 pt-6">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">
-              Tu progreso · {course.completedLessons} de {course.lessonCount} lecciones
+              {t.yourProgress(course.completedLessons, course.lessonCount)}
             </span>
             <span className="font-medium">{course.progressPercentage}%</span>
           </div>
@@ -176,7 +178,7 @@ export default function CoursePage() {
           {isCourseCompleted && (
             <p className="flex items-center gap-2 pt-2 text-sm font-medium text-primary">
               <TrophyIcon className="size-4" />
-              Completaste este curso. Podés volver a ver cualquier lección cuando quieras.
+              {t.courseCompleted}
             </p>
           )}
           <div className="border-t pt-3">
@@ -197,7 +199,7 @@ export default function CoursePage() {
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle className="text-xl">
-                Lección {currentLesson.position}: {currentLesson.title}
+                {t.lessonTitle(currentLesson.position, currentLesson.title)}
               </CardTitle>
               <CardDescription className="flex items-center gap-1">
                 <ClockIcon className="size-3" />
@@ -205,7 +207,7 @@ export default function CoursePage() {
                 {currentLesson.isCompleted && (
                   <span className="ml-2 flex items-center gap-1 text-primary">
                     <CheckCircleIcon className="size-3" />
-                    Completada
+                    {t.completed}
                   </span>
                 )}
               </CardDescription>
@@ -228,7 +230,7 @@ export default function CoursePage() {
                   onClick={() => previousLesson && setCurrentLessonId(previousLesson.id)}
                 >
                   <ArrowLeftIcon className="size-4" />
-                  Anterior
+                  {t.previous}
                 </Button>
                 {currentLesson.isCompleted ? (
                   <Button
@@ -236,13 +238,13 @@ export default function CoursePage() {
                     disabled={!nextLesson}
                     onClick={() => nextLesson && setCurrentLessonId(nextLesson.id)}
                   >
-                    Siguiente
+                    {t.next}
                     <ArrowRightIcon className="size-4" />
                   </Button>
                 ) : (
                   <Button onClick={handleComplete} disabled={isCompleting}>
                     {isCompleting ? <Spinner /> : <CheckCircleIcon className="size-4" />}
-                    {nextLesson ? "Completar y seguir" : "Completar lección"}
+                    {nextLesson ? t.completeAndContinue : t.completeLesson}
                   </Button>
                 )}
               </div>
@@ -251,7 +253,7 @@ export default function CoursePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Lecciones</CardTitle>
+              <CardTitle className="text-lg">{t.lessons}</CardTitle>
             </CardHeader>
             <CardContent>
               <ol className="space-y-1">

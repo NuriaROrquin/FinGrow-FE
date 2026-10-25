@@ -27,8 +27,8 @@ export default function EducationPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-balance">Educación Financiera</h1>
-        <p className="text-muted-foreground mt-1">Aprende y mejora tu educación financiera</p>
+        <h1 className="text-3xl font-bold text-balance">{t.education.title}</h1>
+        <p className="text-muted-foreground mt-1">{t.education.subtitle}</p>
       </div>
 
       {/* Progress Overview */}
@@ -57,9 +57,9 @@ export default function EducationPage() {
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="courses">Cursos</TabsTrigger>
-          <TabsTrigger value="articles">Artículos</TabsTrigger>
-          <TabsTrigger value="achievements">Logros</TabsTrigger>
+          <TabsTrigger value="courses">{t.education.tabCourses}</TabsTrigger>
+          <TabsTrigger value="articles">{t.education.tabArticles}</TabsTrigger>
+          <TabsTrigger value="achievements">{t.achievements.label}</TabsTrigger>
         </TabsList>
 
         {/* Courses Tab */}
