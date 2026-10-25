@@ -24,11 +24,14 @@ Salvo el login, WhatsApp, Telegram y lo que se lista abajo, no hay llamadas real
 un bug, revisá si no es simplemente esto:
 
 - **`lib/auth-context.tsx`** (T-05, SCRUM-23; login de empresa: HU-46) mantiene la sesión real:
-`login()` llama a `POST /login/empleado` o `POST /login/empresa` según el rol, el backend
-responde con la cookie **HttpOnly** `fingrow-session` (que lleva el JWT) y un `SessionResponse`
-con `userId`, `companyId`, `fullName`, `role` y `expiresAt`. Al cargar la página se rehidrata
-con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve el token: en
-`localStorage` solo queda `fingrow-role`, para saber a qué login volver ante un 401.
+hay un solo login, en la portada (`components/home/login-form.tsx`): `login()` llama a
+`POST /login` sin rol, porque el email es único entre empleados y empresas y el backend lo
+resuelve. Responde con la cookie **HttpOnly** `fingrow-session` (que lleva el JWT) y un
+`SessionResponse` con `userId`, `companyId`, `fullName`, `role` y `expiresAt`; con el doble
+factor activo responde un desafío que se completa en `POST /login/2fa`. Con la sesión iniciada,
+`AuthenticatedRedirect` manda a cada rol a su panel. Al cargar la página se rehidrata con
+`GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve el token ni guarda
+el rol: un 401 vuelve siempre a la portada, y `/login/*` redirige ahí (`next.config.mjs`).
 - **Departamentos y empleados del panel de empresa** (HU-51, HU-54) usan la API real
   (`lib/api/company.ts`, `/api/company/departments` y `/api/company/employees`). El empleado se
   relaciona con su departamento por id. El alta devuelve una contraseña temporal que se muestra
@@ -208,7 +211,7 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
 ## Arquitectura y estructura
 
 ```
-app/            Rutas (App Router): dashboard, login/empleado, login/empresa
+app/            Rutas (App Router): la portada con el login y dashboard
 components/ui/  Componentes shadcn — generados, no reescribir el estilo base a mano
 lib/            Contexts (auth, preferencias), utils y la capa de acceso HTTP (lib/api)
 hooks/          Hooks compartidos (use-mobile, use-toast)
