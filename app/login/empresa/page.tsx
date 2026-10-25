@@ -45,7 +45,7 @@ export default function EmpresaLoginPage() {
     setIsLoading(true);
 
     try {
-      const pendingChallenge = await login(email, password, "empresa");
+      const pendingChallenge = await login(email, password);
 
       if (pendingChallenge) {
         setChallenge(pendingChallenge);
@@ -72,7 +72,7 @@ export default function EmpresaLoginPage() {
     setIsLoading(true);
 
     try {
-      await completeTwoFactorLogin(challenge.challengeToken, code, "empresa");
+      await completeTwoFactorLogin(challenge.challengeToken, code);
       router.push("/dashboard/company");
     } catch (error) {
       toastApiError(

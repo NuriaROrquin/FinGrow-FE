@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation"
 import {
   getSession,
   isTwoFactorChallenge,
-  loginEmpleado,
-  loginEmpresa,
+  login as loginRequest,
   logout as logoutRequest,
   refreshSession,
   verifyTwoFactorLogin,
@@ -24,8 +23,8 @@ interface AuthContextType {
   userName: string
   isAuthenticated: boolean
   isHydrated: boolean
-  login: (email: string, password: string, role?: UserRole) => Promise<TwoFactorChallenge | null>
-  completeTwoFactorLogin: (challengeToken: string, code: string, role?: UserRole) => Promise<void>
+  login: (email: string, password: string) => Promise<TwoFactorChallenge | null>
+  completeTwoFactorLogin: (challengeToken: string, code: string) => Promise<void>
   logout: (redirectTo?: string) => Promise<void>
   refreshUser: () => Promise<void>
 }
@@ -92,9 +91,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthState(createAuthenticatedState(user))
   }
 
-const login = async (email: string, password: string, role: UserRole = "empleado") => {
-  const response =
-    role === "empresa" ? await loginEmpresa({ email, password }) : await loginEmpleado({ email, password })
+const login = async (email: string, password: string) => {
+  const response = await loginRequest({ email, password })
 
   if (isTwoFactorChallenge(response)) {
     return response
@@ -104,8 +102,8 @@ const login = async (email: string, password: string, role: UserRole = "empleado
   return null
 }
 
-const completeTwoFactorLogin = async (challengeToken: string, code: string, role: UserRole = "empleado") => {
-  startSession(await verifyTwoFactorLogin(challengeToken, code, role))
+const completeTwoFactorLogin = async (challengeToken: string, code: string) => {
+  startSession(await verifyTwoFactorLogin(challengeToken, code))
 }
 
   // El nombre viaja dentro del token: después de editar el perfil hay que renovar la sesión

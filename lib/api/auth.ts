@@ -1,5 +1,4 @@
 import { api } from "./client"
-import type { SessionRole } from "./session"
 
 export interface LoginRequest {
   email: string
@@ -24,16 +23,12 @@ export function isTwoFactorChallenge(response: SessionResponse | TwoFactorChalle
   return "requiresTwoFactor" in response && response.requiresTwoFactor === true
 }
 
-export function loginEmpleado(credentials: LoginRequest) {
-  return api.post<SessionResponse | TwoFactorChallenge>("/login/empleado", credentials, { skipAuthRedirect: true })
+export function login(credentials: LoginRequest) {
+  return api.post<SessionResponse | TwoFactorChallenge>("/login", credentials, { skipAuthRedirect: true })
 }
 
-export function verifyTwoFactorLogin(challengeToken: string, code: string, role: SessionRole = "empleado") {
-  return api.post<SessionResponse>(`/login/${role}/2fa`, { challengeToken, code }, { skipAuthRedirect: true })
-}
-
-export function loginEmpresa(credentials: LoginRequest) {
-  return api.post<SessionResponse | TwoFactorChallenge>("/login/empresa", credentials, { skipAuthRedirect: true })
+export function verifyTwoFactorLogin(challengeToken: string, code: string) {
+  return api.post<SessionResponse>("/login/2fa", { challengeToken, code }, { skipAuthRedirect: true })
 }
 
 export function getSession() {

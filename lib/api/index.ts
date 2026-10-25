@@ -22,8 +22,7 @@ export { clearSession, getRole, loginPathForCurrentRole, saveSession, type Sessi
 export {
   getSession,
   isTwoFactorChallenge,
-  loginEmpleado,
-  loginEmpresa,
+  login,
   logout,
   verifyTwoFactorLogin,
   type LoginRequest,
