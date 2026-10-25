@@ -91,9 +91,10 @@ export function AddTransactionForm({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [generalError, setGeneralError] = useState<string | null>(null)
   const { toast } = useToast()
-  const t = useMessages()
+  const messages = useMessages()
+  const t = messages.transactionForm
 
-  const categoryLabels = transactionType === "Expense" ? t.labels.expenseCategories : t.labels.incomeCategories
+  const categoryLabels = transactionType === "Expense" ? messages.labels.expenseCategories : messages.labels.incomeCategories
 
   useEffect(() => {
     const nextValues = getInitialFormValues(initialTransaction, preferences.currency)
@@ -122,12 +123,12 @@ export function AddTransactionForm({
     e.preventDefault()
 
     if (!paymentMethod) {
-      setFieldErrors((previous) => ({ ...previous, paymentMethod: "Seleccioná un método de pago." }))
+      setFieldErrors((previous) => ({ ...previous, paymentMethod: t.requiredPaymentMethod }))
       return
     }
 
     if (mode === "edit" && lockedStatus === "Confirmed" && status !== "Confirmed") {
-      setGeneralError("Una transacción confirmada no puede volver a estado Pending.")
+      setGeneralError(t.confirmedCannotRevert)
       return
     }
 
@@ -166,19 +167,19 @@ export function AddTransactionForm({
 
         if (error.status === 404) {
           toast({
-            title: "Movimiento no encontrado",
-            description: "El movimiento no existe o no pertenece a este usuario.",
+            title: t.notFoundTitle,
+            description: t.notFoundDescription,
             variant: "destructive",
           })
         } else if (error.status === 400 && Object.keys(nextFieldErrors).length > 0) {
           toast({
-            title: "Validación del formulario",
-            description: "Revisá los campos marcados antes de guardar.",
+            title: t.validationTitle,
+            description: t.validationDescription,
             variant: "destructive",
           })
         } else {
           toast({
-            title: mode === "edit" ? "No se pudo actualizar la transacción" : "No se pudo guardar la transacción",
+            title: mode === "edit" ? t.updateFailed : t.saveFailed,
             description: error.description,
             variant: "destructive",
           })
@@ -187,10 +188,10 @@ export function AddTransactionForm({
         return
       }
 
-      const message = error instanceof Error ? error.message : "Intenta de nuevo en unos segundos."
+      const message = error instanceof Error ? error.message : t.tryAgainShortly
       setGeneralError(message)
       toast({
-        title: mode === "edit" ? "No se pudo actualizar la transacción" : "No se pudo guardar la transacción",
+        title: mode === "edit" ? t.updateFailed : t.saveFailed,
         description: message,
         variant: "destructive",
       })
@@ -217,14 +218,14 @@ export function AddTransactionForm({
         }}
       >
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="Expense">Gasto</TabsTrigger>
-          <TabsTrigger value="Income">Ingreso</TabsTrigger>
+          <TabsTrigger value="Expense">{t.expense}</TabsTrigger>
+          <TabsTrigger value="Income">{t.income}</TabsTrigger>
         </TabsList>
       </Tabs>
 
       <div className="grid grid-cols-3 gap-2">
         <div className="col-span-2 space-y-2">
-          <Label htmlFor="amount">Monto</Label>
+          <Label htmlFor="amount">{t.amount}</Label>
           <Input
             id="amount"
             type="number"
@@ -241,7 +242,7 @@ export function AddTransactionForm({
           {fieldErrors.amount && <p className="text-xs text-destructive">{fieldErrors.amount}</p>}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="currency">Moneda</Label>
+          <Label htmlFor="currency">{t.currency}</Label>
           <Select value={currency} onValueChange={(value) => setCurrency(value as Currency)}>
             <SelectTrigger id="currency">
               <SelectValue />
@@ -258,10 +259,10 @@ export function AddTransactionForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description">Descripción</Label>
+        <Label htmlFor="description">{t.description}</Label>
         <Input
           id="description"
-          placeholder="Ingresa descripción"
+          placeholder={t.descriptionPlaceholder}
           value={description}
           onChange={(e) => {
             setDescription(e.target.value)
@@ -273,10 +274,10 @@ export function AddTransactionForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="category">Categoría</Label>
+        <Label htmlFor="category">{t.category}</Label>
         <Select value={category} onValueChange={handleCategoryChange}>
           <SelectTrigger id="category" aria-invalid={Boolean(fieldErrors.category)}>
-            <SelectValue placeholder="Selecciona categoría" />
+            <SelectValue placeholder={t.categoryPlaceholder} />
           </SelectTrigger>
           <SelectContent>
             {Object.entries(categoryLabels).map(([value, label]) => (
@@ -290,7 +291,7 @@ export function AddTransactionForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="date">Fecha</Label>
+        <Label htmlFor="date">{t.date}</Label>
         <Input
           id="date"
           type="date"
@@ -305,7 +306,7 @@ export function AddTransactionForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="payment">Método de Pago</Label>
+        <Label htmlFor="payment">{t.paymentMethod}</Label>
         <Select
           value={paymentMethod}
           onValueChange={(value) => {
@@ -314,10 +315,10 @@ export function AddTransactionForm({
           }}
         >
           <SelectTrigger id="payment" aria-invalid={Boolean(fieldErrors.paymentMethod)}>
-            <SelectValue placeholder="Selecciona método de pago" />
+            <SelectValue placeholder={t.paymentMethodPlaceholder} />
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(t.labels.paymentMethods).map(([value, label]) => (
+            {Object.entries(messages.labels.paymentMethods).map(([value, label]) => (
               <SelectItem key={value} value={value}>
                 {label}
               </SelectItem>
@@ -339,10 +340,10 @@ export function AddTransactionForm({
 
       {mode === "edit" && (
         <div className="space-y-2 rounded-md border border-border/70 bg-muted/30 p-3">
-          <Label htmlFor="transaction-status">Estado</Label>
+          <Label htmlFor="transaction-status">{t.status}</Label>
           <div className="flex items-center gap-3">
             <span className={`text-sm ${status === "Pending" ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
-              Pendiente
+              {messages.labels.transactionStatuses.Pending}
             </span>
             <Switch
               id="transaction-status"
@@ -355,32 +356,32 @@ export function AddTransactionForm({
 
                 setStatus(checked ? "Confirmed" : "Pending")
               }}
-              aria-label="Cambiar estado de la transacción"
+              aria-label={t.statusAria}
             />
             <span className={`text-sm ${status === "Confirmed" ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
-              Confirmada
+              {messages.labels.transactionStatuses.Confirmed}
             </span>
           </div>
           <p className="text-xs text-muted-foreground">
             {lockedStatus === "Confirmed"
-              ? "Esta transacción ya está confirmada y no puede volver a pendiente."
-              : "Puedes pasar de pendiente a confirmada."}
+              ? t.statusLocked
+              : t.statusHint}
           </p>
         </div>
       )}
 
       <div className="flex gap-2 justify-end pt-4">
         <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-          Cancelar
+          {messages.common.cancel}
         </Button>
         <Button type="submit" disabled={isSubmitting || isUploadingReceipt}>
           {isSubmitting
-            ? "Guardando..."
+            ? t.saving
             : isUploadingReceipt
-              ? "Subiendo comprobante..."
+              ? t.uploadingReceipt
               : mode === "edit"
-                ? "Guardar cambios"
-                : "Agregar Transacción"}
+                ? t.saveChanges
+                : t.add}
         </Button>
       </div>
     </form>

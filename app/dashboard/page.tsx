@@ -256,8 +256,8 @@ export default function DashboardPage() {
         />
         <Tabs value={currency} onValueChange={(value) => setCurrency(value as "ARS" | "USD")} className="w-fit">
           <TabsList>
-            <TabsTrigger value="ARS">{t.currencyArs}</TabsTrigger>
-            <TabsTrigger value="USD">{t.currencyUsd}</TabsTrigger>
+            <TabsTrigger value="ARS">{messages.common.currencyArs}</TabsTrigger>
+            <TabsTrigger value="USD">{messages.common.currencyUsd}</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>

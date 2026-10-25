@@ -126,6 +126,7 @@ const transactionTableCellClassName = "py-3 pr-2 align-middle whitespace-nowrap"
 export default function TransactionsPage() {
   const searchParams = useSearchParams()
   const t = useMessages()
+  const tx = t.transactions
   // Métodos de pago para el filtro, ordenados alfabéticamente en el idioma elegido
   const paymentMethodFilterOptions = (Object.entries(t.labels.paymentMethods) as [PaymentMethod, string][]).sort(
     ([, labelA], [, labelB]) => labelA.localeCompare(labelB),
@@ -202,15 +203,15 @@ export default function TransactionsPage() {
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return
         toast({
-          title: "No se pudo cargar el resumen",
-          description: error instanceof Error ? error.message : "Intenta de nuevo en unos segundos.",
+          title: tx.summaryLoadFailed,
+          description: error instanceof Error ? error.message : tx.tryAgainShortly,
           variant: "destructive",
         })
       })
       .finally(() => {
         setIsSummaryReady(true)
       })
-  }, [dateFrom, dateTo, summaryRefreshKey, toast])
+  }, [dateFrom, dateTo, summaryRefreshKey, toast, tx])
 
   useEffect(() => {
     const view = searchParams.get("view")
@@ -255,8 +256,8 @@ export default function TransactionsPage() {
         .catch((error: unknown) => {
           if (error instanceof DOMException && error.name === "AbortError") return
           toast({
-            title: "No se pudo cargar el listado",
-            description: error instanceof Error ? error.message : "Intenta de nuevo en unos segundos.",
+            title: tx.listLoadFailed,
+            description: error instanceof Error ? error.message : tx.tryAgainShortly,
             variant: "destructive",
           })
         })
@@ -282,6 +283,7 @@ export default function TransactionsPage() {
     searchQuery,
     sort,
     toast,
+    tx,
   ])
 
   useEffect(() => {
@@ -389,19 +391,19 @@ export default function TransactionsPage() {
         setCurrentPage((page) => page - 1)
       }
       toast({
-        title: "Transacción eliminada",
-        description: "La transacción se eliminó correctamente.",
+        title: tx.deletedToast,
+        description: tx.deletedToastDescription,
       })
     } catch (error) {
       toast({
         title: error instanceof Error && isApiError(error) && error.status === 404
-          ? "Transacción no encontrada"
-          : "No se pudo eliminar la transacción",
+          ? tx.notFound
+          : tx.deleteFailed,
         description: error instanceof Error && isApiError(error) && error.status === 404
-          ? "La transacción no existe o no pertenece al usuario."
+          ? tx.notFoundDescription
           : error instanceof Error
             ? error.message
-            : "Intenta de nuevo en unos segundos.",
+            : tx.tryAgainShortly,
         variant: "destructive",
       })
     } finally {
@@ -468,11 +470,11 @@ export default function TransactionsPage() {
       })
       const link = document.createElement("a")
       const url = URL.createObjectURL(blob)
-      const dateFromForFilename = dateFrom.replaceAll("-", "") || "sin-fecha"
-      const dateToForFilename = dateTo.replaceAll("-", "") || "sin-fecha"
+      const dateFromForFilename = dateFrom.replaceAll("-", "") || tx.exportNoDate
+      const dateToForFilename = dateTo.replaceAll("-", "") || tx.exportNoDate
 
       link.href = url
-      link.download = `transacciones_${dateFromForFilename}_${dateToForFilename}.xlsx`
+      link.download = `${tx.exportFileName}_${dateFromForFilename}_${dateToForFilename}.xlsx`
       link.style.visibility = "hidden"
       document.body.appendChild(link)
       link.click()
@@ -480,8 +482,8 @@ export default function TransactionsPage() {
       URL.revokeObjectURL(url)
     } catch (error) {
       toast({
-        title: "No se pudo exportar las transacciones",
-        description: error instanceof Error ? error.message : "Intenta de nuevo en unos segundos.",
+        title: tx.exportFailed,
+        description: error instanceof Error ? error.message : tx.tryAgainShortly,
         variant: "destructive",
       })
     } finally {
@@ -493,8 +495,8 @@ export default function TransactionsPage() {
     <div className="flex w-full max-w-full flex-col space-y-6 overflow-x-hidden pr-1 sm:pr-2">
       <div className="contents">
         <div className="order-0">
-          <h1 className="text-3xl font-bold text-balance">Transacciones</h1>
-          <p className="text-muted-foreground mt-1">Rastrea y gestiona tus ingresos y gastos</p>
+          <h1 className="text-3xl font-bold text-balance">{tx.title}</h1>
+          <p className="text-muted-foreground mt-1">{tx.subtitle}</p>
         </div>
 
           <div className="order-4 grid w-full grid-cols-1 gap-2 py-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -513,7 +515,7 @@ export default function TransactionsPage() {
               <Button variant="outline" className="w-full" asChild>
                 <a href={`https://t.me/${TELEGRAM_BOT_USERNAME}`} target="_blank" rel="noopener noreferrer">
                   <Send className="size-4" />
-                  Mensaje Telegram
+                  {tx.telegramMessage}
                 </a>
               </Button>
             )}
@@ -521,13 +523,13 @@ export default function TransactionsPage() {
             <Dialog open={isAddDialogOpen} onOpenChange={handleTransactionDialogChange}>
               <Button className="w-full" onClick={() => openCreateTransactionDialog()}>
                 <PlusIcon className="size-4" />
-                Agregar Transacción
+                {tx.add}
               </Button>
               <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                  <DialogTitle>{editingTransaction ? "Editar transacción" : "Agregar Nueva Transacción"}</DialogTitle>
+                  <DialogTitle>{editingTransaction ? tx.editTitle : tx.addTitle}</DialogTitle>
                   <DialogDescription>
-                    {editingTransaction ? "Actualiza los datos del movimiento seleccionado." : "Registra un nuevo ingreso o gasto"}
+                    {editingTransaction ? tx.editDescription : tx.addDescription}
                   </DialogDescription>
                 </DialogHeader>
                 <AddTransactionForm
@@ -549,8 +551,8 @@ export default function TransactionsPage() {
                       }))
                       setSummaryRefreshKey((key) => key + 1)
                       toast({
-                        title: "Transacción actualizada",
-                        description: "Los cambios se guardaron correctamente.",
+                        title: tx.updatedToast,
+                        description: tx.updatedToastDescription,
                       })
                       return
                     }
@@ -563,8 +565,8 @@ export default function TransactionsPage() {
                     }))
                     setSummaryRefreshKey((key) => key + 1)
                     toast({
-                      title: "Transacción guardada",
-                      description: "La transacción ha sido agregada exitosamente",
+                      title: tx.savedToast,
+                      description: tx.savedToastDescription,
                     })
                   }}
                   onClose={closeTransactionDialog}
@@ -582,15 +584,16 @@ export default function TransactionsPage() {
             >
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>¿Eliminar transacción?</AlertDialogTitle>
+                  <AlertDialogTitle>{tx.deleteTitle}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Vas a eliminar la transacción de {transactionToDelete?.description ?? ""} por {transactionToDelete
-                      ? formatMoney(transactionToDelete.amount, transactionToDelete.currency)
-                      : ""}. Esta acción no se puede deshacer.
+                    {tx.deleteWarning(
+                      transactionToDelete?.description ?? "",
+                      transactionToDelete ? formatMoney(transactionToDelete.amount, transactionToDelete.currency) : "",
+                    )}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                  <AlertDialogCancel disabled={isDeleting}>{t.common.cancel}</AlertDialogCancel>
                   <AlertDialogAction
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     disabled={isDeleting}
@@ -599,7 +602,7 @@ export default function TransactionsPage() {
                       void handleDeleteTransaction()
                     }}
                   >
-                    {isDeleting ? "Eliminando..." : "Confirmar"}
+                    {isDeleting ? tx.deleting : tx.confirm}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -611,34 +614,34 @@ export default function TransactionsPage() {
         <PeriodFilter dateFrom={dateFrom} dateTo={dateTo} onChange={({ dateFrom: nextDateFrom, dateTo: nextDateTo }) => changePeriod(nextDateFrom, nextDateTo)} />
         <Tabs value={summaryCurrency} onValueChange={(value) => setSummaryCurrency(value as "ARS" | "USD")} className="w-fit">
           <TabsList>
-            <TabsTrigger value="ARS">Pesos (ARS)</TabsTrigger>
-            <TabsTrigger value="USD">Dólares (USD)</TabsTrigger>
+            <TabsTrigger value="ARS">{t.common.currencyArs}</TabsTrigger>
+            <TabsTrigger value="USD">{t.common.currencyUsd}</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
       <Alert className="order-2 border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-800/70 dark:bg-sky-950/40 dark:text-sky-100">
         <AlertDescription className="flex flex-wrap items-center gap-1.5 text-sky-900 dark:text-sky-100">
-          <span>Los movimientos pendientes no se incluyen en los totales hasta que sean confirmados.</span>
+          <span>{tx.pendingNotice}</span>
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
                 className="size-6 rounded-full text-sky-700 hover:bg-sky-100 hover:text-sky-800 dark:text-sky-300 dark:hover:bg-sky-900/60 dark:hover:text-sky-100"
-                aria-label="Más información sobre el cálculo de los totales"
+                aria-label={tx.totalsHelpAria}
               >
                 <Info className="size-4" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80 text-sm">
-              <p className="font-medium">¿Cómo se calculan los totales?</p>
+              <p className="font-medium">{tx.totalsHelpTitle}</p>
               <p className="mt-1 text-muted-foreground">
-                Ingresos, gastos y balance neto solo suman las transacciones con estado{" "}
-                <strong className="text-foreground">Confirmada</strong>. Las transacciones{" "}
-                <strong className="text-foreground">Pendientes</strong> (por ejemplo, las que llegan de
-                integraciones como Mercado Pago) se excluyen de estos cálculos hasta que las confirmes
-                desde la pestaña Pendientes.
+                {tx.totalsHelpPrefix}
+                <strong className="text-foreground">{tx.totalsHelpConfirmed}</strong>
+                {tx.totalsHelpMiddle}
+                <strong className="text-foreground">{tx.totalsHelpPending}</strong>
+                {tx.totalsHelpSuffix}
               </p>
             </PopoverContent>
           </Popover>
@@ -656,14 +659,14 @@ export default function TransactionsPage() {
               <ArrowUpIcon className="size-5 shrink-0 text-muted-foreground" />
               <div>
                 <CardDescription className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                  Ingresos
+                  {tx.income}
                 </CardDescription>
                 <CardTitle className="mt-1 text-2xl text-foreground">{formatCurrency(selectedSummary.income, summaryCurrency)}</CardTitle>
               </div>
             </div>
             <div className="mt-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
               <ArrowUpIcon className="size-3.5" />
-              <span>{selectedSummary.incomeTransactions} ingresos</span>
+              <span>{tx.incomeCount(selectedSummary.incomeTransactions)}</span>
             </div>
           </CardContent>
         </Card>
@@ -674,14 +677,14 @@ export default function TransactionsPage() {
               <ArrowDownIcon className="size-5 shrink-0 text-muted-foreground" />
               <div>
                 <CardDescription className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                  Gastos
+                  {tx.expenses}
                 </CardDescription>
                 <CardTitle className="mt-1 text-2xl text-foreground">{formatCurrency(selectedSummary.expenses, summaryCurrency)}</CardTitle>
               </div>
             </div>
             <div className="mt-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
               <ArrowDownIcon className="size-3.5" />
-              <span>{selectedSummary.expenseTransactions} gastos</span>
+              <span>{tx.expenseCount(selectedSummary.expenseTransactions)}</span>
             </div>
           </CardContent>
         </Card>
@@ -692,14 +695,14 @@ export default function TransactionsPage() {
               <ScaleIcon className="size-5 shrink-0 text-muted-foreground" />
               <div>
                 <CardDescription className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                  Balance Neto
+                  {tx.netBalance}
                 </CardDescription>
                 <CardTitle className="mt-1 text-2xl text-foreground">{formatCurrency(selectedSummary.balance, summaryCurrency)}</CardTitle>
               </div>
             </div>
             <div className="mt-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
               {selectedSummary.balance >= 0 ? <ArrowUpIcon className="size-3.5" /> : <ArrowDownIcon className="size-3.5" />}
-              <span>{selectedSummary.transactions} transacciones totales</span>
+              <span>{tx.totalCount(selectedSummary.transactions)}</span>
             </div>
           </CardContent>
         </Card>
@@ -733,21 +736,21 @@ export default function TransactionsPage() {
 
       <Card className={activeView === "movements" ? "order-5" : "hidden"}>
         <CardHeader>
-          <CardTitle>Historial de Transacciones</CardTitle>
-          <CardDescription>Todas tus transacciones financieras en un solo lugar</CardDescription>
+          <CardTitle>{tx.historyTitle}</CardTitle>
+          <CardDescription>{tx.historyDescription}</CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[minmax(0,1.2fr)_repeat(4,minmax(0,1fr))_auto]">
               <div className="flex min-w-0 flex-col gap-1 lg:col-span-2 xl:col-span-1">
                 <Label htmlFor="search-query" className="text-xs text-muted-foreground">
-                  Buscar
+                  {tx.search}
                 </Label>
                 <div className="relative">
                   <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="search-query"
-                    placeholder="Buscar transacciones..."
+                    placeholder={tx.searchPlaceholder}
                     value={searchQuery}
                     onChange={(e) => {
                       setSearchQuery(e.target.value)
@@ -758,15 +761,15 @@ export default function TransactionsPage() {
                 </div>
               </div>
               <div className="flex min-w-0 flex-col gap-1">
-                <Label className="text-xs text-muted-foreground">Estado</Label>
+                <Label className="text-xs text-muted-foreground">{tx.status}</Label>
                 <Popover open={isStatusPickerOpen} onOpenChange={setIsStatusPickerOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" role="combobox" aria-expanded={isStatusPickerOpen} className="w-full justify-between bg-card font-normal">
                       <span className="truncate">
                         {filterStatus.length === 0
-                          ? "Ningún estado"
+                          ? tx.noStatus
                           : filterStatus.length === transactionStatusFilterOptions.length
-                            ? "Todos"
+                            ? tx.all
                             : transactionStatusFilterOptions
                                 .filter(([value]) => filterStatus.includes(value))
                                 .map(([, label]) => label)
@@ -780,7 +783,7 @@ export default function TransactionsPage() {
                       <CommandList>
                         <CommandGroup>
                           <CommandItem
-                            value="Todos"
+                            value={tx.all}
                             onSelect={() => {
                               setFilterStatus((current) =>
                                 current.length === transactionStatusFilterOptions.length
@@ -794,7 +797,7 @@ export default function TransactionsPage() {
                               checked={filterStatus.length === transactionStatusFilterOptions.length}
                               tabIndex={-1}
                             />
-                            Todos
+                            {tx.all}
                           </CommandItem>
                           {transactionStatusFilterOptions.map(([value, label]) => (
                             <CommandItem
@@ -820,7 +823,7 @@ export default function TransactionsPage() {
                 </Popover>
               </div>
               <div className="flex min-w-0 flex-col gap-1">
-                <Label className="text-xs text-muted-foreground">Método de pago</Label>
+                <Label className="text-xs text-muted-foreground">{tx.paymentMethod}</Label>
                 <Select value={filterPaymentMethod} onValueChange={(value) => {
                   setFilterPaymentMethod(value)
                   setCurrentPage(1)
@@ -829,7 +832,7 @@ export default function TransactionsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="all">{tx.all}</SelectItem>
                     {paymentMethodFilterOptions.map(([value, label]) => (
                       <SelectItem key={value} value={value}>
                         {label}
@@ -839,7 +842,7 @@ export default function TransactionsPage() {
                 </Select>
               </div>
               <div className="flex min-w-0 flex-col gap-1">
-                <Label className="text-xs text-muted-foreground">Tipo</Label>
+                <Label className="text-xs text-muted-foreground">{tx.type}</Label>
                 <Select value={filterType} onValueChange={(value) => {
                   setFilterType(value as "all" | "Income" | "Expense")
                   setFilterCategory("all")
@@ -849,14 +852,14 @@ export default function TransactionsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="Expense">Gastos</SelectItem>
-                    <SelectItem value="Income">Ingresos</SelectItem>
+                    <SelectItem value="all">{tx.all}</SelectItem>
+                    <SelectItem value="Expense">{tx.expenses}</SelectItem>
+                    <SelectItem value="Income">{tx.income}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex min-w-0 flex-col gap-1">
-                <Label className="text-xs text-muted-foreground">Categoría</Label>
+                <Label className="text-xs text-muted-foreground">{tx.category}</Label>
                 <Popover open={isCategoryPickerOpen} onOpenChange={setIsCategoryPickerOpen}>
                   <PopoverTrigger asChild>
                     <Button
@@ -867,21 +870,21 @@ export default function TransactionsPage() {
                       disabled={filterType === "all"}
                     >
                       {filterType === "all"
-                        ? "Seleccioná un tipo"
+                        ? tx.selectTypeFirst
                         : filterCategory === "all"
-                        ? "Todos"
+                        ? tx.all
                         : categoryFilterOptions.find(([value]) => value === filterCategory)?.[1] ?? filterCategory}
                       <ChevronsUpDown className="size-4 opacity-50" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[200px] p-0">
                     <Command>
-                      <CommandInput placeholder="Buscar categoría..." />
+                      <CommandInput placeholder={tx.searchCategory} />
                       <CommandList>
-                        <CommandEmpty>No se encontró la categoría.</CommandEmpty>
+                        <CommandEmpty>{tx.categoryNotFound}</CommandEmpty>
                         <CommandGroup>
                           <CommandItem
-                            value="Todos"
+                            value={tx.all}
                             onSelect={() => {
                               setFilterCategory("all")
                               setCurrentPage(1)
@@ -889,7 +892,7 @@ export default function TransactionsPage() {
                             }}
                           >
                             <Check className={`size-4 ${filterCategory === "all" ? "opacity-100" : "opacity-0"}`} />
-                            Todos
+                            {tx.all}
                           </CommandItem>
                           {categoryFilterOptions.map(([value, label]) => (
                             <CommandItem
@@ -917,15 +920,15 @@ export default function TransactionsPage() {
                 className={`size-9 self-end ${hasActiveFilters ? "" : "invisible pointer-events-none"}`}
                 onClick={clearFilters}
                 disabled={!hasActiveFilters}
-                aria-label="Limpiar filtros"
-                title="Limpiar filtros"
+                aria-label={tx.clearFilters}
+                title={tx.clearFilters}
               >
                 <Trash2 className="size-4" />
               </Button>
             </div>
             <Button variant="outline" className="w-full shrink-0 xl:w-auto" onClick={handleExport} disabled={isExporting}>
               <DownloadIcon className="size-4" />
-              {isExporting ? "Generando..." : "Exportar"}
+              {isExporting ? tx.exporting : tx.export}
             </Button>
           </div>
         </CardContent>
@@ -936,28 +939,28 @@ export default function TransactionsPage() {
                 <TableRow>
                   <SortableTableHead
                     className={transactionTableHeadClassName}
-                    label="Fecha"
+                    label={tx.columnDate}
                     field="OccurredOn"
                     sort={sort}
                     onSort={handleSort}
                   />
                   <SortableTableHead
                     className={transactionTableHeadClassName}
-                    label="Descripción"
+                    label={tx.columnDescription}
                     field="Description"
                     sort={sort}
                     onSort={handleSort}
                   />
                   <SortableTableHead
                     className={transactionTableHeadClassName}
-                    label="Categoría"
+                    label={tx.columnCategory}
                     field="Category"
                     sort={sort}
                     onSort={handleSort}
                   />
                   <SortableTableHead
                     className={transactionTableHeadClassName}
-                    label="Método de Pago"
+                    label={tx.columnPaymentMethod}
                     field="PaymentMethod"
                     sort={sort}
                     onSort={handleSort}
@@ -971,26 +974,26 @@ export default function TransactionsPage() {
                   />
                   <SortableTableHead
                     className={transactionTableHeadClassName}
-                    label="Estado"
+                    label={tx.columnStatus}
                     field="Status"
                     sort={sort}
                     onSort={handleSort}
                   />
                   <SortableTableHead
                     className={transactionTableHeadClassName}
-                    label="Monto"
+                    label={tx.columnAmount}
                     field="Amount"
                     sort={sort}
                     onSort={handleSort}
                   />
-                  <TableHead className={transactionTableHeadClassName}>Acción</TableHead>
+                  <TableHead className={transactionTableHeadClassName}>{tx.columnActions}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoadingTransactions ? (
                   <TableRow>
                     <TableCell colSpan={8} className="py-4 text-center text-muted-foreground">
-                      Cargando movimientos...
+                      {tx.loading}
                     </TableCell>
                   </TableRow>
                 ) : filteredTransactions.length === 0 ? (
@@ -999,12 +1002,12 @@ export default function TransactionsPage() {
                       <div className="flex flex-col items-center gap-2 py-4">
                         <span>
                           {hasActiveFilters
-                            ? "No encontramos movimientos que coincidan con esos filtros."
-                            : "Todavia no cargaste ningun movimiento."}
+                            ? tx.noMatches
+                            : tx.empty}
                         </span>
                         {hasActiveFilters && (
                           <Button variant="outline" size="sm" onClick={clearFilters}>
-                            Limpiar filtros
+                            {tx.clearFilters}
                           </Button>
                         )}
                       </div>
@@ -1086,12 +1089,12 @@ export default function TransactionsPage() {
           <div className="mt-4 flex flex-col gap-3 border-t pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-col gap-1">
               <span className="font-medium text-foreground">
-                {transactionsResponse.totalCount} transacciones
+                {tx.count(transactionsResponse.totalCount)}
               </span>
               <span>
                 {transactionsResponse.totalCount === 0
-                  ? "0 transacciones"
-                  : `Mostrando ${visibleResultsStart}-${visibleResultsEnd} de ${transactionsResponse.totalCount}`}
+                  ? tx.count(0)
+                  : tx.showing(visibleResultsStart, visibleResultsEnd, transactionsResponse.totalCount)}
               </span>
             </div>
 
@@ -1105,27 +1108,27 @@ export default function TransactionsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="10">10 por página</SelectItem>
-                    <SelectItem value="20">20 por página</SelectItem>
-                    <SelectItem value="30">30 por página</SelectItem>
+                    <SelectItem value="10">{tx.perPage(10)}</SelectItem>
+                    <SelectItem value="20">{tx.perPage(20)}</SelectItem>
+                    <SelectItem value="30">{tx.perPage(30)}</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button
                   variant="outline"
                   size="icon"
-                  aria-label="Página anterior"
+                  aria-label={tx.previousPage}
                   disabled={transactionsResponse.pageNumber <= 1}
                   onClick={() => setCurrentPage((page) => page - 1)}
                 >
                   <ChevronLeft className="size-4" />
                 </Button>
                 <span className="min-w-[84px] text-center">
-                  Página {transactionsResponse.pageNumber} de {transactionsResponse.totalPages}
+                  {tx.pageOf(transactionsResponse.pageNumber, transactionsResponse.totalPages)}
                 </span>
                 <Button
                   variant="outline"
                   size="icon"
-                  aria-label="Página siguiente"
+                  aria-label={tx.nextPage}
                   disabled={transactionsResponse.pageNumber >= transactionsResponse.totalPages}
                   onClick={() => setCurrentPage((page) => page + 1)}
                 >
