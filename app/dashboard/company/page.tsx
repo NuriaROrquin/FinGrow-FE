@@ -4,7 +4,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { BuildingIcon } from "lucide-react"
+import { BuildingIcon, DownloadIcon } from "lucide-react"
+import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ParticipationCards } from "@/components/company/participation-cards"
 import { DepartmentMetricsSection } from "@/components/company/department-metrics-section"
@@ -13,14 +15,18 @@ import { FinancialHealthCard } from "@/components/company/financial-health-card"
 import { FinancialConcernsCard } from "@/components/company/financial-concerns-card"
 import { CompanyRecommendationsCard } from "@/components/company/company-recommendations-card"
 import { CompanyTrendsCard } from "@/components/company/company-trends-card"
+import { CompanyReportPdfExport } from "@/components/company/company-report-pdf-export"
 import type { CompanyInsightsState } from "@/components/company/company-insights-state"
 import {
   getCompanyInsights,
   getCompanyMetricsComparison,
+  getCompanyMonthlyReport,
   isApiError,
   type CompanyMetricsComparisonDto,
+  type CompanyMonthlyReportDto,
 } from "@/lib/api"
-import { useEffect, useState } from "react"
+import { useMessages } from "@/lib/i18n"
+import { useCallback, useEffect, useState } from "react"
 
 const chartConfig = {
   active: {
@@ -48,6 +54,7 @@ function formatRate(rate: number): string {
 }
 
 export default function CompanyDashboardPage() {
+  const reportTexts = useMessages().companyReportPdf
   const [comparison, setComparison] = useState<CompanyMetricsComparisonDto | null>(null)
   const [comparisonError, setComparisonError] = useState<string | null>(null)
   const [isComparisonLoading, setIsComparisonLoading] = useState(true)
@@ -102,6 +109,41 @@ export default function CompanyDashboardPage() {
     return () => controller.abort()
   }, [])
 
+  // HU-65: el reporte se pide recién al exportar; preocupaciones y recomendaciones salen del mismo
+  // pedido a /insights que ya muestran las pestañas, así el PDF dice lo mismo que la pantalla.
+  const [isExporting, setIsExporting] = useState(false)
+  const [pdfExport, setPdfExport] = useState<{ report: CompanyMonthlyReportDto; generatedAt: Date } | null>(null)
+
+  const startExport = async () => {
+    setIsExporting(true)
+
+    try {
+      const report = await getCompanyMonthlyReport()
+
+      if (!report.period) {
+        toast.info(reportTexts.noPeriod)
+        setIsExporting(false)
+        return
+      }
+
+      setPdfExport({ report, generatedAt: new Date() })
+    } catch {
+      toast.error(reportTexts.exportFailed)
+      setIsExporting(false)
+    }
+  }
+
+  const finishExport = useCallback(() => {
+    setPdfExport(null)
+    setIsExporting(false)
+  }, [])
+
+  const failExport = useCallback(() => {
+    setPdfExport(null)
+    setIsExporting(false)
+    toast.error(reportTexts.exportFailed)
+  }, [reportTexts.exportFailed])
+
   const periods = comparison?.periods ?? []
   const participationChartData = periods.map(({ period, participationRate }) => ({
     month: formatPeriod(period),
@@ -116,14 +158,20 @@ export default function CompanyDashboardPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="flex size-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <BuildingIcon className="size-6" />
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex size-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <BuildingIcon className="size-6" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-balance">Panel Empresarial</h1>
+            <p className="text-muted-foreground mt-1">Resumen de bienestar financiero de empleados</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-3xl font-bold text-balance">Panel Empresarial</h1>
-          <p className="text-muted-foreground mt-1">Resumen de bienestar financiero de empleados</p>
-        </div>
+        <Button onClick={startExport} disabled={insightsState.isLoading || isExporting} className="self-start lg:self-auto">
+          <DownloadIcon className="size-4" />
+          {isExporting ? reportTexts.exporting : reportTexts.export}
+        </Button>
       </div>
 
       {/* Key Metrics */}
@@ -247,6 +295,16 @@ export default function CompanyDashboardPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {pdfExport && (
+        <CompanyReportPdfExport
+          generatedAt={pdfExport.generatedAt}
+          report={pdfExport.report}
+          insights={insightsState}
+          onComplete={finishExport}
+          onError={failExport}
+        />
+      )}
     </div>
   )
 }
