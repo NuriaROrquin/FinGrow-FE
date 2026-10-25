@@ -25,13 +25,12 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import {
   completeLesson,
-  courseLevelLabels,
-  educationCategoryLabels,
   getCourse,
   isApiError,
   toastApiError,
   type CourseDetailDto,
 } from "@/lib/api"
+import { useMessages } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
 const BACK_TO_COURSES = "/dashboard/education"
@@ -43,6 +42,7 @@ type LoadState =
   | { status: "error" }
 
 export default function CoursePage() {
+  const labels = useMessages().labels
   const params = useParams<{ slug: string }>()
   const router = useRouter()
   const [state, setState] = useState<LoadState>({ status: "loading" })
@@ -148,8 +148,8 @@ export default function CoursePage() {
           <h1 className="text-3xl font-bold">{course.title}</h1>
           <p className="mt-1 text-muted-foreground">{course.description}</p>
           <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
-            <Badge variant="outline">{courseLevelLabels[course.level]}</Badge>
-            <Badge variant="secondary">{educationCategoryLabels[course.category]}</Badge>
+            <Badge variant="outline">{labels.courseLevels[course.level]}</Badge>
+            <Badge variant="secondary">{labels.educationCategories[course.category]}</Badge>
             <span className="flex items-center gap-1 text-muted-foreground">
               <ClockIcon className="size-3" />
               {formatDuration(course.durationMinutes)}

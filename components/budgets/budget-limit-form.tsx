@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { isApiError, setBudgetLimit, toastApiError, type BudgetDto } from "@/lib/api"
-import { expenseCategoryLabels, type ExpenseCategory } from "@/lib/api/transactions"
+import type { ExpenseCategory } from "@/lib/api/transactions"
+import { useMessages } from "@/lib/i18n"
 import { expenseCategoryIcons, type YearMonth } from "./budget-month"
 
 function validateAmount(raw: string): string | null {
@@ -49,6 +50,7 @@ export function BudgetLimitForm({
   onBudgetMissing: () => void
   onClose: () => void
 }) {
+  const categoryLabels = useMessages().labels.expenseCategories
   const isEditing = fixedCategory !== undefined
   const [category, setCategory] = useState<ExpenseCategory | "">(fixedCategory ?? "")
   const [amount, setAmount] = useState(initialAmount !== undefined ? String(initialAmount) : "")
@@ -76,8 +78,8 @@ export function BudgetLimitForm({
       onSaved(budget)
       toast.success(
         isEditing
-          ? `Límite de ${expenseCategoryLabels[category]} actualizado`
-          : `Límite de ${expenseCategoryLabels[category]} agregado`,
+          ? `Límite de ${categoryLabels[category]} actualizado`
+          : `Límite de ${categoryLabels[category]} agregado`,
       )
       onClose()
     } catch (err) {
@@ -102,7 +104,7 @@ export function BudgetLimitForm({
       {fixedCategory !== undefined ? (
         <p className="flex items-center gap-2 text-sm">
           <span className="text-2xl">{expenseCategoryIcons[fixedCategory]}</span>
-          <span className="font-medium">{expenseCategoryLabels[fixedCategory]}</span>
+          <span className="font-medium">{categoryLabels[fixedCategory]}</span>
         </p>
       ) : (
         <div className="space-y-2">
@@ -120,7 +122,7 @@ export function BudgetLimitForm({
             <SelectContent>
               {availableCategories.map((option) => (
                 <SelectItem key={option} value={option}>
-                  {expenseCategoryIcons[option]} {expenseCategoryLabels[option]}
+                  {expenseCategoryIcons[option]} {categoryLabels[option]}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -12,8 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ReceiptField, type UploadedReceipt } from "@/components/transactions/receipt-field"
 import { useToast } from "@/hooks/use-toast"
 import {
-  expenseCategoryLabels,
-  incomeCategoryLabels,
   type CreateTransactionPayload,
   type Currency,
   type ExpenseCategory,
@@ -23,41 +21,14 @@ import {
   type TransactionDto,
 } from "@/lib/api/transactions"
 import { isApiError } from "@/lib/api/errors"
+import { useMessages } from "@/lib/i18n"
 import { usePreferences } from "@/lib/preferences-context"
-
-const paymentMethodLabels: Record<PaymentMethod, string> = {
-  Cash: "Efectivo",
-  CreditCard: "Tarjeta de Crédito",
-  DebitCard: "Tarjeta de Débito",
-  BankTransfer: "Transferencia Bancaria",
-  DigitalWallet: "Billetera Digital",
-}
-
-const paymentMethodValueByLabel = Object.fromEntries(
-  Object.entries(paymentMethodLabels).map(([value, label]) => [label, value]),
-) as Record<string, PaymentMethod>
 
 const currencyLabels: Record<Currency, string> = {
   ARS: "ARS ($)",
   USD: "USD ($)",
   EUR: "EUR (€)",
   BRL: "BRL (R$)",
-}
-
-const expenseCategoryValueByLabel = Object.fromEntries(
-  Object.entries(expenseCategoryLabels).map(([value, label]) => [label, value]),
-) as Record<string, ExpenseCategory>
-
-const incomeCategoryValueByLabel = Object.fromEntries(
-  Object.entries(incomeCategoryLabels).map(([value, label]) => [label, value]),
-) as Record<string, IncomeCategory>
-
-function getCategoryValueFromLabel(type: "Income" | "Expense", label: string): string {
-  if (type === "Expense") {
-    return expenseCategoryValueByLabel[label] ?? label
-  }
-
-  return incomeCategoryValueByLabel[label] ?? label
 }
 
 function getInitialFormValues(transaction: TransactionDto | null | undefined, defaultCurrency: Currency) {
@@ -73,21 +44,14 @@ function getInitialFormValues(transaction: TransactionDto | null | undefined, de
     }
   }
 
-  const transactionType = transaction.type
-  const categoryLabel = transaction.category
-  const normalizedCategory =
-    transactionType === "Expense"
-      ? getCategoryValueFromLabel(transactionType, categoryLabel)
-      : getCategoryValueFromLabel(transactionType, categoryLabel)
-
   return {
-    transactionType,
+    transactionType: transaction.type,
     currency: transaction.currency,
     amount: String(transaction.amount),
     description: transaction.description,
-    category: normalizedCategory,
+    category: transaction.category,
     date: String(transaction.occurredOn).slice(0, 10),
-    paymentMethod: paymentMethodValueByLabel[transaction.paymentMethod] ?? "",
+    paymentMethod: transaction.paymentMethod as PaymentMethod | "",
   }
 }
 
@@ -115,8 +79,7 @@ export function AddTransactionForm({
     initialTransaction ? getInitialFormValues(initialTransaction, preferences.currency).category : "",
   )
   const [date, setDate] = useState(initialTransaction ? String(initialTransaction.occurredOn).slice(0, 10) : "")
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">
-    (initialTransaction ? paymentMethodValueByLabel[initialTransaction.paymentMethod] ?? "" : "")
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">(initialTransaction?.paymentMethod ?? "")
   const [status, setStatus] = useState<TransactionStatus>(initialTransaction?.status ?? "Confirmed")
   const [lockedStatus, setLockedStatus] = useState<TransactionStatus | null>(
     initialTransaction?.status === "Confirmed" ? "Confirmed" : null,
@@ -128,8 +91,9 @@ export function AddTransactionForm({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [generalError, setGeneralError] = useState<string | null>(null)
   const { toast } = useToast()
+  const t = useMessages()
 
-  const categoryLabels = transactionType === "Expense" ? expenseCategoryLabels : incomeCategoryLabels
+  const categoryLabels = transactionType === "Expense" ? t.labels.expenseCategories : t.labels.incomeCategories
 
   useEffect(() => {
     const nextValues = getInitialFormValues(initialTransaction, preferences.currency)
@@ -353,7 +317,7 @@ export function AddTransactionForm({
             <SelectValue placeholder="Selecciona método de pago" />
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(paymentMethodLabels).map(([value, label]) => (
+            {Object.entries(t.labels.paymentMethods).map(([value, label]) => (
               <SelectItem key={value} value={value}>
                 {label}
               </SelectItem>

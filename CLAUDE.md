@@ -128,8 +128,8 @@ con `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve
   (`favorable="increase"` de `expense-variation.tsx`). El switch "Comparar con período anterior" muestra
   la variación, marca "Nueva" una categoría sin gasto antes y suma al final las que bajaron a cero
   (−100 %). Sin historia antes de que termine el período anterior (`hasPreviousPeriod`), el switch
-  muestra "Sin período anterior para mostrar". Sus textos están en `lib/i18n` (`expenseBreakdown`); los
-  nombres de las categorías salen de `expenseCategoryLabels`, que todavía no pasa por i18n.
+  muestra "Sin período anterior para mostrar". Sus textos están en `lib/i18n` (`expenseBreakdown`) y los
+  nombres de las categorías, en `labels.expenseCategories`.
 - **Hitos y recomendaciones (HU-44)**: debajo del gráfico de Resumen,
   `components/reports/financial-insights-section.tsx` muestra lo que la página pide a
   `GET /api/reports/insights` con su período y su moneda, en dos cards: Hitos Alcanzados

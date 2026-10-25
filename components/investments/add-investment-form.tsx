@@ -23,7 +23,6 @@ import {
   formatQuantity,
   getSecurityPrice,
   hasTerm,
-  investmentTypeLabels,
   isApiError,
   isPricedPerNominal,
   quoteMarketOf,
@@ -35,6 +34,7 @@ import {
   type QuoteMarket,
   type SecurityPriceDto,
 } from "@/lib/api"
+import { useMessages } from "@/lib/i18n"
 import type { Currency } from "@/lib/api/transactions"
 import { formatDate, formatDateText, formatMoney } from "@/lib/format"
 
@@ -192,6 +192,7 @@ export function AddInvestmentForm({
   onSubmit: (payload: CreateInvestmentPayload) => Promise<void>
   onClose: () => void
 }) {
+  const labels = useMessages().labels
   const isEditing = Boolean(initialInvestment)
   const isImported = initialInvestment?.source === "Iol"
   const [type, setType] = useState<InvestmentType | "">(initialInvestment?.type ?? "")
@@ -427,7 +428,7 @@ export function AddInvestmentForm({
               <SelectValue placeholder="Seleccioná el tipo" />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(investmentTypeLabels).map(([value, label]) => (
+              {Object.entries(labels.investmentTypes).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
                 </SelectItem>

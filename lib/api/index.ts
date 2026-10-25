@@ -118,7 +118,6 @@ export {
   type ThemePreference,
 } from "./preferences"
 export {
-  educationCategoryLabels,
   getArticle,
   listArticles,
   type ArticleDto,
@@ -127,8 +126,6 @@ export {
 } from "./articles"
 export {
   completeLesson,
-  courseLevelLabels,
-  courseProgressStatusLabels,
   getCourse,
   getLearningProgress,
   listCourses,
@@ -218,8 +215,7 @@ export {
   getPortfolioSummary,
   deleteInvestment,
   hasTerm,
-  investmentSortFieldLabels,
-  investmentTypeLabels,
+  INVESTMENT_TYPES,
   isPricedPerNominal,
   isQuoted,
   listInvestments,

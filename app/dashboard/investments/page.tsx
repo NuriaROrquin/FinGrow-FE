@@ -61,7 +61,6 @@ import {
   accruesInterest,
   isApiError,
   formatQuantity,
-  investmentTypeLabels,
   listInvestments,
   syncIol,
   toastApiError,
@@ -85,7 +84,7 @@ import {
   formatSignedMoney,
   formatSignedPercentage,
 } from "@/lib/format"
-import { useMessages } from "@/lib/i18n"
+import { useMessages, type Messages } from "@/lib/i18n"
 import { toggleSort, type SortState } from "@/lib/sort"
 
 const investmentTypeColors: Record<InvestmentType, string> = {
@@ -217,7 +216,12 @@ function heldTypesOf(groups: AllocationGroupDto[], slices: AllocationSlice[]): I
   return Array.from(new Set([...byValue, ...rest]))
 }
 
-function allocationByType(groups: AllocationGroupDto[], currency: Currency, quote: MepQuoteDto | null): Allocation {
+function allocationByType(
+  groups: AllocationGroupDto[],
+  currency: Currency,
+  quote: MepQuoteDto | null,
+  typeLabels: Messages["labels"]["investmentTypes"],
+): Allocation {
   const valueByType = new Map<InvestmentType, number>()
   const convertedCurrencies = new Set<Currency>()
   const excludedCurrencies = new Set<Currency>()
@@ -242,7 +246,7 @@ function allocationByType(groups: AllocationGroupDto[], currency: Currency, quot
   const slices = Array.from(valueByType.entries())
     .map(([type, value]) => ({
       type,
-      label: investmentTypeLabels[type],
+      label: typeLabels[type],
       value: Math.round(value * 100) / 100,
       share: total === 0 ? 0 : (value / total) * 100,
       color: investmentTypeColors[type],
@@ -567,7 +571,7 @@ export default function InvestmentsPage() {
       : currencies
   const selectedAllocationCurrency = pickCurrency(allocationCurrencies, allocationCurrency)
   const allocation: Allocation = selectedAllocationCurrency
-    ? allocationByType(summary?.allocation ?? [], selectedAllocationCurrency, mepQuote)
+    ? allocationByType(summary?.allocation ?? [], selectedAllocationCurrency, mepQuote, t.labels.investmentTypes)
     : { slices: [], convertedCurrencies: [], excludedCurrencies: [] }
   const allocationChartConfig: ChartConfig = Object.fromEntries(
     allocation.slices.map((slice) => [slice.label, { label: slice.label, color: slice.color }]),
@@ -741,7 +745,7 @@ export default function InvestmentsPage() {
           <CardContent>
             <p className="text-sm text-muted-foreground">
               {lastPurchase
-                ? `${investmentTypeLabels[lastPurchase.type]} · ${formatDate(lastPurchase.purchasedOn)}`
+                ? `${t.labels.investmentTypes[lastPurchase.type]} · ${formatDate(lastPurchase.purchasedOn)}`
                 : emptyHint}
             </p>
           </CardContent>
@@ -911,7 +915,7 @@ export default function InvestmentsPage() {
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="text-xs">
-                      {investmentTypeLabels[investment.type]}
+                      {t.labels.investmentTypes[investment.type]}
                     </Badge>
                   </TableCell>
                   <TableCell>{formatDate(investment.purchasedOn)}</TableCell>

@@ -29,7 +29,6 @@ import { useEffect, useState } from "react"
 import { useToast } from "@/hooks/use-toast"
 import {
   createTransaction,
-  expenseCategoryLabels,
   listTransactions,
   type Currency,
   type TransactionDto,
@@ -46,6 +45,7 @@ import { GoalForm } from "@/components/goals/goal-form"
 import { AddTransactionForm } from "@/components/transactions/add-transaction-form"
 import { PeriodFilter, getCurrentMonthStart, getToday } from "@/components/period-filter"
 import { formatDateText, formatMoney, formatNumber } from "@/lib/format"
+import { useMessages, type Messages } from "@/lib/i18n"
 import { usePreferences } from "@/lib/preferences-context"
 import { OtherCurrencyNotice } from "@/components/transactions/other-currency-notice"
 
@@ -80,13 +80,14 @@ function formatMonth(month: string): string {
   return formatDateText(new Date(year, monthNumber - 1, 1), { month: "short" }).replace(".", "")
 }
 
-function getCategoryLabel(category: string): string {
-  return expenseCategoryLabels[category as keyof typeof expenseCategoryLabels] ?? category
+function getCategoryLabel(category: string, labels: Messages["labels"]): string {
+  const categoryLabels: Record<string, string> = labels.expenseCategories
+  return categoryLabels[category] ?? category
 }
 
-function toCategoryChartData(items: ExpenseCategoryTotalDto[]) {
+function toCategoryChartData(items: ExpenseCategoryTotalDto[], labels: Messages["labels"]) {
   return items.map((item, index) => ({
-    name: getCategoryLabel(item.category),
+    name: getCategoryLabel(item.category, labels),
     value: item.totalExpense,
     color: categoryColors[index % categoryColors.length],
   }))
@@ -110,13 +111,15 @@ function ChartEmptyState({ title, description }: { title: string; description: s
 export default function DashboardPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const t = useMessages()
   const [openTransaction, setOpenTransaction] = useState(false)
   const [openSavings, setOpenSavings] = useState(false)
   const [recentTransactions, setRecentTransactions] = useState<TransactionDto[]>([])
   const [recentTransactionsRefreshKey, setRecentTransactionsRefreshKey] = useState(0)
   const [monthlySpendingData, setMonthlySpendingData] = useState<{ month: string; amount: number }[]>([])
   const [incomeVsExpenseData, setIncomeVsExpenseData] = useState<{ month: string; income: number; expense: number }[]>([])
-  const [categoryData, setCategoryData] = useState<{ name: string; value: number; color: string }[]>([])
+  const [categoryItems, setCategoryItems] = useState<ExpenseCategoryTotalDto[]>([])
+  const categoryData = toCategoryChartData(categoryItems, t.labels)
   const [isLoadingCharts, setIsLoadingCharts] = useState(true)
   const [chartsError, setChartsError] = useState<string | null>(null)
   const [chartsRefreshKey, setChartsRefreshKey] = useState(0)
@@ -180,7 +183,7 @@ export default function DashboardPage() {
     setChartsError(null)
     setMonthlySpendingData([])
     setIncomeVsExpenseData([])
-    setCategoryData([])
+    setCategoryItems([])
 
     Promise.all([
       getMonthlyExpenses({ currency, dateTo, signal: controller.signal }),
@@ -198,7 +201,7 @@ export default function DashboardPage() {
             expense: item.totalExpense,
           })),
         )
-        setCategoryData(toCategoryChartData(expensesByCategory.items.filter((item) => item.totalExpense > 0)))
+        setCategoryItems(expensesByCategory.items.filter((item) => item.totalExpense > 0))
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return
@@ -598,7 +601,7 @@ export default function DashboardPage() {
                       <div>
                         <p className="font-medium">{transaction.description}</p>
                         <p className="text-sm text-muted-foreground">
-                          {transactionDate} • {getCategoryLabel(transaction.category)}
+                          {transactionDate} • {getCategoryLabel(transaction.category, t.labels)}
                         </p>
                       </div>
                     </div>

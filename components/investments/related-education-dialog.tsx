@@ -12,8 +12,6 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
-  courseLevelLabels,
-  courseProgressStatusLabels,
   listArticles,
   listCourses,
   toastApiError,
@@ -21,6 +19,7 @@ import {
   type CourseSummaryDto,
   type InvestmentType,
 } from "@/lib/api"
+import { useMessages } from "@/lib/i18n"
 import { plural } from "@/lib/utils"
 
 type LoadState =
@@ -32,18 +31,20 @@ const linkClassName =
   "block rounded-lg border p-3 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 
 function CourseLink({ course }: { course: CourseSummaryDto }) {
+  const labels = useMessages().labels
+
   return (
     <Link href={relatedContentHref("courses", course.slug)} className={linkClassName}>
       <div className="flex items-start justify-between gap-2">
         <span className="font-medium">{course.title}</span>
         {course.progressStatus !== "NotStarted" && (
           <Badge variant={course.progressStatus === "Completed" ? "default" : "secondary"} className="shrink-0">
-            {courseProgressStatusLabels[course.progressStatus]}
+            {labels.courseProgressStatuses[course.progressStatus]}
           </Badge>
         )}
       </div>
       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-        <span>{courseLevelLabels[course.level]}</span>
+        <span>{labels.courseLevels[course.level]}</span>
         <span className="flex items-center gap-1">
           <ClockIcon className="size-3" />
           {formatDuration(course.durationMinutes)}

@@ -1,3 +1,8 @@
+import type { CourseLevel, CourseProgressStatus } from "@/lib/api/courses"
+import type { EducationCategory } from "@/lib/api/education"
+import type { InvestmentSortField, InvestmentType } from "@/lib/api/investments"
+import type { ExpenseCategory, IncomeCategory, PaymentMethod, TransactionListStatus } from "@/lib/api/transactions"
+
 export const es = {
   common: {
     cancel: "Cancelar",
@@ -10,6 +15,82 @@ export const es = {
     neverSynced: "Todavía no se sincronizó",
     lastActivity: (date: string) => `Última actividad: ${date}`,
     neverActive: "Todavía no recibimos mensajes",
+  },
+
+  // Lo que se muestra de cada valor que viaja a la API. Las claves son contrato con FinGrow-BE (y
+  // las categorías, también con FinGrow-AI): se traduce el texto, nunca la clave.
+  labels: {
+    expenseCategories: {
+      Alimentos: "Alimentos",
+      Transporte: "Transporte",
+      Vivienda: "Vivienda",
+      Servicios: "Servicios",
+      Salud: "Salud",
+      Educacion: "Educación",
+      Entretenimiento: "Entretenimiento",
+      Indumentaria: "Indumentaria",
+      AhorroInversion: "Ahorro e Inversión",
+      Otros: "Otros",
+    } satisfies Record<ExpenseCategory, string>,
+    incomeCategories: {
+      Salario: "Salario",
+      Freelance: "Freelance",
+      Inversiones: "Inversiones",
+      Regalo: "Regalo",
+      Otros: "Otros",
+    } satisfies Record<IncomeCategory, string>,
+    transactionStatuses: {
+      Confirmed: "Confirmada",
+      Pending: "Pendiente",
+      Eliminated: "Eliminada",
+    } satisfies Record<TransactionListStatus, string>,
+    paymentMethods: {
+      Cash: "Efectivo",
+      CreditCard: "Tarjeta de Crédito",
+      DebitCard: "Tarjeta de Débito",
+      BankTransfer: "Transferencia Bancaria",
+      DigitalWallet: "Billetera Digital",
+    } satisfies Record<PaymentMethod, string>,
+    investmentTypes: {
+      Stock: "Acción",
+      Cedear: "CEDEAR",
+      Etf: "ETF",
+      Bond: "Bono",
+      CorporateBond: "Obligación Negociable",
+      TreasuryBill: "Letra del Tesoro",
+      MutualFund: "Fondo Común",
+      FixedTermDeposit: "Plazo Fijo",
+      Repo: "Caución",
+      RemuneratedAccount: "Cuenta Remunerada",
+      Crypto: "Criptomoneda",
+    } satisfies Record<InvestmentType, string>,
+    investmentSortFields: {
+      PurchasedOn: "Fecha de compra",
+      AssetName: "Nombre del activo",
+      AssetType: "Tipo de activo",
+      InvestedAmount: "Capital invertido",
+      CurrentValue: "Valor actual",
+      ReturnPercentage: "Rendimiento",
+    } satisfies Record<InvestmentSortField, string>,
+    courseLevels: {
+      Beginner: "Principiante",
+      Intermediate: "Intermedio",
+      Advanced: "Avanzado",
+    } satisfies Record<CourseLevel, string>,
+    courseProgressStatuses: {
+      NotStarted: "Sin empezar",
+      InProgress: "En curso",
+      Completed: "Completado",
+    } satisfies Record<CourseProgressStatus, string>,
+    educationCategories: {
+      Basics: "Básico",
+      Savings: "Ahorro",
+      Budgeting: "Presupuesto",
+      Investments: "Inversiones",
+      Credit: "Crédito",
+      Retirement: "Jubilación",
+      Taxes: "Impuestos",
+    } satisfies Record<EducationCategory, string>,
   },
 
   nav: {

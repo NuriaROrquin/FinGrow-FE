@@ -13,8 +13,9 @@ import {
   type BudgetAnalysisEligibilityDto,
   type BudgetAnalysisSummaryDto,
 } from "@/lib/api"
-import { expenseCategoryLabels, type Currency } from "@/lib/api/transactions"
+import type { Currency } from "@/lib/api/transactions"
 import { formatDateText, formatNumber } from "@/lib/format"
+import { useMessages } from "@/lib/i18n"
 import { usePreferences } from "@/lib/preferences-context"
 import { formatAmount, formatYearMonth } from "./budget-month"
 
@@ -76,6 +77,7 @@ function NotEnoughHistory({ eligibility, currency }: { eligibility: BudgetAnalys
 }
 
 function Summary({ summary, currency }: { summary: BudgetAnalysisSummaryDto; currency: Currency }) {
+  const categoryLabels = useMessages().labels.expenseCategories
   const last = summary.lastClosedMonth
   const lastLabel = formatYearMonth({ year: last.year, month: last.month })
   const period = periodLabel(summary)
@@ -94,7 +96,7 @@ function Summary({ summary, currency }: { summary: BudgetAnalysisSummaryDto; cur
         <div className="rounded-lg border p-3">
           <p className="text-xs text-muted-foreground">Categoría más excedida · {period}</p>
           <p className="text-lg font-semibold">
-            {mostExceeded ? expenseCategoryLabels[mostExceeded.category] : "Ninguna"}
+            {mostExceeded ? categoryLabels[mostExceeded.category] : "Ninguna"}
           </p>
           <p className="text-xs text-muted-foreground">
             {mostExceeded
@@ -117,7 +119,7 @@ function Summary({ summary, currency }: { summary: BudgetAnalysisSummaryDto; cur
           {summary.categories.map((category) => (
             <li key={category.category} className="space-y-1">
               <div className="flex items-center justify-between gap-2 text-sm">
-                <span>{expenseCategoryLabels[category.category]}</span>
+                <span>{categoryLabels[category.category]}</span>
                 <span className="text-muted-foreground">
                   {percentage(category.averageUsedPercentage)} · excedida {category.monthsExceeded}/
                   {category.monthsWithLimit}

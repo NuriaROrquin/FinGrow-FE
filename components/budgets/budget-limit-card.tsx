@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import type { BudgetHealth, BudgetLimitDto } from "@/lib/api"
-import { expenseCategoryLabels, type Currency } from "@/lib/api/transactions"
+import type { Currency } from "@/lib/api/transactions"
+import { useMessages } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { expenseCategoryIcons, formatAmount } from "./budget-month"
 
@@ -56,6 +57,7 @@ export function BudgetLimitCard({
   onRemove: () => void
   canRemove: boolean
 }) {
+  const categoryLabel = useMessages().labels.expenseCategories[limit.category]
   const status = statusOf(limit)
   const health = status ? statusStyles[status] : null
   const remaining = limit.remaining ?? 0
@@ -72,7 +74,7 @@ export function BudgetLimitCard({
             </div>
             <div>
               <CardTitle className="text-lg">
-                {expenseCategoryLabels[limit.category]}
+                {categoryLabel}
               </CardTitle>
               <CardDescription>
                 Límite mensual: {formatAmount(limit.amount, currency)}
@@ -84,7 +86,7 @@ export function BudgetLimitCard({
             <Button
               variant="ghost"
               size="icon"
-              aria-label={`Editar límite de ${expenseCategoryLabels[limit.category]}`}
+              aria-label={`Editar límite de ${categoryLabel}`}
               onClick={onEdit}
             >
               <PencilIcon className="size-4" />
@@ -92,7 +94,7 @@ export function BudgetLimitCard({
             <Button
               variant="ghost"
               size="icon"
-              aria-label={`Quitar ${expenseCategoryLabels[limit.category]} del presupuesto`}
+              aria-label={`Quitar ${categoryLabel} del presupuesto`}
               title={
                 canRemove
                   ? "Quitar categoría"

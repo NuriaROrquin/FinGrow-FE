@@ -9,14 +9,13 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   ASSET_NAME_MAX_LENGTH,
-  investmentSortFieldLabels,
-  investmentTypeLabels,
   type InvestmentListQuery,
   type InvestmentPerformance,
   type InvestmentSortField,
   type InvestmentType,
   type SortDirection,
 } from "@/lib/api"
+import { useMessages } from "@/lib/i18n"
 import type { Currency } from "@/lib/api/transactions"
 
 export interface InvestmentFilterValues {
@@ -152,6 +151,7 @@ export function InvestmentFiltersBar({
   onClear: () => void
   error: string | null
 }) {
+  const labels = useMessages().labels
   const update = <Key extends keyof InvestmentFilterValues>(key: Key, value: InvestmentFilterValues[Key]) =>
     onChange({ ...values, [key]: value })
 
@@ -181,7 +181,7 @@ export function InvestmentFiltersBar({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
-              {Object.entries(investmentTypeLabels).map(([value, label]) => (
+              {Object.entries(labels.investmentTypes).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
                 </SelectItem>
@@ -292,7 +292,7 @@ export function InvestmentFiltersBar({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(investmentSortFieldLabels).map(([value, label]) => (
+              {Object.entries(labels.investmentSortFields).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
                 </SelectItem>

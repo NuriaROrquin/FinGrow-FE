@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { educationCategoryLabels, getArticle, isApiError, toastApiError, type ArticleDto } from "@/lib/api"
+import { getArticle, isApiError, toastApiError, type ArticleDto } from "@/lib/api"
+import { useMessages } from "@/lib/i18n"
 import { formatDateText } from "@/lib/format"
 
 const BACK_TO_ARTICLES = "/dashboard/education?tab=articles"
@@ -18,6 +19,7 @@ const BACK_TO_ARTICLES = "/dashboard/education?tab=articles"
 type LoadState = { status: "loading" } | { status: "loaded"; article: ArticleDto } | { status: "not-found" } | { status: "error" }
 
 export default function ArticlePage() {
+  const labels = useMessages().labels
   const params = useParams<{ slug: string }>()
   const router = useRouter()
   const [state, setState] = useState<LoadState>({ status: "loading" })
@@ -85,7 +87,7 @@ export default function ArticlePage() {
         <div className="flex-1">
           <h1 className="text-3xl font-bold">{article.title}</h1>
           <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-muted-foreground">
-            <Badge variant="outline">{educationCategoryLabels[article.category]}</Badge>
+            <Badge variant="outline">{labels.educationCategories[article.category]}</Badge>
             <span className="flex items-center gap-1">
               <ClockIcon className="size-3" />
               {article.readingTimeMinutes} min de lectura

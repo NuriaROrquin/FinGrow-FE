@@ -25,8 +25,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
-  courseLevelLabels,
-  courseProgressStatusLabels,
   listCourses,
   toastApiError,
   type CourseDetailDto,
@@ -35,6 +33,7 @@ import {
   type CourseSummaryDto,
   type EducationCategory,
 } from "@/lib/api"
+import { useMessages } from "@/lib/i18n"
 import { CourseRating } from "./course-rating"
 import { formatDuration } from "./format-duration"
 
@@ -53,6 +52,7 @@ const categoryIcons: Record<EducationCategory, LucideIcon> = {
 }
 
 export function CoursesCatalog() {
+  const labels = useMessages().labels
   const router = useRouter()
   const [level, setLevel] = useState<CourseLevel | typeof ALL>(ALL)
   const [maxDuration, setMaxDuration] = useState<string>(ALL)
@@ -117,7 +117,7 @@ export function CoursesCatalog() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>Todos los niveles</SelectItem>
-              {Object.entries(courseLevelLabels).map(([value, label]) => (
+              {Object.entries(labels.courseLevels).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
                 </SelectItem>
@@ -131,7 +131,7 @@ export function CoursesCatalog() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>Todo el progreso</SelectItem>
-              {Object.entries(courseProgressStatusLabels).map(([value, label]) => (
+              {Object.entries(labels.courseProgressStatuses).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
                 </SelectItem>
@@ -232,7 +232,7 @@ export function CoursesCatalog() {
                       <BookOpenIcon className="size-4" />
                       <span>{course.lessonCount} lecciones</span>
                     </div>
-                    <Badge variant="outline">{courseLevelLabels[course.level]}</Badge>
+                    <Badge variant="outline">{labels.courseLevels[course.level]}</Badge>
                   </div>
 
                   <div className="space-y-2">

@@ -19,7 +19,7 @@ import {
   Landmark,
   Smartphone,
 } from "lucide-react"
-import type { PaymentMethodLabel } from "@/lib/api/transactions"
+import type { PaymentMethod } from "@/lib/api/transactions"
 
 // Mapa de categoría (clave del enum, ej. "AhorroInversion") a ícono representativo.
 const categoryIconMap: Record<string, LucideIcon> = {
@@ -41,37 +41,18 @@ const categoryIconMap: Record<string, LucideIcon> = {
   Otros: Tag,
 }
 
-// Mismo mapa pero indexado por la etiqueta ya traducida (ej. "Ahorro e Inversión"),
-// por si el backend devuelve el texto en lugar de la clave del enum.
-const categoryIconMapByLabel: Record<string, LucideIcon> = {
-  Alimentos: Utensils,
-  Transporte: Car,
-  Vivienda: Home,
-  Servicios: Zap,
-  Salud: HeartPulse,
-  Educación: GraduationCap,
-  Entretenimiento: Popcorn,
-  Indumentaria: Shirt,
-  "Ahorro e Inversión": PiggyBank,
-  Salario: Wallet,
-  Freelance: Laptop,
-  Inversiones: TrendingUp,
-  Regalo: Gift,
-  Otros: Tag,
-}
-
 export function getCategoryIcon(category: string): LucideIcon {
-  return categoryIconMap[category] ?? categoryIconMapByLabel[category] ?? Tag
+  return categoryIconMap[category] ?? Tag
 }
 
-const paymentMethodIconMap: Record<PaymentMethodLabel, LucideIcon> = {
-  Efectivo: Banknote,
-  "Tarjeta de Crédito": CreditCard,
-  "Tarjeta de Débito": CreditCard,
-  "Transferencia Bancaria": Landmark,
-  "Billetera Digital": Smartphone,
+const paymentMethodIconMap: Record<PaymentMethod, LucideIcon> = {
+  Cash: Banknote,
+  CreditCard: CreditCard,
+  DebitCard: CreditCard,
+  BankTransfer: Landmark,
+  DigitalWallet: Smartphone,
 }
 
-export function getPaymentMethodIcon(paymentMethod: string): LucideIcon {
-  return paymentMethodIconMap[paymentMethod as PaymentMethodLabel] ?? CreditCard
+export function getPaymentMethodIcon(paymentMethod: PaymentMethod): LucideIcon {
+  return paymentMethodIconMap[paymentMethod] ?? CreditCard
 }

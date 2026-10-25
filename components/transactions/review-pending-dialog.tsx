@@ -13,9 +13,6 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ConfidenceBadge } from "@/components/transactions/confidence-badge"
 import { ReceiptPreview } from "@/components/transactions/receipt-preview"
 import {
-  expenseCategoryLabels,
-  incomeCategoryLabels,
-  paymentMethodLabels,
   type ConfirmTransactionPayload,
   type Currency,
   type ExpenseCategory,
@@ -74,7 +71,8 @@ export function ReviewPendingDialog({
     return null
   }
 
-  const categoryLabels: Record<string, string> = values.type === "Expense" ? expenseCategoryLabels : incomeCategoryLabels
+  const categoryLabels: Record<string, string> =
+    values.type === "Expense" ? messages.labels.expenseCategories : messages.labels.incomeCategories
   const sourceLabel = t.sources[transaction.source] ?? transaction.source
   const keepsAiSuggestion = values.type === transaction.type && values.category === transaction.category
   const isScanned = transaction.source === "ReceiptScan"
@@ -242,7 +240,7 @@ export function ReviewPendingDialog({
                   <SelectValue placeholder={t.paymentMethodPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(paymentMethodLabels).map(([value, label]) => (
+                  {Object.entries(messages.labels.paymentMethods).map(([value, label]) => (
                     <SelectItem key={value} value={value}>
                       {label}
                     </SelectItem>

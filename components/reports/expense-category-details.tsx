@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import type { CategoryExpenseDto, ExpenseBreakdownDto, ExpenseTotalDto } from "@/lib/api"
-import { expenseCategoryLabels, type Currency } from "@/lib/api/transactions"
+import type { Currency } from "@/lib/api/transactions"
 import { formatDate, formatMoney } from "@/lib/format"
 import { useMessages } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
@@ -24,10 +24,12 @@ function CategoryRow({
   currency: Currency
   isComparing: boolean
 }) {
+  const categoryLabels = useMessages().labels.expenseCategories
+
   return (
     <div className="rounded-lg border p-3">
       <div className="mb-2 flex items-center justify-between gap-3">
-        <span className="font-medium">{expenseCategoryLabels[category.category]}</span>
+        <span className="font-medium">{categoryLabels[category.category]}</span>
         <div className="flex items-center gap-2">
           <Badge variant="outline">{formatShare(category.percentage)}</Badge>
           <span className="font-semibold tabular-nums">{formatMoney(category.amount, currency)}</span>

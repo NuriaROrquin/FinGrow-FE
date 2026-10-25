@@ -89,19 +89,20 @@ export function formatQuantity(quantity: number, type: InvestmentType): string {
   return unit === "" ? amount : `${amount} ${unit}`
 }
 
-export const investmentTypeLabels: Record<InvestmentType, string> = {
-  Stock: "Acción",
-  Cedear: "CEDEAR",
-  Etf: "ETF",
-  Bond: "Bono",
-  CorporateBond: "Obligación Negociable",
-  TreasuryBill: "Letra del Tesoro",
-  MutualFund: "Fondo Común",
-  FixedTermDeposit: "Plazo Fijo",
-  Repo: "Caución",
-  RemuneratedAccount: "Cuenta Remunerada",
-  Crypto: "Criptomoneda",
-}
+// Las etiquetas de cada tipo están en `lib/i18n` (`labels.investmentTypes`).
+export const INVESTMENT_TYPES: InvestmentType[] = [
+  "Stock",
+  "Cedear",
+  "Etf",
+  "Bond",
+  "CorporateBond",
+  "TreasuryBill",
+  "MutualFund",
+  "FixedTermDeposit",
+  "Repo",
+  "RemuneratedAccount",
+  "Crypto",
+]
 
 /** De donde vino la inversion: la cargo el empleado o la importo IOL. */
 export type InvestmentSource = "Manual" | "Iol"
@@ -212,15 +213,6 @@ export type InvestmentSortField =
 export type SortDirection = "Ascending" | "Descending"
 
 export type InvestmentPerformance = "Gain" | "Loss"
-
-export const investmentSortFieldLabels: Record<InvestmentSortField, string> = {
-  PurchasedOn: "Fecha de compra",
-  AssetName: "Nombre del activo",
-  AssetType: "Tipo de activo",
-  InvestedAmount: "Capital invertido",
-  CurrentValue: "Valor actual",
-  ReturnPercentage: "Rendimiento",
-}
 
 export interface InvestmentListQuery {
   pageNumber: number

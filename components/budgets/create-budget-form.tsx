@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createBudget, isApiError, toastApiError, type BudgetDto } from "@/lib/api"
-import { expenseCategoryLabels, type Currency, type ExpenseCategory } from "@/lib/api/transactions"
+import { EXPENSE_CATEGORIES, type Currency, type ExpenseCategory } from "@/lib/api/transactions"
+import { useMessages } from "@/lib/i18n"
 import { expenseCategoryIcons, formatYearMonth, type YearMonth } from "./budget-month"
 import { usePreferences } from "@/lib/preferences-context"
 
@@ -21,7 +22,6 @@ const currencyLabels: Record<Currency, string> = {
   BRL: "BRL (R$)",
 }
 
-const allCategories = Object.keys(expenseCategoryLabels) as ExpenseCategory[]
 
 interface LimitRow {
   key: number
@@ -41,6 +41,7 @@ export function CreateBudgetForm({
   onClose: () => void
 }) {
   const { preferences } = usePreferences()
+  const categoryLabels = useMessages().labels.expenseCategories
   const [currency, setCurrency] = useState<Currency>(preferences.currency)
   const [rows, setRows] = useState<LimitRow[]>([{ key: 0, category: "", amount: "" }])
   const [nextKey, setNextKey] = useState(1)
@@ -124,11 +125,11 @@ export function CreateBudgetForm({
                   <SelectValue placeholder="Categoría" />
                 </SelectTrigger>
                 <SelectContent>
-                  {allCategories
+                  {EXPENSE_CATEGORIES
                     .filter((category) => category === row.category || !usedCategories.has(category))
                     .map((category) => (
                       <SelectItem key={category} value={category}>
-                        {expenseCategoryIcons[category]} {expenseCategoryLabels[category]}
+                        {expenseCategoryIcons[category]} {categoryLabels[category]}
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -162,7 +163,7 @@ export function CreateBudgetForm({
           variant="outline"
           size="sm"
           onClick={addRow}
-          disabled={rows.length >= allCategories.length}
+          disabled={rows.length >= EXPENSE_CATEGORIES.length}
         >
           <PlusIcon className="size-4" />
           Agregar categoría

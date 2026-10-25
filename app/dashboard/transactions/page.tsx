@@ -63,14 +63,12 @@ import { useToast } from "@/hooks/use-toast"
 import {
   createTransaction,
   deleteTransaction,
-  expenseCategoryLabels,
   exportTransactions,
   getTransactionSummary,
-  incomeCategoryLabels,
   listTransactions,
-  paymentMethodLabels,
-  transactionStatusLabels,
   type Currency,
+  type ExpenseCategory,
+  type IncomeCategory,
   type PaymentMethod,
   type PendingTransactionDto,
   type TransactionDto,
@@ -115,15 +113,7 @@ const emptyTransactionSummary: TransactionSummaryResponse = {
   otherCurrencies: [],
 }
 
-// Métodos de pago para el filtro, ordenados alfabéticamente
-const paymentMethodFilterOptions = (Object.entries(paymentMethodLabels) as [PaymentMethod, string][]).sort(
-  ([, labelA], [, labelB]) => labelA.localeCompare(labelB, "es"),
-)
-
-const transactionStatusFilterOptions: [TransactionListStatus, string][] = [
-  ["Confirmed", "Confirmada"],
-  ["Eliminated", "Eliminada"],
-]
+const transactionStatusFilterValues: TransactionListStatus[] = ["Confirmed", "Eliminated"]
 const defaultTransactionStatuses: TransactionListStatus[] = ["Confirmed"]
 
 const defaultTransactionSort: SortState<TransactionSortField> = { field: "OccurredOn", direction: "desc" }
@@ -136,6 +126,13 @@ const transactionTableCellClassName = "py-3 pr-2 align-middle whitespace-nowrap"
 export default function TransactionsPage() {
   const searchParams = useSearchParams()
   const t = useMessages()
+  // Métodos de pago para el filtro, ordenados alfabéticamente en el idioma elegido
+  const paymentMethodFilterOptions = (Object.entries(t.labels.paymentMethods) as [PaymentMethod, string][]).sort(
+    ([, labelA], [, labelB]) => labelA.localeCompare(labelB),
+  )
+  const transactionStatusFilterOptions = transactionStatusFilterValues.map(
+    (status) => [status, t.labels.transactionStatuses[status]] as const,
+  )
   const pending = usePendingTransactions()
   const [activeView, setActiveView] = useState<TransactionsView>(
     searchParams.get("view") === "pending" ? "pending" : "movements",
@@ -241,11 +238,11 @@ export default function TransactionsPage() {
         type: apiType,
         expenseCategory:
           filterType === "Expense" && filterCategory !== "all"
-            ? (filterCategory as keyof typeof expenseCategoryLabels)
+            ? (filterCategory as ExpenseCategory)
             : undefined,
         incomeCategory:
           filterType === "Income" && filterCategory !== "all"
-            ? (filterCategory as keyof typeof incomeCategoryLabels)
+            ? (filterCategory as IncomeCategory)
             : undefined,
         status: filterStatus.length > 0 ? filterStatus : undefined,
         paymentMethod: filterPaymentMethod === "all" ? undefined : (filterPaymentMethod as PaymentMethod),
@@ -305,9 +302,9 @@ export default function TransactionsPage() {
   const transactions = transactionsResponse.items
   const filteredTransactions = transactions
   const categoryFilterOptions = filterType === "Expense"
-    ? Object.entries(expenseCategoryLabels)
+    ? Object.entries(t.labels.expenseCategories)
     : filterType === "Income"
-      ? Object.entries(incomeCategoryLabels)
+      ? Object.entries(t.labels.incomeCategories)
       : []
 
   const defaultDateFrom = getCurrentMonthStart()
@@ -458,11 +455,11 @@ export default function TransactionsPage() {
         type: filterType === "all" ? undefined : filterType,
         expenseCategory:
           filterType === "Expense" && filterCategory !== "all"
-            ? (filterCategory as keyof typeof expenseCategoryLabels)
+            ? (filterCategory as ExpenseCategory)
             : undefined,
         incomeCategory:
           filterType === "Income" && filterCategory !== "all"
-            ? (filterCategory as keyof typeof incomeCategoryLabels)
+            ? (filterCategory as IncomeCategory)
             : undefined,
         status: filterStatus.length > 0 ? filterStatus : undefined,
         paymentMethod: filterPaymentMethod === "all" ? undefined : (filterPaymentMethod as PaymentMethod),
@@ -1016,11 +1013,11 @@ export default function TransactionsPage() {
                 ) : (
                   filteredTransactions.map((transaction) => {
                     const CategoryIcon = getCategoryIcon(transaction.category)
-                    const categoryLabel =
-                      expenseCategoryLabels[transaction.category as keyof typeof expenseCategoryLabels] ??
-                      incomeCategoryLabels[transaction.category as keyof typeof incomeCategoryLabels] ??
-                      transaction.category
+                    const categoryLabels: Record<string, string> =
+                      transaction.type === "Income" ? t.labels.incomeCategories : t.labels.expenseCategories
+                    const categoryLabel = categoryLabels[transaction.category] ?? transaction.category
                     const PaymentMethodIcon = getPaymentMethodIcon(transaction.paymentMethod)
+                    const paymentMethodLabel = t.labels.paymentMethods[transaction.paymentMethod] ?? transaction.paymentMethod
 
                     return (
                       <TableRow key={transaction.id}>
@@ -1039,9 +1036,9 @@ export default function TransactionsPage() {
                           </div>
                         </TableCell>
                         <TableCell className={`${transactionTableCellClassName} text-muted-foreground`}>
-                          <div className="flex items-center gap-2" title={transaction.paymentMethod}>
+                          <div className="flex items-center gap-2" title={paymentMethodLabel}>
                             <PaymentMethodIcon className="size-4 shrink-0" aria-hidden="true" />
-                            <span className="truncate text-sm">{transaction.paymentMethod}</span>
+                            <span className="truncate text-sm">{paymentMethodLabel}</span>
                           </div>
                         </TableCell>
                         <TableCell className={`${transactionTableCellClassName} text-sm text-muted-foreground`}>
@@ -1061,7 +1058,7 @@ export default function TransactionsPage() {
                             ) : (
                               <Clock className="size-3" />
                             )}
-                            {transactionStatusLabels[transaction.status] ?? transaction.status}
+                            {t.labels.transactionStatuses[transaction.status] ?? transaction.status}
                           </Badge>
                         </TableCell>
                         <TableCell className={transactionTableCellClassName}>

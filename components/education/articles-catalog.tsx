@@ -11,12 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
-  educationCategoryLabels,
   listArticles,
   toastApiError,
   type ArticleSummaryDto,
   type EducationCategory,
 } from "@/lib/api"
+import { useMessages } from "@/lib/i18n"
 import { formatDateText } from "@/lib/format"
 
 const ALL = "all"
@@ -24,6 +24,7 @@ const ALL = "all"
 const readingTimeOptions = [3, 5, 10]
 
 export function ArticlesCatalog() {
+  const labels = useMessages().labels
   const router = useRouter()
   const [category, setCategory] = useState<EducationCategory | typeof ALL>(ALL)
   const [maxReadingTime, setMaxReadingTime] = useState<string>(ALL)
@@ -69,7 +70,7 @@ export function ArticlesCatalog() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>Todas las categorías</SelectItem>
-              {Object.entries(educationCategoryLabels).map(([value, label]) => (
+              {Object.entries(labels.educationCategories).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
                 </SelectItem>
@@ -157,7 +158,7 @@ export function ArticlesCatalog() {
                     <p className="text-sm text-muted-foreground line-clamp-1">{article.summary}</p>
                     <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mt-1">
                       <Badge variant="outline" className="text-xs">
-                        {educationCategoryLabels[article.category]}
+                        {labels.educationCategories[article.category]}
                       </Badge>
                       <span className="flex items-center gap-1">
                         <ClockIcon className="size-3" />

@@ -39,10 +39,8 @@ import {
   toastApiError,
   type BudgetDto,
 } from "@/lib/api";
-import {
-  expenseCategoryLabels,
-  type ExpenseCategory,
-} from "@/lib/api/transactions";
+import { EXPENSE_CATEGORIES, type ExpenseCategory } from "@/lib/api/transactions";
+import { useMessages } from "@/lib/i18n";
 import { BudgetLimitCard } from "./budget-limit-card";
 import { BudgetLimitForm } from "./budget-limit-form";
 import {
@@ -53,8 +51,6 @@ import {
   type YearMonth,
 } from "./budget-month";
 import { CreateBudgetForm } from "./create-budget-form";
-
-const allCategories = Object.keys(expenseCategoryLabels) as ExpenseCategory[];
 
 type LimitEditor =
   | { mode: "edit"; category: ExpenseCategory; amount: number }
@@ -69,6 +65,7 @@ export function MonthlyBudgetSection({
   /** Se llama cuando se guardó un cambio en un presupuesto o en su gasto, para refrescar el análisis (HU-25). */
   onBudgetsChanged?: () => void;
 }) {
+  const categoryLabels = useMessages().labels.expenseCategories;
   const [period, setPeriod] = useState<YearMonth>(currentYearMonth);
   const [budget, setBudget] = useState<BudgetDto | null>(null);
   const [previousBudget, setPreviousBudget] = useState<BudgetDto | null>(null);
@@ -177,7 +174,7 @@ export function MonthlyBudgetSection({
       );
       saveBudget(updated);
       toast.success(
-        `${expenseCategoryLabels[categoryToRemove]} se quitó del presupuesto`,
+        `${categoryLabels[categoryToRemove]} se quitó del presupuesto`,
       );
     } catch (error) {
       toastApiError(error, "No se pudo quitar la categoría.");
@@ -206,7 +203,7 @@ export function MonthlyBudgetSection({
 
   const total =
     budget?.limits.reduce((sum, limit) => sum + limit.amount, 0) ?? 0;
-  const categoriesWithoutLimit = allCategories.filter(
+  const categoriesWithoutLimit = EXPENSE_CATEGORIES.filter(
     (category) => !budget?.limits.some((limit) => limit.category === category),
   );
 
@@ -388,7 +385,7 @@ export function MonthlyBudgetSection({
             <AlertDialogTitle>¿Quitar categoría?</AlertDialogTitle>
             <AlertDialogDescription>
               Vas a quitar{" "}
-              {categoryToRemove ? expenseCategoryLabels[categoryToRemove] : ""}{" "}
+              {categoryToRemove ? categoryLabels[categoryToRemove] : ""}{" "}
               del presupuesto de{" "}
               {periodLabel}. Tus movimientos
               de esa categoría no se borran: solo dejan de compararse contra un
