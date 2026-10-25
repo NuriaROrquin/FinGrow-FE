@@ -32,6 +32,11 @@ factor activo responde un desafío que se completa en `POST /login/2fa`. Con la 
 `AuthenticatedRedirect` manda a cada rol a su panel. Al cargar la página se rehidrata con
 `GET /session`; `logout()` llama a `DELETE /session`. El JavaScript nunca ve el token ni guarda
 el rol: un 401 vuelve siempre a la portada, y `/login/*` redirige ahí (`next.config.mjs`).
+- **Recuperar la contraseña (HU-72)**: el "¿La olvidaste?" de la portada lleva a
+  `/recuperar-password`, que pide el enlace con `POST /password-reset` (`lib/api/password-reset.ts`),
+  sin rol, igual que el login. La confirmación es la misma exista o no la cuenta: no muestres nada
+  distinto según la respuesta. El correo lleva a `/recuperar-password/restablecer?token=...`, que
+  valida el enlace al abrirlo y lo canjea con la contraseña nueva; al terminar se vuelve a la portada.
 - **Departamentos y empleados del panel de empresa** (HU-51, HU-54) usan la API real
   (`lib/api/company.ts`, `/api/company/departments` y `/api/company/employees`). El empleado se
   relaciona con su departamento por id. El alta devuelve una contraseña temporal que se muestra
