@@ -18,7 +18,6 @@
 export { api, setUnauthorizedHandler, type RequestOptions } from "./client"
 export { ApiError, ClientErrorCodes, isApiError, parseApiError } from "./errors"
 export { toastApiError } from "./notify"
-export { clearSession, getRole, loginPathForCurrentRole, saveSession, type SessionRole } from "./session"
 export {
   getSession,
   isTwoFactorChallenge,

@@ -13,7 +13,6 @@ import {
   type TwoFactorChallenge,
 } from "@/lib/api/auth"
 import { setUnauthorizedHandler } from "@/lib/api/client"
-import { clearSession as clearStoredSession, saveSession } from "@/lib/api/session"
 import { isSessionActive, toSessionUser } from "@/lib/auth/session-user"
 import type { SessionUser, UserRole } from "@/lib/auth/types"
 
@@ -62,15 +61,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (cancelled) return
 
         if (user && isSessionActive(user)) {
-          saveSession(user.role)
           setAuthState(createAuthenticatedState(user))
-        } else {
-          clearStoredSession()
         }
       })
-      .catch(() => {
-        if (!cancelled) clearStoredSession()
-      })
+      .catch(() => undefined)
       .finally(() => {
         if (!cancelled) setIsHydrated(true)
       })
@@ -87,7 +81,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error("La sesión recibida no es válida")
     }
 
-    saveSession(user.role)
     setAuthState(createAuthenticatedState(user))
   }
 
@@ -114,7 +107,6 @@ const completeTwoFactorLogin = async (challengeToken: string, code: string) => {
 
   const clearSession = useCallback(
     (redirectTo = "/") => {
-      clearStoredSession()
       setAuthState(unauthenticatedState)
       router.replace(redirectTo)
     },
@@ -146,7 +138,6 @@ const completeTwoFactorLogin = async (challengeToken: string, code: string) => {
         if (cancelled) return
 
         if (user && isSessionActive(user)) {
-          saveSession(user.role)
           setAuthState(createAuthenticatedState(user))
           return
         }
