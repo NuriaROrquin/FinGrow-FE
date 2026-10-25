@@ -10,22 +10,22 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { isApiError, setBudgetLimit, toastApiError, type BudgetDto } from "@/lib/api"
 import type { ExpenseCategory } from "@/lib/api/transactions"
-import { useMessages } from "@/lib/i18n"
+import { useMessages, type Messages } from "@/lib/i18n"
 import { expenseCategoryIcons, type YearMonth } from "./budget-month"
 
-function validateAmount(raw: string): string | null {
+function validateAmount(raw: string, t: Messages["budgets"]): string | null {
   if (raw.trim() === "") {
-    return "Ingresá el límite de la categoría."
+    return t.limitRequired
   }
 
   const amount = Number(raw)
 
   if (!Number.isFinite(amount)) {
-    return "El límite tiene que ser un número."
+    return t.limitNotNumber
   }
 
   if (amount <= 0) {
-    return "El límite tiene que ser un número mayor a cero."
+    return t.limitNotPositive
   }
 
   return null
@@ -50,7 +50,9 @@ export function BudgetLimitForm({
   onBudgetMissing: () => void
   onClose: () => void
 }) {
-  const categoryLabels = useMessages().labels.expenseCategories
+  const messages = useMessages()
+  const t = messages.budgets
+  const categoryLabels = messages.labels.expenseCategories
   const isEditing = fixedCategory !== undefined
   const [category, setCategory] = useState<ExpenseCategory | "">(fixedCategory ?? "")
   const [amount, setAmount] = useState(initialAmount !== undefined ? String(initialAmount) : "")
@@ -61,11 +63,11 @@ export function BudgetLimitForm({
     e.preventDefault()
 
     if (category === "") {
-      setError("Elegí una categoría.")
+      setError(t.pickCategory)
       return
     }
 
-    const amountError = validateAmount(amount)
+    const amountError = validateAmount(amount, t)
     if (amountError) {
       setError(amountError)
       return
@@ -77,9 +79,7 @@ export function BudgetLimitForm({
       const budget = await setBudgetLimit(period.year, period.month, { category, amount: Number(amount) })
       onSaved(budget)
       toast.success(
-        isEditing
-          ? `Límite de ${categoryLabels[category]} actualizado`
-          : `Límite de ${categoryLabels[category]} agregado`,
+        isEditing ? t.limitUpdated(categoryLabels[category]) : t.limitAdded(categoryLabels[category]),
       )
       onClose()
     } catch (err) {
@@ -88,7 +88,7 @@ export function BudgetLimitForm({
         return
       }
 
-      toastApiError(err, "No se pudo guardar el límite.")
+      toastApiError(err, t.limitSaveFailed)
 
       if (isApiError(err) && err.status === 404) {
         onBudgetMissing()
@@ -108,7 +108,7 @@ export function BudgetLimitForm({
         </p>
       ) : (
         <div className="space-y-2">
-          <Label htmlFor="limit-category">Categoría</Label>
+          <Label htmlFor="limit-category">{t.category}</Label>
           <Select
             value={category}
             onValueChange={(value) => {
@@ -117,7 +117,7 @@ export function BudgetLimitForm({
             }}
           >
             <SelectTrigger id="limit-category" className="w-full">
-              <SelectValue placeholder="Elegí una categoría" />
+              <SelectValue placeholder={t.pickCategoryPlaceholder} />
             </SelectTrigger>
             <SelectContent>
               {availableCategories.map((option) => (
@@ -131,7 +131,7 @@ export function BudgetLimitForm({
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="limit-amount">Límite mensual{currency ? ` (${currency})` : ""}</Label>
+        <Label htmlFor="limit-amount">{t.monthlyLimit}{currency ? ` (${currency})` : ""}</Label>
         <Input
           id="limit-amount"
           type="number"
@@ -156,10 +156,10 @@ export function BudgetLimitForm({
 
       <div className="flex gap-2 justify-end pt-4">
         <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-          Cancelar
+          {messages.common.cancel}
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Guardando..." : "Guardar"}
+          {isSubmitting ? t.saving : t.save}
         </Button>
       </div>
     </form>

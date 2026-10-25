@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import type { GoalDto } from "@/lib/api"
-import { formatDate, formatMoney } from "@/lib/format"
+import { formatDate, formatMoney, formatNumber } from "@/lib/format"
+import { useMessages, type Messages } from "@/lib/i18n"
 
 function formatDeadline(deadline: string): string {
   return formatDate(deadline)
@@ -16,12 +17,11 @@ function formatAchievedAt(achievedAt: string): string {
   return formatDate(achievedAt)
 }
 
-function describeTimeLeft(goal: GoalDto, deadlineLabel: string): string {
-  if (goal.status === "Cancelled") return "Meta cancelada"
-  if (goal.isOverdue) return `Vencida el ${deadlineLabel}`
-  if (goal.daysRemaining === 0) return `Vence hoy · ${deadlineLabel}`
-  if (goal.daysRemaining === 1) return `1 día restante · ${deadlineLabel}`
-  return `${goal.daysRemaining} días restantes · ${deadlineLabel}`
+function describeTimeLeft(goal: GoalDto, deadlineLabel: string, t: Messages["goals"]): string {
+  if (goal.status === "Cancelled") return t.cancelledGoal
+  if (goal.isOverdue) return t.overdueOn(deadlineLabel)
+  if (goal.daysRemaining === 0) return t.dueToday(deadlineLabel)
+  return t.daysLeft(goal.daysRemaining, deadlineLabel)
 }
 
 export function InProgressGoalCard({
@@ -35,6 +35,8 @@ export function InProgressGoalCard({
   onEdit: () => void
   onDelete: () => void
 }) {
+  const t = useMessages().goals
+
   return (
     <Card className={goal.isOverdue ? "border-destructive/50" : undefined}>
       <CardHeader>
@@ -44,20 +46,20 @@ export function InProgressGoalCard({
             <div>
               <CardTitle className="text-lg">{goal.name}</CardTitle>
               <CardDescription className={goal.isOverdue ? "text-destructive" : undefined}>
-                {describeTimeLeft(goal, formatDeadline(goal.deadline))}
+                {describeTimeLeft(goal, formatDeadline(goal.deadline), t)}
               </CardDescription>
             </div>
           </div>
           <div className="flex items-center gap-1">
             {goal.isOverdue ? (
-              <Badge variant="destructive">Vencida</Badge>
+              <Badge variant="destructive">{t.overdue}</Badge>
             ) : (
-              <Badge variant="outline">{goal.progressPercentage.toFixed(0)}%</Badge>
+              <Badge variant="outline">{formatNumber(goal.progressPercentage, { maximumFractionDigits: 0 })}%</Badge>
             )}
-            <Button variant="ghost" size="icon" aria-label={`Editar la meta ${goal.name}`} onClick={onEdit}>
+            <Button variant="ghost" size="icon" aria-label={t.editAria(goal.name)} onClick={onEdit}>
               <PencilIcon className="size-4" />
             </Button>
-            <Button variant="ghost" size="icon" aria-label={`Eliminar la meta ${goal.name}`} onClick={onDelete}>
+            <Button variant="ghost" size="icon" aria-label={t.deleteAria(goal.name)} onClick={onDelete}>
               <Trash2Icon className="size-4" />
             </Button>
           </div>
@@ -67,17 +69,19 @@ export function InProgressGoalCard({
         <div className="flex items-baseline justify-between">
           <span className="text-2xl font-bold">{formatMoney(goal.currentAmount, goal.currency)}</span>
           <span className="text-sm text-muted-foreground">
-            de {formatMoney(goal.targetAmount, goal.currency)}
+            {t.ofTarget(formatMoney(goal.targetAmount, goal.currency))}
           </span>
         </div>
         <Progress value={goal.progressPercentage} className="h-2" />
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">{formatMoney(goal.remainingAmount, goal.currency)} pendiente</span>
-          <span className="font-medium">{goal.progressPercentage.toFixed(1)}% alcanzado</span>
+          <span className="text-muted-foreground">{t.pending(formatMoney(goal.remainingAmount, goal.currency))}</span>
+          <span className="font-medium">
+            {t.reached(formatNumber(goal.progressPercentage, { minimumFractionDigits: 1, maximumFractionDigits: 1 }))}
+          </span>
         </div>
         <Button variant="outline" className="w-full" onClick={onOpenContributions}>
           <HandCoinsIcon className="size-4" />
-          {goal.status === "Active" ? "Registrar aporte" : "Ver aportes"}
+          {goal.status === "Active" ? t.addContribution : t.viewContributions}
         </Button>
       </CardContent>
     </Card>
@@ -95,6 +99,8 @@ export function AchievedGoalCard({
   onEdit: () => void
   onDelete: () => void
 }) {
+  const t = useMessages().goals
+
   return (
     <Card className="border-success/40 bg-success/5">
       <CardHeader>
@@ -106,16 +112,16 @@ export function AchievedGoalCard({
             <div>
               <CardTitle className="text-lg">{goal.name}</CardTitle>
               <CardDescription>
-                {goal.achievedAt ? `Lograda el ${formatAchievedAt(goal.achievedAt)}` : "Meta lograda"}
+                {goal.achievedAt ? t.achievedOn(formatAchievedAt(goal.achievedAt)) : t.achievedGoal}
               </CardDescription>
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <Badge className="hover:bg-primary">Alcanzada</Badge>
-            <Button variant="ghost" size="icon" aria-label={`Editar la meta ${goal.name}`} onClick={onEdit}>
+            <Badge className="hover:bg-primary">{t.achievedBadge}</Badge>
+            <Button variant="ghost" size="icon" aria-label={t.editAria(goal.name)} onClick={onEdit}>
               <PencilIcon className="size-4" />
             </Button>
-            <Button variant="ghost" size="icon" aria-label={`Eliminar la meta ${goal.name}`} onClick={onDelete}>
+            <Button variant="ghost" size="icon" aria-label={t.deleteAria(goal.name)} onClick={onDelete}>
               <Trash2Icon className="size-4" />
             </Button>
           </div>
@@ -125,13 +131,13 @@ export function AchievedGoalCard({
         <div className="flex items-baseline justify-between">
           <span className="text-2xl font-bold">{formatMoney(goal.currentAmount, goal.currency)}</span>
           <span className="text-sm text-muted-foreground">
-            objetivo {formatMoney(goal.targetAmount, goal.currency)}
+            {t.target(formatMoney(goal.targetAmount, goal.currency))}
           </span>
         </div>
         <Progress value={100} className="h-2" />
         <Button variant="ghost" className="w-full" onClick={onOpenContributions}>
           <HandCoinsIcon className="size-4" />
-          Ver aportes
+          {t.viewContributions}
         </Button>
       </CardContent>
     </Card>

@@ -65,7 +65,9 @@ export function MonthlyBudgetSection({
   /** Se llama cuando se guardó un cambio en un presupuesto o en su gasto, para refrescar el análisis (HU-25). */
   onBudgetsChanged?: () => void;
 }) {
-  const categoryLabels = useMessages().labels.expenseCategories;
+  const messages = useMessages();
+  const t = messages.budgets;
+  const categoryLabels = messages.labels.expenseCategories;
   const [period, setPeriod] = useState<YearMonth>(currentYearMonth);
   const [budget, setBudget] = useState<BudgetDto | null>(null);
   const [previousBudget, setPreviousBudget] = useState<BudgetDto | null>(null);
@@ -112,14 +114,14 @@ export function MonthlyBudgetSection({
           return;
         setBudget(null);
         setPreviousBudget(null);
-        toastApiError(error, "No se pudo cargar el presupuesto del mes.");
+        toastApiError(error, t.loadFailed);
       })
       .finally(() => {
         if (!controller.signal.aborted) setIsLoading(false);
       });
 
     return () => controller.abort();
-  }, [period, reloadKey]);
+  }, [period, reloadKey, t]);
 
   useEffect(() => {
     onBudgetChange(isLoading ? null : budget);
@@ -150,11 +152,9 @@ export function MonthlyBudgetSection({
     try {
       await duplicatePreviousBudget(period.year, period.month);
       reloadChanged();
-      toast.success(
-        `Presupuesto de ${periodLabel} creado a partir de ${previousLabel}`,
-      );
+      toast.success(t.duplicated(periodLabel, previousLabel));
     } catch (error) {
-      toastApiError(error, "No se pudo duplicar el presupuesto.");
+      toastApiError(error, t.duplicateFailed);
       if (isApiError(error) && (error.status === 409 || error.status === 404))
         reload();
     } finally {
@@ -173,11 +173,9 @@ export function MonthlyBudgetSection({
         categoryToRemove,
       );
       saveBudget(updated);
-      toast.success(
-        `${categoryLabels[categoryToRemove]} se quitó del presupuesto`,
-      );
+      toast.success(t.categoryRemoved(categoryLabels[categoryToRemove]));
     } catch (error) {
-      toastApiError(error, "No se pudo quitar la categoría.");
+      toastApiError(error, t.removeCategoryFailed);
       if (isApiError(error) && (error.status === 404 || error.status === 409))
         reload();
     } finally {
@@ -191,9 +189,9 @@ export function MonthlyBudgetSection({
     try {
       await deleteBudget(period.year, period.month);
       reloadChanged();
-      toast.success(`Presupuesto de ${periodLabel} eliminado`);
+      toast.success(t.budgetDeleted(periodLabel));
     } catch (error) {
-      toastApiError(error, "No se pudo eliminar el presupuesto.");
+      toastApiError(error, t.deleteBudgetFailed);
       if (isApiError(error) && error.status === 404) reload();
     } finally {
       setIsRemoving(false);
@@ -214,7 +212,7 @@ export function MonthlyBudgetSection({
           <Button
             variant="outline"
             size="icon"
-            aria-label="Mes anterior"
+            aria-label={t.previousMonth}
             onClick={() => setPeriod((current) => shiftMonth(current, -1))}
           >
             <ChevronLeftIcon className="size-4" />
@@ -225,7 +223,7 @@ export function MonthlyBudgetSection({
           <Button
             variant="outline"
             size="icon"
-            aria-label="Mes siguiente"
+            aria-label={t.nextMonth}
             onClick={() => setPeriod((current) => shiftMonth(current, 1))}
           >
             <ChevronRightIcon className="size-4" />
@@ -234,7 +232,7 @@ export function MonthlyBudgetSection({
         {!isLoading && budget && (
           <div className="flex flex-wrap items-center gap-3">
             <p className="text-sm text-muted-foreground">
-              Total asignado:{" "}
+              {t.totalAssigned}{" "}
               <span className="font-semibold text-foreground">
                 {formatAmount(total, budget.currency)}
               </span>
@@ -242,7 +240,7 @@ export function MonthlyBudgetSection({
             {categoriesWithoutLimit.length > 0 && (
               <Button onClick={() => setLimitEditor({ mode: "add" })}>
                 <PlusIcon className="size-4" />
-                Agregar Categoría
+                {t.addCategory}
               </Button>
             )}
             <Button
@@ -251,7 +249,7 @@ export function MonthlyBudgetSection({
               onClick={() => setIsDeleteBudgetOpen(true)}
             >
               <Trash2Icon className="size-4" />
-              Eliminar Presupuesto
+              {t.deleteBudget}
             </Button>
           </div>
         )}
@@ -285,17 +283,15 @@ export function MonthlyBudgetSection({
         <Card>
           <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
             <p className="text-muted-foreground">
-              No tenés un presupuesto para{" "}
+              {t.noBudgetPrefix}
               <span className="font-medium text-foreground">{periodLabel}</span>
-              .
+              {t.noBudgetSuffix}
             </p>
             <div className="flex flex-wrap justify-center gap-2">
               {previousBudget && (
                 <Button onClick={handleDuplicate} disabled={isDuplicating}>
                   <CopyIcon className="size-4" />
-                  {isDuplicating
-                    ? "Duplicando..."
-                    : `Duplicar el de ${previousLabel}`}
+                  {isDuplicating ? t.duplicating : t.duplicateFrom(previousLabel)}
                 </Button>
               )}
               <Button
@@ -304,13 +300,12 @@ export function MonthlyBudgetSection({
                 disabled={isDuplicating}
               >
                 <PlusIcon className="size-4" />
-                Crear desde cero
+                {t.createFromScratch}
               </Button>
             </div>
             {previousBudget && (
               <p className="text-xs text-muted-foreground">
-                Duplicar copia los {previousBudget.limits.length} límites de{" "}
-                {previousLabel}.
+                {t.duplicateHint(previousBudget.limits.length, previousLabel)}
               </p>
             )}
           </CardContent>
@@ -320,11 +315,8 @@ export function MonthlyBudgetSection({
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Crear presupuesto</DialogTitle>
-            <DialogDescription>
-              Asigná un límite de gasto por categoría para{" "}
-              {periodLabel}.
-            </DialogDescription>
+            <DialogTitle>{t.createTitle}</DialogTitle>
+            <DialogDescription>{t.createDescription(periodLabel)}</DialogDescription>
           </DialogHeader>
           <CreateBudgetForm
             period={period}
@@ -342,16 +334,12 @@ export function MonthlyBudgetSection({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {limitEditor?.mode === "edit"
-                ? "Editar límite"
-                : "Agregar categoría"}
+              {limitEditor?.mode === "edit" ? t.editLimitTitle : t.addCategoryTitle}
             </DialogTitle>
             <DialogDescription>
               {limitEditor?.mode === "edit"
-                ? "Ajustá el límite"
-                : "Definí el límite de una categoría nueva"}{" "}
-              para {periodLabel}. Lo gastado
-              y el estado se recalculan al guardar.
+                ? t.editLimitDescription(periodLabel)
+                : t.addCategoryDescription(periodLabel)}
             </DialogDescription>
           </DialogHeader>
           {limitEditor && budget && (
@@ -382,19 +370,17 @@ export function MonthlyBudgetSection({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Quitar categoría?</AlertDialogTitle>
+            <AlertDialogTitle>{t.removeCategoryTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              Vas a quitar{" "}
-              {categoryToRemove ? categoryLabels[categoryToRemove] : ""}{" "}
-              del presupuesto de{" "}
-              {periodLabel}. Tus movimientos
-              de esa categoría no se borran: solo dejan de compararse contra un
-              límite.
+              {t.removeCategoryWarning(
+                categoryToRemove ? categoryLabels[categoryToRemove] : "",
+                periodLabel,
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isRemoving}>
-              Cancelar
+              {messages.common.cancel}
             </AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -404,7 +390,7 @@ export function MonthlyBudgetSection({
                 void handleRemoveCategory();
               }}
             >
-              {isRemoving ? "Quitando..." : "Quitar"}
+              {isRemoving ? t.removing : t.remove}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -418,17 +404,12 @@ export function MonthlyBudgetSection({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar presupuesto?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Vas a eliminar el presupuesto de{" "}
-              {periodLabel} con todas sus
-              categorías. Tus movimientos no se borran. Esta acción no se puede
-              deshacer, pero podés crear otro presupuesto para el mes.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t.deleteBudgetTitle}</AlertDialogTitle>
+            <AlertDialogDescription>{t.deleteBudgetWarning(periodLabel)}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isRemoving}>
-              Cancelar
+              {messages.common.cancel}
             </AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -438,7 +419,7 @@ export function MonthlyBudgetSection({
                 void handleDeleteBudget();
               }}
             >
-              {isRemoving ? "Eliminando..." : "Eliminar"}
+              {isRemoving ? t.deleting : t.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

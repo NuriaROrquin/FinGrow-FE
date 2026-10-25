@@ -23,12 +23,15 @@ import { BudgetAnalysisCard } from "@/components/budgets/budget-analysis-card"
 import { MonthlyBudgetSection } from "@/components/budgets/monthly-budget-section"
 import { formatAmount } from "@/components/budgets/budget-month"
 import { listGoals, toastApiError, type BudgetDto, type GoalDto } from "@/lib/api"
+import { formatNumber } from "@/lib/format"
+import { useMessages } from "@/lib/i18n"
 
 type BudgetsTab = "budgets" | "savings"
 
 const scrollableGoalGrid = "grid max-h-[560px] gap-4 overflow-y-auto p-1 pr-2 md:grid-cols-2"
 
 export default function BudgetsPage() {
+  const t = useMessages().budgets
   const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState<BudgetsTab>(() =>
     searchParams.get("tab") === "savings" ? "savings" : "budgets",
@@ -61,14 +64,14 @@ export default function BudgetsPage() {
       .then(setSavingsGoals)
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return
-        toastApiError(error, "No se pudieron cargar tus metas de ahorro.")
+        toastApiError(error, t.goalsLoadFailed)
       })
       .finally(() => {
         if (!controller.signal.aborted) setIsLoadingGoals(false)
       })
 
     return () => controller.abort()
-  }, [])
+  }, [t])
 
   const replaceGoal = (updated: GoalDto) =>
     setSavingsGoals((current) => current.map((goal) => (goal.id === updated.id ? updated : goal)))
@@ -92,8 +95,8 @@ export default function BudgetsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-balance">Presupuestos y Ahorros</h1>
-          <p className="text-muted-foreground mt-1">Gestiona tus límites de gasto y metas de ahorro</p>
+          <h1 className="text-3xl font-bold text-balance">{t.title}</h1>
+          <p className="text-muted-foreground mt-1">{t.subtitle}</p>
         </div>
       </div>
 
@@ -102,25 +105,25 @@ export default function BudgetsPage() {
           <>
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Presupuesto Total</CardDescription>
+                <CardDescription>{t.totalBudget}</CardDescription>
                 <CardTitle className="text-2xl">
                   {currentBudget ? formatAmount(totalBudget, currentBudget.currency) : "—"}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  {currentBudget ? "Suma de los topes del mes" : "Sin presupuesto para el mes"}
+                  {currentBudget ? t.totalBudgetHint : t.noBudgetHint}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Categorías con Tope</CardDescription>
+                <CardDescription>{t.categoriesWithLimit}</CardDescription>
                 <CardTitle className="text-2xl">{currentBudget?.limits.length ?? 0}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">En el mes seleccionado</p>
+                <p className="text-sm text-muted-foreground">{t.inSelectedMonth}</p>
               </CardContent>
             </Card>
           </>
@@ -128,17 +131,17 @@ export default function BudgetsPage() {
           <>
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Metas de Ahorro</CardDescription>
+                <CardDescription>{t.savingsGoals}</CardDescription>
                 <CardTitle className="text-2xl">{goalsInProgress.length}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">Metas activas</p>
+                <p className="text-sm text-muted-foreground">{t.activeGoals}</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Total Ahorrado</CardDescription>
+                <CardDescription>{t.totalSaved}</CardDescription>
                 {savingsTotalsByCurrency.length === 0 && <CardTitle className="text-2xl">—</CardTitle>}
                 {savingsTotalsByCurrency.map(({ currency, current }) => (
                   <CardTitle key={currency} className="text-2xl">
@@ -149,7 +152,13 @@ export default function BudgetsPage() {
               <CardContent>
                 {savingsTotalsByCurrency.map(({ currency, target, current }) => (
                   <p key={currency} className="text-sm text-muted-foreground">
-                    {(target > 0 ? (current / target) * 100 : 0).toFixed(1)}% del objetivo ({currency})
+                    {t.ofTarget(
+                      formatNumber(target > 0 ? (current / target) * 100 : 0, {
+                        minimumFractionDigits: 1,
+                        maximumFractionDigits: 1,
+                      }),
+                      currency,
+                    )}
                   </p>
                 ))}
               </CardContent>
@@ -160,8 +169,8 @@ export default function BudgetsPage() {
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as BudgetsTab)} className="space-y-4">        
         <TabsList>
-          <TabsTrigger value="budgets">Presupuestos</TabsTrigger>
-          <TabsTrigger value="savings">Metas de Ahorro</TabsTrigger>
+          <TabsTrigger value="budgets">{t.tabBudgets}</TabsTrigger>
+          <TabsTrigger value="savings">{t.tabSavings}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="budgets" className="space-y-4">
@@ -171,18 +180,18 @@ export default function BudgetsPage() {
 
         <TabsContent value="savings" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Metas de Ahorro</h2>
+            <h2 className="text-xl font-semibold">{t.savingsGoals}</h2>
             <Dialog open={isSavingsDialogOpen} onOpenChange={setIsSavingsDialogOpen}>
               <DialogTrigger asChild>
                 <Button>
                   <PlusIcon className="size-4" />
-                  Agregar Meta
+                  {t.addGoal}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Crear Meta de Ahorro</DialogTitle>
-                  <DialogDescription>Establece un monto objetivo y fecha límite para tu ahorro</DialogDescription>
+                  <DialogTitle>{t.createGoalTitle}</DialogTitle>
+                  <DialogDescription>{t.createGoalDescription}</DialogDescription>
                 </DialogHeader>
                 <GoalForm
                   onSaved={(goal) => setSavingsGoals((current) => [goal, ...current])}
@@ -200,18 +209,18 @@ export default function BudgetsPage() {
           ) : savingsGoals.length === 0 ? (
             <Card>
               <CardContent className="py-10 text-center text-muted-foreground">
-                Todavía no tenés metas de ahorro. Creá la primera con &quot;Agregar Meta&quot;.
+                {t.noGoals}
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-6">
               <section className="space-y-3">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  En curso ({goalsInProgress.length})
+                  {t.inProgress(goalsInProgress.length)}
                 </h3>
                 {goalsInProgress.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    No tenés metas en curso. Creá una nueva con &quot;Agregar Meta&quot;.
+                    {t.noGoalsInProgress}
                   </p>
                 ) : (
                   <div className={scrollableGoalGrid}>
@@ -232,7 +241,7 @@ export default function BudgetsPage() {
                 <section className="space-y-3">
                   <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-success">
                     <TrophyIcon className="size-4" />
-                    Alcanzadas ({achievedGoals.length})
+                    {t.achieved(achievedGoals.length)}
                   </h3>
                   <div className={scrollableGoalGrid}>
                     {achievedGoals.map((goal) => (
@@ -262,8 +271,8 @@ export default function BudgetsPage() {
           <Dialog open={editingGoal !== null} onOpenChange={(open) => !open && setEditingGoalId(null)}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Editar Meta de Ahorro</DialogTitle>
-                <DialogDescription>Ajustá el nombre, el monto objetivo o la fecha límite de tu meta</DialogDescription>
+                <DialogTitle>{t.editGoalTitle}</DialogTitle>
+                <DialogDescription>{t.editGoalDescription}</DialogDescription>
               </DialogHeader>
               {editingGoal && (
                 <GoalForm

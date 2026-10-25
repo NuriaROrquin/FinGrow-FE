@@ -7,30 +7,32 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress"
 import type { BudgetHealth, BudgetLimitDto } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
-import { useMessages } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
+import { formatNumber } from "@/lib/format"
+import { useMessages } from "@/lib/i18n"
 import { expenseCategoryIcons, formatAmount } from "./budget-month"
 
 type LimitStatus = BudgetHealth | "Completed"
+type StatusLabel = "statusOnTrack" | "statusWarning" | "statusCompleted" | "statusExceeded"
 
-const statusStyles: Record<LimitStatus, { label: string; badge: string; bar: string }> = {
+const statusStyles: Record<LimitStatus, { label: StatusLabel; badge: string; bar: string }> = {
   OnTrack: {
-    label: "En curso",
+    label: "statusOnTrack",
     badge: "border-transparent bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300",
     bar: "[&>div]:bg-emerald-500",
   },
   Warning: {
-    label: "Cerca del límite",
+    label: "statusWarning",
     badge: "border-transparent bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
     bar: "[&>div]:bg-amber-500",
   },
   Completed: {
-    label: "Completado",
+    label: "statusCompleted",
     badge: "border-transparent bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300",
     bar: "[&>div]:bg-sky-500",
   },
   Exceeded: {
-    label: "Excedido",
+    label: "statusExceeded",
     badge: "border-transparent bg-destructive text-destructive-foreground",
     bar: "[&>div]:bg-destructive",
   },
@@ -57,7 +59,9 @@ export function BudgetLimitCard({
   onRemove: () => void
   canRemove: boolean
 }) {
-  const categoryLabel = useMessages().labels.expenseCategories[limit.category]
+  const messages = useMessages()
+  const t = messages.budgets
+  const categoryLabel = messages.labels.expenseCategories[limit.category]
   const status = statusOf(limit)
   const health = status ? statusStyles[status] : null
   const remaining = limit.remaining ?? 0
@@ -77,16 +81,16 @@ export function BudgetLimitCard({
                 {categoryLabel}
               </CardTitle>
               <CardDescription>
-                Límite mensual: {formatAmount(limit.amount, currency)}
+                {t.monthlyLimitValue(formatAmount(limit.amount, currency))}
               </CardDescription>
             </div>
           </div>
           <div className="flex items-center gap-1">
-            {health && <Badge className={health.badge}>{health.label}</Badge>}
+            {health && <Badge className={health.badge}>{t[health.label]}</Badge>}
             <Button
               variant="ghost"
               size="icon"
-              aria-label={`Editar límite de ${categoryLabel}`}
+              aria-label={t.editLimitAria(categoryLabel)}
               onClick={onEdit}
             >
               <PencilIcon className="size-4" />
@@ -94,11 +98,9 @@ export function BudgetLimitCard({
             <Button
               variant="ghost"
               size="icon"
-              aria-label={`Quitar ${categoryLabel} del presupuesto`}
+              aria-label={t.removeFromBudgetAria(categoryLabel)}
               title={
-                canRemove
-                  ? "Quitar categoría"
-                  : "Es la única categoría. Para quitarla, eliminá el presupuesto."
+                canRemove ? t.removeCategory : t.onlyCategory
               }
               onClick={onRemove}
               disabled={!canRemove}
@@ -115,7 +117,7 @@ export function BudgetLimitCard({
               <span className="text-2xl font-bold">
                 {formatAmount(limit.spent ?? 0, currency)}
               </span>
-              <span className="text-sm text-muted-foreground">gastado</span>
+              <span className="text-sm text-muted-foreground">{t.spent}</span>
             </div>
             <Progress
               value={Math.min(limit.usedPercentage ?? 0, 100)}
@@ -130,13 +132,15 @@ export function BudgetLimitCard({
                 }
               >
                 {remaining < 0
-                  ? `Te pasaste ${formatAmount(-remaining, currency)}`
+                  ? t.overBy(formatAmount(-remaining, currency))
                   : remaining === 0
-                    ? "Llegaste al límite"
-                    : `Quedan ${formatAmount(remaining, currency)}`}
+                    ? t.atLimit
+                    : t.remaining(formatAmount(remaining, currency))}
               </span>
               <span className="font-medium">
-                {(limit.usedPercentage ?? 0).toFixed(1)}% usado
+                {t.used(
+                  formatNumber(limit.usedPercentage ?? 0, { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
+                )}
               </span>
             </div>
           </>
