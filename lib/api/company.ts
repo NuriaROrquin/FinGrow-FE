@@ -1,4 +1,5 @@
 import { api } from "./client"
+import type { FinancialRecommendationDto } from "./reports"
 import type { Currency } from "./transactions"
 
 export const DEPARTMENT_NAME_MAX_LENGTH = 120
@@ -255,32 +256,139 @@ export interface CompanyMetricsDto {
   fiscalYear: number
   activeEmployees: number
   participationRate: number | null
-  confirmedTransactions: number
-  employeesWithBudget: number
-  employeesWithActiveGoal: number
-  goalsAchieved: number
-  employeesWithIntegration: number
+  participatingEmployees: number | null
+  confirmedTransactions: number | null
+  employeesWithBudget: number | null
+  employeesWithActiveGoal: number | null
+  goalsAchieved: number | null
+  employeesWithIntegration: number | null
   averageFinancialHealthScore: number | null
+  financialHealthBand: HealthBand | null
+  isMetricsHidden: boolean
+  minimumGroupSize: number
+  hiddenReason: string | null
 }
 
-export function getCompanyMetrics(signal?: AbortSignal): Promise<CompanyMetricsDto[]> {
-  return api.get<CompanyMetricsDto[]>("/api/company/metrics", { signal })
+export type CompanyMetricsQuery = {
+  fromDate?: string
+  toDate?: string
 }
 
-export interface CompanyMetricsComparisonPeriodDto {
-  period: string
-  participationRate: number | null
-  averageFinancialHealthScore: number | null
+export function getCompanyMetrics(
+  query: CompanyMetricsQuery = {},
+  signal?: AbortSignal,
+): Promise<CompanyMetricsDto[]> {
+  const params = new URLSearchParams()
+  if (query.fromDate) params.set("fromDate", query.fromDate)
+  if (query.toDate) params.set("toDate", query.toDate)
+  const search = params.toString()
+
+  return api.get<CompanyMetricsDto[]>(`/api/company/metrics${search ? `?${search}` : ""}`, { signal })
 }
 
-export interface CompanyMetricsComparisonDto {
-  periods: CompanyMetricsComparisonPeriodDto[]
-  participationRateChange: number | null
-  averageFinancialHealthScoreChange: number | null
+export type CompanyConcern = "LowSavings" | "ThinCushion" | "BudgetOverruns" | "MissedGoalContributions"
+
+export interface CompanyConcernDto {
+  concern: CompanyConcern
+  affectedEmployees: number
+  /** Sobre cuántos se midió: presupuesto y metas solo cuentan a quienes los tienen. */
+  evaluatedEmployees: number
+  /** Porcentaje (0 a 100) de afectados sobre evaluados. */
+  percentage: number
 }
 
-export function getCompanyMetricsComparison(signal?: AbortSignal): Promise<CompanyMetricsComparisonDto> {
-  return api.get<CompanyMetricsComparisonDto>("/api/company/metrics/comparison", { signal })
+/** Preocupaciones (HU-61) y recomendaciones (HU-64) del último mes con foto. */
+export interface CompanyInsightsDto {
+  /** `YYYY-MM-DD`. `null` si todavía no hay ningún mes cerrado con foto. */
+  period: string | null
+  /** Menos empleados medidos que `minimumGroupSize`: no hay preocupaciones ni recomendaciones. */
+  isAnonymized: boolean
+  minimumGroupSize: number
+  measuredEmployees: number | null
+  /** Ordenadas de la que más pesa a la que menos; ya vienen sin las que afectan a pocos empleados. */
+  concerns: CompanyConcernDto[]
+  recommendations: FinancialRecommendationDto[]
+  recommendationsAvailable: boolean
+}
+
+export function getCompanyInsights(signal?: AbortSignal): Promise<CompanyInsightsDto> {
+  return api.get<CompanyInsightsDto>("/api/company/metrics/insights", { signal })
+}
+
+export type CompanyTrendIndicator =
+  | "ParticipationRate"
+  | "AverageFinancialHealthScore"
+  | "BudgetAdoption"
+  | "GoalAdoption"
+  | "IntegrationAdoption"
+  | "GoalsAchieved"
+  | "CompletedCourses"
+  | "LowSavings"
+  | "ThinCushion"
+  | "BudgetOverruns"
+  | "MissedGoalContributions"
+
+export type CompanyTrendUnit = "Percentage" | "Points" | "Count"
+
+export interface CompanyTrendDto {
+  indicator: CompanyTrendIndicator
+  unit: CompanyTrendUnit
+  previousValue: number
+  currentValue: number
+  change: number
+}
+
+export interface CompanyTrendsDto {
+  period: string | null
+  previousPeriod: string | null
+  isAnonymized: boolean
+  minimumGroupSize: number
+  positiveTrends: CompanyTrendDto[]
+  opportunities: CompanyTrendDto[]
+}
+
+export function getCompanyTrends(signal?: AbortSignal): Promise<CompanyTrendsDto> {
+  return api.get<CompanyTrendsDto>("/api/company/metrics/trends", { signal })
+}
+
+/**
+ * Por qué un dato del reporte mensual viaja o no. Un dato oculto llega en `null` con su motivo:
+ * nunca se completa con cero en el front.
+ */
+export type CompanyReportValueStatus = "Visible" | "NoData" | "TooFewActiveEmployees" | "TooFewScoredEmployees"
+
+export interface CompanyReportIndicatorDto {
+  indicator: CompanyTrendIndicator
+  unit: CompanyTrendUnit
+  status: CompanyReportValueStatus
+  value: number | null
+  previousStatus: CompanyReportValueStatus
+  previousValue: number | null
+  /** Solo cuando el valor del mes y el del mes anterior son visibles. */
+  change: number | null
+}
+
+/** Reporte agregado y anónimo del último mes con foto, para exportar a PDF (HU-65). */
+export interface CompanyMonthlyReportDto {
+  companyName: string
+  /** `YYYY-MM-DD`. `null` si todavía no hay ningún mes cerrado con foto. */
+  period: string | null
+  /** `YYYY-MM-DD`, el mes inmediatamente anterior a `period`. */
+  previousPeriod: string | null
+  minimumGroupSize: number
+  /** El mes tuvo menos empleados activos que `minimumGroupSize`: todos los indicadores vienen ocultos. */
+  isAnonymized: boolean
+  activeEmployees: number | null
+  participatingEmployees: number | null
+  averageScoreBand: HealthBand | null
+  /** Participación, puntaje promedio y cursos completados, en ese orden. */
+  indicators: CompanyReportIndicatorDto[]
+  /** Las mismas reglas y la misma forma que `GET /api/company/metrics/trends`. */
+  trends: CompanyTrendsDto
+}
+
+export function getCompanyMonthlyReport(signal?: AbortSignal): Promise<CompanyMonthlyReportDto> {
+  return api.get<CompanyMonthlyReportDto>("/api/company/metrics/report", { signal })
 }
 
 export type HealthBand = "Critical" | "Fragile" | "Stable" | "Healthy"
@@ -289,10 +397,11 @@ export type DepartmentMetricsSummary = {
   departmentId: string
   departmentName: string
   period: string | null
-  employees: number | null
-  averageScore: number | null
-  participation: number | null
-  status: HealthBand | null
+  activeEmployees: number | null
+  participatingEmployees: number | null
+  participationRate: number | null
+  averageFinancialHealthScore: number | null
+  financialHealthBand: HealthBand | null
   isMetricsHidden: boolean
   minimumGroupSize: number
   hiddenReason: string | null

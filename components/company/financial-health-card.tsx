@@ -4,14 +4,28 @@ import { useEffect, useState } from "react"
 import { MinusIcon, ShieldCheckIcon, TrendingDownIcon, TrendingUpIcon } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { getCompanyMetrics, isApiError, toastApiError, type CompanyMetricsDto } from "@/lib/api"
+import {
+  getCompanyMetrics,
+  isApiError,
+  toastApiError,
+  type CompanyMetricsDto,
+  type HealthBand,
+} from "@/lib/api"
 import { plural } from "@/lib/utils"
+import { HealthBandBadge } from "./department-metrics-section"
 
 const ANONYMIZED_ERROR_CODE = "Metrics.Anonymized"
 
 type FinancialHealthState =
   | { status: "loading" }
-  | { status: "ready"; period: string; score: number; change: number | null; previousPeriod: string | null }
+  | {
+      status: "ready"
+      period: string
+      score: number
+      band: HealthBand
+      change: number | null
+      previousPeriod: string | null
+    }
   | { status: "hidden" }
   | { status: "noPeriods" }
   | { status: "error" }
@@ -21,9 +35,14 @@ function toState(metrics: CompanyMetricsDto[]): FinancialHealthState {
   const latest = periods[periods.length - 1]
 
   if (!latest) return { status: "noPeriods" }
-  if (latest.averageFinancialHealthScore === null) return { status: "hidden" }
+  if (latest.isMetricsHidden || latest.averageFinancialHealthScore === null || latest.financialHealthBand === null) {
+    return { status: "hidden" }
+  }
 
-  const previous = periods.length > 1 ? periods[periods.length - 2] : null
+  const previous = [...periods]
+    .slice(0, -1)
+    .reverse()
+    .find((period) => !period.isMetricsHidden && period.averageFinancialHealthScore !== null)
   const change =
     previous?.averageFinancialHealthScore != null
       ? Math.round((latest.averageFinancialHealthScore - previous.averageFinancialHealthScore) * 10) / 10
@@ -33,6 +52,7 @@ function toState(metrics: CompanyMetricsDto[]): FinancialHealthState {
     status: "ready",
     period: latest.period,
     score: latest.averageFinancialHealthScore,
+    band: latest.financialHealthBand,
     change,
     previousPeriod: change === null ? null : previous?.period ?? null,
   }
@@ -92,7 +112,7 @@ export function FinancialHealthCard() {
   useEffect(() => {
     const controller = new AbortController()
 
-    getCompanyMetrics(controller.signal)
+    getCompanyMetrics({}, controller.signal)
       .then((metrics) => setState(toState(metrics)))
       .catch((error) => {
         if (controller.signal.aborted) return
@@ -117,7 +137,10 @@ export function FinancialHealthCard() {
           {state.status === "loading" ? (
             <Skeleton className="h-8 w-20" />
           ) : state.status === "ready" ? (
-            `${formatScore(state.score)}/100`
+            <div className="flex flex-wrap items-center gap-2">
+              <span>{formatScore(state.score)}/100</span>
+              <HealthBandBadge band={state.band} />
+            </div>
           ) : (
             "—"
           )}

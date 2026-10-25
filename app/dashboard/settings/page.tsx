@@ -70,7 +70,7 @@ export default function SettingsPage() {
     try {
       await changePassword({ currentPassword, newPassword })
       sonnerToast.success(t.settings.security.passwordUpdated, { description: t.settings.security.passwordUpdatedDescription })
-      await logout(`/login/${role}`)
+      await logout()
     } catch (error) {
       toastApiError(error, t.settings.security.passwordUpdateFailed, { showCode: false })
     } finally {

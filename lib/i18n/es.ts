@@ -791,6 +791,92 @@ export const es = {
     savings: "Reporte de Ahorros",
     fileName: "reporte-financiero",
   },
+
+  companyReportPdf: {
+    export: "Exportar reporte",
+    exporting: "Generando PDF...",
+    exportFailed: "No se pudo generar el reporte. Probá de nuevo.",
+    noPeriod: "Todavía no hay meses cerrados para exportar.",
+    title: "Reporte de Bienestar Financiero",
+    company: "Empresa",
+    period: "Período",
+    comparedWith: "Comparado con",
+    generatedAt: "Generado el",
+    summaryTitle: "Resumen del mes",
+    evolutionTitle: "Evolución",
+    trendsTitle: "Tendencias",
+    anonymized: (month: string, minimum: number) =>
+      `En ${month} hubo menos de ${minimum} empleados activos. Los indicadores se ocultan para no identificar a nadie.`,
+    participants: (participating: number, active: number) =>
+      `${participating} de ${active} empleados activos participaron`,
+    band: (label: string) => `Nivel: ${label}`,
+    bands: {
+      Critical: "Crítica",
+      Fragile: "Frágil",
+      Stable: "Estable",
+      Healthy: "Saludable",
+    },
+    hidden: "Oculto",
+    hiddenReasons: {
+      TooFewActiveEmployees: (minimum: number) => `Menos de ${minimum} empleados activos en el mes.`,
+      TooFewScoredEmployees: (minimum: number) =>
+        `Menos de ${minimum} empleados con actividad suficiente para medir su salud financiera.`,
+    },
+    change: (change: string, month: string) => `${change} respecto de ${month}`,
+    noChange: (month: string) => `Sin cambios respecto de ${month}`,
+    previousReasons: {
+      NoData: (month: string) => `Sin datos de ${month} para comparar.`,
+      TooFewActiveEmployees: (month: string, minimum: number) =>
+        `Sin comparación: en ${month} hubo menos de ${minimum} empleados activos.`,
+      TooFewScoredEmployees: (month: string, minimum: number) =>
+        `Sin comparación: en ${month} hubo menos de ${minimum} empleados con puntaje.`,
+    },
+    privacyNote: (minimum: number) =>
+      `Este reporte contiene solo métricas agregadas y anónimas de la plantilla: ningún dato identifica a un empleado. Los indicadores de grupos de menos de ${minimum} empleados no se muestran.`,
+    fileName: "reporte-empresa",
+  },
+
+  companyTrends: {
+    title: "Tendencias",
+    description: "Qué mejoró y qué empeoró respecto del mes anterior",
+    comparedWith: (current: string, previous: string) => `${current} comparado con ${previous}`,
+    positiveTitle: "Tendencias positivas",
+    opportunitiesTitle: "Oportunidades de mejora",
+    noPositive: "Ningún indicador mejoró de forma significativa.",
+    noOpportunities: "Ningún indicador empeoró de forma significativa.",
+    noChanges: (current: string, previous: string) => `Sin cambios significativos entre ${previous} y ${current}.`,
+    loadFailed: "No se pudieron cargar las tendencias.",
+    noPeriod: "Todavía no hay meses cerrados para analizar.",
+    noPreviousPeriod: (month: string) =>
+      `Para ver tendencias hacen falta dos meses seguidos con datos. Por ahora solo está ${month}.`,
+    anonymized: (minimum: number) =>
+      `En alguno de los dos meses hubo menos de ${minimum} empleados activos. Las tendencias se muestran cuando hay suficientes para no identificar a nadie.`,
+    footer: "Se calculan a partir de indicadores agregados y anónimos. Un cambio menor a 2 puntos se considera estable.",
+    fromTo: (previous: string, current: string) => `De ${previous} a ${current}`,
+    indicators: {
+      ParticipationRate: "Participación",
+      AverageFinancialHealthScore: "Salud financiera promedio",
+      BudgetAdoption: "Empleados con presupuesto",
+      GoalAdoption: "Empleados con metas activas",
+      IntegrationAdoption: "Empleados con integraciones",
+      GoalsAchieved: "Metas alcanzadas",
+      CompletedCourses: "Cursos completados",
+      LowSavings: "Empleados con ahorro bajo",
+      ThinCushion: "Empleados con fondo de emergencia insuficiente",
+      BudgetOverruns: "Empleados que exceden su presupuesto",
+      MissedGoalContributions: "Empleados que no cubren la cuota de sus metas",
+    },
+    values: {
+      Percentage: (value: string) => `${value}%`,
+      Points: (value: string) => `${value}/100`,
+      Count: (value: string) => value,
+    },
+    changes: {
+      Percentage: (change: string) => `${change} p.p.`,
+      Points: (change: string) => `${change} puntos`,
+      Count: (change: string) => change,
+    },
+  },
 }
 
 export type Messages = typeof es

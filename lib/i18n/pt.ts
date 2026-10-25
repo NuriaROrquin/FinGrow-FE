@@ -778,4 +778,90 @@ export const pt: Messages = {
     savings: "Relatório de Poupança",
     fileName: "relatorio-financeiro",
   },
+
+  companyReportPdf: {
+    export: "Exportar relatório",
+    exporting: "Gerando PDF...",
+    exportFailed: "Não foi possível gerar o relatório. Tente novamente.",
+    noPeriod: "Ainda não há meses fechados para exportar.",
+    title: "Relatório de Bem-Estar Financeiro",
+    company: "Empresa",
+    period: "Período",
+    comparedWith: "Comparado com",
+    generatedAt: "Gerado em",
+    summaryTitle: "Resumo do mês",
+    evolutionTitle: "Evolução",
+    trendsTitle: "Tendências",
+    anonymized: (month: string, minimum: number) =>
+      `Em ${month} houve menos de ${minimum} funcionários ativos. Os indicadores ficam ocultos para não identificar ninguém.`,
+    participants: (participating: number, active: number) =>
+      `${participating} de ${active} funcionários ativos participaram`,
+    band: (label: string) => `Nível: ${label}`,
+    bands: {
+      Critical: "Crítica",
+      Fragile: "Frágil",
+      Stable: "Estável",
+      Healthy: "Saudável",
+    },
+    hidden: "Oculto",
+    hiddenReasons: {
+      TooFewActiveEmployees: (minimum: number) => `Menos de ${minimum} funcionários ativos no mês.`,
+      TooFewScoredEmployees: (minimum: number) =>
+        `Menos de ${minimum} funcionários com atividade suficiente para medir a saúde financeira.`,
+    },
+    change: (change: string, month: string) => `${change} em relação a ${month}`,
+    noChange: (month: string) => `Sem mudanças em relação a ${month}`,
+    previousReasons: {
+      NoData: (month: string) => `Sem dados de ${month} para comparar.`,
+      TooFewActiveEmployees: (month: string, minimum: number) =>
+        `Sem comparação: em ${month} houve menos de ${minimum} funcionários ativos.`,
+      TooFewScoredEmployees: (month: string, minimum: number) =>
+        `Sem comparação: em ${month} houve menos de ${minimum} funcionários com pontuação.`,
+    },
+    privacyNote: (minimum: number) =>
+      `Este relatório contém apenas métricas agregadas e anônimas da equipe: nenhum dado identifica um funcionário. Os indicadores de grupos com menos de ${minimum} funcionários não são exibidos.`,
+    fileName: "relatorio-empresa",
+  },
+
+  companyTrends: {
+    title: "Tendências",
+    description: "O que melhorou e o que piorou em relação ao mês anterior",
+    comparedWith: (current: string, previous: string) => `${current} comparado com ${previous}`,
+    positiveTitle: "Tendências positivas",
+    opportunitiesTitle: "Oportunidades de melhoria",
+    noPositive: "Nenhum indicador melhorou de forma significativa.",
+    noOpportunities: "Nenhum indicador piorou de forma significativa.",
+    noChanges: (current: string, previous: string) => `Sem mudanças significativas entre ${previous} e ${current}.`,
+    loadFailed: "Não foi possível carregar as tendências.",
+    noPeriod: "Ainda não há meses fechados para analisar.",
+    noPreviousPeriod: (month: string) =>
+      `Para ver tendências são necessários dois meses seguidos com dados. Por enquanto só há ${month}.`,
+    anonymized: (minimum: number) =>
+      `Em algum dos dois meses houve menos de ${minimum} funcionários ativos. As tendências são exibidas quando há o suficiente para não identificar ninguém.`,
+    footer: "Calculadas a partir de indicadores agregados e anônimos. Uma mudança menor que 2 pontos é considerada estável.",
+    fromTo: (previous: string, current: string) => `De ${previous} para ${current}`,
+    indicators: {
+      ParticipationRate: "Participação",
+      AverageFinancialHealthScore: "Saúde financeira média",
+      BudgetAdoption: "Funcionários com orçamento",
+      GoalAdoption: "Funcionários com metas ativas",
+      IntegrationAdoption: "Funcionários com integrações",
+      GoalsAchieved: "Metas alcançadas",
+      CompletedCourses: "Cursos concluídos",
+      LowSavings: "Funcionários com poupança baixa",
+      ThinCushion: "Funcionários com reserva de emergência insuficiente",
+      BudgetOverruns: "Funcionários que excedem o orçamento",
+      MissedGoalContributions: "Funcionários que não cobrem a parcela das metas",
+    },
+    values: {
+      Percentage: (value: string) => `${value}%`,
+      Points: (value: string) => `${value}/100`,
+      Count: (value: string) => value,
+    },
+    changes: {
+      Percentage: (change: string) => `${change} p.p.`,
+      Points: (change: string) => `${change} pontos`,
+      Count: (change: string) => change,
+    },
+  },
 }

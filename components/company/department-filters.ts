@@ -1,4 +1,5 @@
 import type { DepartmentDto } from "@/lib/api"
+import { compareText, sortRows, toDate, toggleSort, type SortAccessors, type SortState } from "@/lib/sort"
 import { normalizeForSearch } from "@/lib/utils"
 
 export type DepartmentStatusFilter = "all" | "active" | "inactive"
@@ -39,12 +40,9 @@ export const departmentManagerLabels: Record<DepartmentManagerFilter, string> = 
   withoutManager: "Sin responsable",
 }
 
-export type DepartmentSortField = "name" | "manager" | "employeeCount" | "createdAt"
+export type DepartmentSortField = "name" | "description" | "manager" | "employeeCount" | "createdAt" | "isActive"
 
-export interface DepartmentSort {
-  field: DepartmentSortField
-  direction: "asc" | "desc"
-}
+export type DepartmentSort = SortState<DepartmentSortField>
 
 export const defaultDepartmentSort: DepartmentSort = { field: "name", direction: "asc" }
 
@@ -85,39 +83,20 @@ export function filterDepartments(departments: DepartmentDto[], values: Departme
   )
 }
 
-function byName(a: DepartmentDto, b: DepartmentDto): number {
-  return a.name.localeCompare(b.name, "es", { sensitivity: "base" })
-}
-
-function compareField(a: DepartmentDto, b: DepartmentDto, field: DepartmentSortField): number {
-  switch (field) {
-    case "employeeCount":
-      return a.employeeCount - b.employeeCount
-    case "createdAt":
-      return a.createdAt.localeCompare(b.createdAt)
-    case "manager":
-      return (a.manager?.fullName ?? "").localeCompare(b.manager?.fullName ?? "", "es", { sensitivity: "base" })
-    default:
-      return byName(a, b)
-  }
+const departmentSortValues: SortAccessors<DepartmentDto, DepartmentSortField> = {
+  name: (department) => department.name,
+  description: (department) => department.description,
+  manager: (department) => department.manager?.fullName ?? null,
+  employeeCount: (department) => department.employeeCount,
+  createdAt: (department) => toDate(department.createdAt),
+  isActive: (department) =>
+    department.isActive ? departmentStatusLabels.active : departmentStatusLabels.inactive,
 }
 
 export function sortDepartments(departments: DepartmentDto[], sort: DepartmentSort): DepartmentDto[] {
-  const direction = sort.direction === "asc" ? 1 : -1
-
-  return [...departments].sort((a, b) => {
-    if (sort.field === "manager" && (a.manager === null) !== (b.manager === null)) {
-      return a.manager === null ? 1 : -1
-    }
-
-    return compareField(a, b, sort.field) * direction || byName(a, b)
-  })
+  return sortRows(departments, sort, departmentSortValues, (a, b) => compareText(a.name, b.name))
 }
 
 export function nextDepartmentSort(current: DepartmentSort, field: DepartmentSortField): DepartmentSort {
-  if (current.field === field) {
-    return { field, direction: current.direction === "asc" ? "desc" : "asc" }
-  }
-
-  return { field, direction: field === "employeeCount" || field === "createdAt" ? "desc" : "asc" }
+  return toggleSort(current, field, ["employeeCount", "createdAt"])
 }

@@ -1,19 +1,21 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { AlertCircleIcon, CheckCircleIcon, InboxIcon, ShieldCheckIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { SortableTableHead } from "@/components/ui/sortable-table-head"
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table"
 import {
   getDepartmentMetrics,
   toastApiError,
   type DepartmentMetricsSummary,
   type HealthBand,
 } from "@/lib/api"
+import { compareText, sortRows, toggleSort, type SortAccessors, type SortState } from "@/lib/sort"
 
 export const healthBandLabels: Record<HealthBand, string> = {
   Critical: "Crítica",
@@ -24,6 +26,27 @@ export const healthBandLabels: Record<HealthBand, string> = {
 
 const NOT_AVAILABLE = "—"
 
+type DepartmentMetricsSortField = "departmentName" | "employees" | "averageScore" | "participation" | "status"
+
+const healthBandRank: Record<HealthBand, number> = {
+  Critical: 0,
+  Fragile: 1,
+  Stable: 2,
+  Healthy: 3,
+}
+
+function visibleMetric<Value>(department: DepartmentMetricsSummary, value: Value | null): Value | null {
+  return department.isMetricsHidden ? null : value
+}
+
+const departmentMetricsSortValues: SortAccessors<DepartmentMetricsSummary, DepartmentMetricsSortField> = {
+  departmentName: (department) => department.departmentName,
+  employees: (department) => visibleMetric(department, department.employees),
+  averageScore: (department) => visibleMetric(department, department.averageScore),
+  participation: (department) => visibleMetric(department, department.participation),
+  status: (department) => visibleMetric(department, department.status && healthBandRank[department.status]),
+}
+
 type DepartmentMetricsState =
   | { status: "loading" }
   | { status: "error" }
@@ -33,7 +56,7 @@ function formatNumber(value: number, maximumFractionDigits: number) {
   return value.toLocaleString("es-AR", { maximumFractionDigits })
 }
 
-function HealthBandBadge({ band }: { band: HealthBand | null }) {
+export function HealthBandBadge({ band }: { band: HealthBand | null }) {
   const label = band ? healthBandLabels[band] : undefined
   if (!band || !label) return <span className="text-muted-foreground">{NOT_AVAILABLE}</span>
 
@@ -83,22 +106,26 @@ function DepartmentRow({ department }: { department: DepartmentMetricsSummary })
         </TableCell>
       ) : (
         <>
-          <TableCell>{department.employees === null ? NOT_AVAILABLE : formatNumber(department.employees, 0)}</TableCell>
           <TableCell>
-            {department.averageScore === null ? (
+            {department.activeEmployees === null ? NOT_AVAILABLE : formatNumber(department.activeEmployees, 0)}
+          </TableCell>
+          <TableCell>
+            {department.averageFinancialHealthScore === null ? (
               <span className="text-muted-foreground">{NOT_AVAILABLE}</span>
             ) : (
               <div className="flex items-center gap-2">
-                <span className="font-semibold whitespace-nowrap">{formatNumber(department.averageScore, 2)}/100</span>
-                <Progress value={department.averageScore} className="h-2 w-20" />
+                <span className="font-semibold whitespace-nowrap">
+                  {formatNumber(department.averageFinancialHealthScore, 2)}/100
+                </span>
+                <Progress value={department.averageFinancialHealthScore} className="h-2 w-20" />
               </div>
             )}
           </TableCell>
           <TableCell>
-            {department.participation === null ? NOT_AVAILABLE : `${formatNumber(department.participation, 2)}%`}
+            {department.participationRate === null ? NOT_AVAILABLE : `${formatNumber(department.participationRate, 2)}%`}
           </TableCell>
           <TableCell>
-            <HealthBandBadge band={department.status} />
+            <HealthBandBadge band={department.financialHealthBand} />
           </TableCell>
         </>
       )}
@@ -109,6 +136,20 @@ function DepartmentRow({ department }: { department: DepartmentMetricsSummary })
 export function DepartmentMetricsSection() {
   const [state, setState] = useState<DepartmentMetricsState>({ status: "loading" })
   const [attempt, setAttempt] = useState(0)
+  const [sort, setSort] = useState<SortState<DepartmentMetricsSortField> | null>(null)
+
+  const departments = useMemo(
+    () =>
+      state.status === "ready"
+        ? sortRows(state.departments, sort, departmentMetricsSortValues, (a, b) =>
+            compareText(a.departmentName, b.departmentName),
+          )
+        : [],
+    [state, sort],
+  )
+
+  const handleSort = (field: DepartmentMetricsSortField) =>
+    setSort((current) => toggleSort(current, field, ["employees", "averageScore", "participation"]))
 
   useEffect(() => {
     const controller = new AbortController()
@@ -162,15 +203,15 @@ export function DepartmentMetricsSection() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Departamento</TableHead>
-                <TableHead>Empleados</TableHead>
-                <TableHead>Puntaje Promedio</TableHead>
-                <TableHead>Participación</TableHead>
-                <TableHead>Estado</TableHead>
+                <SortableTableHead label="Departamento" field="departmentName" sort={sort} onSort={handleSort} />
+                <SortableTableHead label="Empleados" field="employees" sort={sort} onSort={handleSort} />
+                <SortableTableHead label="Puntaje Promedio" field="averageScore" sort={sort} onSort={handleSort} />
+                <SortableTableHead label="Participación" field="participation" sort={sort} onSort={handleSort} />
+                <SortableTableHead label="Estado" field="status" sort={sort} onSort={handleSort} />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {state.departments.map((department) => (
+              {departments.map((department) => (
                 <DepartmentRow key={department.departmentId} department={department} />
               ))}
             </TableBody>

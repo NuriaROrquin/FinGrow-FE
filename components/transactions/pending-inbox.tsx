@@ -1,20 +1,36 @@
 "use client"
 
+import { useMemo, useState } from "react"
 import { CheckCircle2, Inbox, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { SortableTableHead } from "@/components/ui/sortable-table-head"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ConfidenceBadge } from "@/components/transactions/confidence-badge"
 import { PendingReviewDialogs, usePendingReview } from "@/components/transactions/pending-review"
 import { getCategoryIcon } from "@/components/transactions/transaction-icons"
 import type { PendingTransactionsState } from "@/components/transactions/use-pending-transactions"
-import { expenseCategoryLabels, incomeCategoryLabels, type PendingTransactionDto } from "@/lib/api/transactions"
+import {
+  expenseCategoryLabels,
+  incomeCategoryLabels,
+  type ConfidenceLevel,
+  type PendingTransactionDto,
+} from "@/lib/api/transactions"
 import { formatDate, formatMoney } from "@/lib/format"
 import { useMessages } from "@/lib/i18n"
+import { sortRows, toDate, toggleSort, type SortAccessors, type SortState } from "@/lib/sort"
 
 const headClassName = "py-3 pr-2 text-left align-middle whitespace-nowrap"
 const cellClassName = "py-3 pr-2 align-middle whitespace-nowrap"
+
+type PendingSortField = "occurredOn" | "type" | "description" | "category" | "confidence" | "source" | "amount"
+
+const confidenceRank: Record<ConfidenceLevel, number> = { Low: 0, Medium: 1, High: 2 }
+
+function signedAmount(transaction: PendingTransactionDto): number {
+  return transaction.type === "Income" ? Math.abs(transaction.amount) : -Math.abs(transaction.amount)
+}
 
 function categoryLabel(transaction: PendingTransactionDto): string {
   const labels: Record<string, string> = transaction.type === "Expense" ? expenseCategoryLabels : incomeCategoryLabels
@@ -34,6 +50,25 @@ export function PendingInbox({
   const t = useMessages().pendingInbox
   const { items, isLoading, hasError, reload, remove } = pending
   const review = usePendingReview({ onRemoved: remove, onConfirmed })
+  const [sort, setSort] = useState<SortState<PendingSortField> | null>(null)
+
+  const sortedItems = useMemo(() => {
+    const accessors: SortAccessors<PendingTransactionDto, PendingSortField> = {
+      occurredOn: (transaction) => toDate(transaction.occurredOn),
+      type: (transaction) => (transaction.type === "Income" ? t.typeIncome : t.typeExpense),
+      description: (transaction) => transaction.description,
+      category: categoryLabel,
+      confidence: (transaction) =>
+        transaction.aiConfidenceLevel === null ? null : confidenceRank[transaction.aiConfidenceLevel],
+      source: (transaction) => t.sources[transaction.source] ?? transaction.source,
+      amount: signedAmount,
+    }
+
+    return sortRows(items, sort, accessors)
+  }, [items, sort, t])
+
+  const handleSort = (field: PendingSortField) =>
+    setSort((current) => toggleSort(current, field, ["occurredOn", "amount"]))
 
   return (
     <Card className={className}>
@@ -63,18 +98,60 @@ export function PendingInbox({
               <Table className="w-full table-auto">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className={headClassName}>{t.columnDate}</TableHead>
-                    <TableHead className={headClassName}>{t.columnType}</TableHead>
-                    <TableHead className={headClassName}>{t.columnDescription}</TableHead>
-                    <TableHead className={headClassName}>{t.columnCategory}</TableHead>
-                    <TableHead className={headClassName}>{t.columnConfidence}</TableHead>
-                    <TableHead className={headClassName}>{t.columnSource}</TableHead>
-                    <TableHead className={headClassName}>{t.columnAmount}</TableHead>
+                    <SortableTableHead
+                      className={headClassName}
+                      label={t.columnDate}
+                      field="occurredOn"
+                      sort={sort}
+                      onSort={handleSort}
+                    />
+                    <SortableTableHead
+                      className={headClassName}
+                      label={t.columnType}
+                      field="type"
+                      sort={sort}
+                      onSort={handleSort}
+                    />
+                    <SortableTableHead
+                      className={headClassName}
+                      label={t.columnDescription}
+                      field="description"
+                      sort={sort}
+                      onSort={handleSort}
+                    />
+                    <SortableTableHead
+                      className={headClassName}
+                      label={t.columnCategory}
+                      field="category"
+                      sort={sort}
+                      onSort={handleSort}
+                    />
+                    <SortableTableHead
+                      className={headClassName}
+                      label={t.columnConfidence}
+                      field="confidence"
+                      sort={sort}
+                      onSort={handleSort}
+                    />
+                    <SortableTableHead
+                      className={headClassName}
+                      label={t.columnSource}
+                      field="source"
+                      sort={sort}
+                      onSort={handleSort}
+                    />
+                    <SortableTableHead
+                      className={headClassName}
+                      label={t.columnAmount}
+                      field="amount"
+                      sort={sort}
+                      onSort={handleSort}
+                    />
                     <TableHead className={headClassName}>{t.columnActions}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {items.map((transaction) => {
+                  {sortedItems.map((transaction) => {
                     const label = categoryLabel(transaction)
                     const CategoryIcon = getCategoryIcon(transaction.category)
 
