@@ -19,11 +19,15 @@ export { api, setUnauthorizedHandler, type RequestOptions } from "./client"
 export { ApiError, ClientErrorCodes, isApiError, parseApiError } from "./errors"
 export { toastApiError } from "./notify"
 export {
+  closeOtherSessions,
+  closeSession,
   getSession,
   isTwoFactorChallenge,
+  listSessions,
   login,
   logout,
   verifyTwoFactorLogin,
+  type ActiveSessionDto,
   type LoginRequest,
   type SessionResponse,
   type TwoFactorChallenge,
