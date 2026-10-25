@@ -770,6 +770,7 @@ export const en: Messages = {
     comparedWith: "Compared with",
     generatedAt: "Generated on",
     summaryTitle: "Month summary",
+    evolutionTitle: "Evolution over time",
     trendsTitle: "Trends",
     anonymized: (month: string, minimum: number) =>
       `In ${month} there were fewer than ${minimum} active employees. Indicators are hidden to keep everyone anonymous.`,

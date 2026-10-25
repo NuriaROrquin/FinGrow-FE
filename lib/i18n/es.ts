@@ -786,6 +786,7 @@ export const es = {
     comparedWith: "Comparado con",
     generatedAt: "Generado el",
     summaryTitle: "Resumen del mes",
+    evolutionTitle: "Evolución",
     trendsTitle: "Tendencias",
     anonymized: (month: string, minimum: number) =>
       `En ${month} hubo menos de ${minimum} empleados activos. Los indicadores se ocultan para no identificar a nadie.`,

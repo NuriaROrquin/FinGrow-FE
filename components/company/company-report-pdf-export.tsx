@@ -8,6 +8,8 @@ import type { CompanyMonthlyReportDto, CompanyReportIndicatorDto } from "@/lib/a
 import { formatDateText, formatDateTime } from "@/lib/format"
 import { useMessages, type Messages } from "@/lib/i18n"
 import { exportReportPdf } from "@/lib/report-pdf"
+import { ReportExportProvider } from "@/components/reports/report-export-context"
+import { CompanyEvolutionCharts, type CompanyMetricsState } from "./company-evolution-charts"
 import { CompanyRecommendationsCard } from "./company-recommendations-card"
 import type { CompanyInsightsState } from "./company-insights-state"
 import { TrendsContent, formatTrendChange, formatTrendValue } from "./company-trends-card"
@@ -110,6 +112,8 @@ interface CompanyReportPdfExportProps {
   report: CompanyMonthlyReportDto
   /** Lo mismo que muestran las pestañas del panel: no se vuelve a llamar a la IA. */
   insights: CompanyInsightsState
+  /** Los meses que ya muestran los gráficos del panel, con los ocultos marcados por el backend. */
+  metrics: CompanyMetricsState
   onComplete: () => void
   onError: (error: unknown) => void
 }
@@ -119,7 +123,14 @@ interface CompanyReportPdfExportProps {
  * captura bloque por bloque (HU-65). Todo lo que muestra ya viene agregado y anonimizado por el
  * backend: acá no se calcula ni se filtra nada.
  */
-export function CompanyReportPdfExport({ generatedAt, report, insights, onComplete, onError }: CompanyReportPdfExportProps) {
+export function CompanyReportPdfExport({
+  generatedAt,
+  report,
+  insights,
+  metrics,
+  onComplete,
+  onError,
+}: CompanyReportPdfExportProps) {
   const texts = useMessages()
   const reportTexts = texts.companyReportPdf
   const rootRef = useRef<HTMLDivElement>(null)
@@ -182,6 +193,13 @@ export function CompanyReportPdfExport({ generatedAt, report, insights, onComple
             <IndicatorCard key={indicator.indicator} indicator={indicator} report={report} />
           ))}
         </div>
+      </PdfBlock>
+
+      <PdfBlock>
+        <SectionTitle>{reportTexts.evolutionTitle}</SectionTitle>
+        <ReportExportProvider value>
+          <CompanyEvolutionCharts {...metrics} />
+        </ReportExportProvider>
       </PdfBlock>
 
       <PdfBlock>

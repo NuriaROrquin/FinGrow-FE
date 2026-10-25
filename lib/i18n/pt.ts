@@ -773,6 +773,7 @@ export const pt: Messages = {
     comparedWith: "Comparado com",
     generatedAt: "Gerado em",
     summaryTitle: "Resumo do mês",
+    evolutionTitle: "Evolução",
     trendsTitle: "Tendências",
     anonymized: (month: string, minimum: number) =>
       `Em ${month} houve menos de ${minimum} funcionários ativos. Os indicadores ficam ocultos para não identificar ninguém.`,
