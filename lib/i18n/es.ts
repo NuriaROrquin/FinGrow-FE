@@ -477,10 +477,10 @@ export const es = {
       closeOtherSessions: "Cerrar las demás sesiones",
       closeSessionTitle: "¿Cerrar esta sesión?",
       closeSessionDescription: (device: string) =>
-        `${device} va a tener que volver a iniciar sesión. Puede seguir entrando unos minutos, hasta que necesite renovar el acceso.`,
+        `${device} va a tener que volver a iniciar sesión: sale en cuanto haga cualquier cosa en FinGrow.`,
       closeOtherSessionsTitle: "¿Cerrar las demás sesiones?",
       closeOtherSessionsDescription:
-        "Todos los dispositivos menos este van a tener que volver a iniciar sesión. Pueden seguir entrando unos minutos, hasta que necesiten renovar el acceso.",
+        "Todos los dispositivos menos este van a tener que volver a iniciar sesión: salen en cuanto hagan cualquier cosa en FinGrow.",
       cancel: "Cancelar",
       closing: "Cerrando...",
       sessionClosed: "Sesión cerrada",

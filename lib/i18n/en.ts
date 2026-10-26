@@ -453,10 +453,10 @@ export const en: Messages = {
       closeOtherSessions: "Sign out of all other sessions",
       closeSessionTitle: "Sign out of this session?",
       closeSessionDescription: (device: string) =>
-        `${device} will have to sign in again. It may keep working for a few minutes, until it needs to renew its access.`,
+        `${device} will have to sign in again: it is signed out as soon as it does anything in FinGrow.`,
       closeOtherSessionsTitle: "Sign out of all other sessions?",
       closeOtherSessionsDescription:
-        "Every device except this one will have to sign in again. They may keep working for a few minutes, until they need to renew their access.",
+        "Every device except this one will have to sign in again: they are signed out as soon as they do anything in FinGrow.",
       cancel: "Cancel",
       closing: "Signing out...",
       sessionClosed: "Session closed",
