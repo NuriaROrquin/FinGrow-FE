@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Edit, Trash2, UserPlus } from "lucide-react"
 import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -265,6 +266,16 @@ export default function EmpleadosPage() {
                         )}
                       </TableCell>
                       <TableCell>
+                        {employee.withdrawnAt ? (
+                          // La baja la pidió el empleado (HU-74): sus datos ya no existen y no se reactiva.
+                          <Badge
+                            variant="outline"
+                            className="text-muted-foreground"
+                            title={`Se dio de baja el ${formatDate(employee.withdrawnAt)} y borró sus datos`}
+                          >
+                            Dado de baja
+                          </Badge>
+                        ) : (
                         <div className="flex items-center gap-2">
                           <Switch
                             checked={employee.isActive}
@@ -278,6 +289,7 @@ export default function EmpleadosPage() {
                             {employee.isActive ? t.statusActive : t.statusInactive}
                           </span>
                         </div>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">

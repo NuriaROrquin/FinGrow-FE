@@ -119,6 +119,10 @@ export function DeleteEmployeeDialog({
                 {pending === "deactivate" ? t.deactivating : t.deactivateAccess}
               </Button>
             </div>
+          ) : employee.withdrawnAt ? (
+            <p className="rounded-md border bg-muted/50 p-3 text-muted-foreground">
+              Se dio de baja y ya borró su información financiera. Al eliminarlo deja de figurar en tu nómina.
+            </p>
           ) : (
             <p className="rounded-md border bg-muted/50 p-3 text-muted-foreground">
               {t.alreadyInactive}

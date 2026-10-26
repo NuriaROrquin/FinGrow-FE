@@ -64,6 +64,8 @@ export interface CompanyEmployeeDto {
   hiredOn: string
   isActive: boolean
   lastLoginAt: string | null
+  /** Cuando el empleado pidió la baja y el borrado de sus datos (HU-74). Es definitiva. */
+  withdrawnAt: string | null
 }
 
 export interface EmployeeDetailsPayload {
@@ -400,6 +402,7 @@ export type DepartmentMetricsSummary = {
   participationRate: number | null
   averageFinancialHealthScore: number | null
   financialHealthBand: HealthBand | null
+  needsAttention: boolean
   isMetricsHidden: boolean
   minimumGroupSize: number
   hiddenReason: string | null

@@ -22,6 +22,7 @@ import { ProfileCard } from "@/components/profile/profile-card"
 import { CompanyProfileCard } from "@/components/company/company-profile-card"
 import { TwoFactorCard } from "@/components/security/two-factor-card"
 import { ActiveSessionsCard } from "@/components/security/active-sessions-card"
+import { WithdrawAccountDialog } from "@/components/security/withdraw-account-dialog"
 import { NotificationPreferences } from "@/components/notifications/notification-preferences"
 import { CompanyNotificationPreferences } from "@/components/notifications/company-notification-preferences"
 import { PreferencesCard } from "@/components/preferences/preferences-card"
@@ -50,6 +51,7 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [changingPassword, setChangingPassword] = useState(false)
+  const [withdrawOpen, setWithdrawOpen] = useState(false)
 
   const handleChangePassword = async (e: FormEvent) => {
     e.preventDefault()
@@ -272,9 +274,12 @@ export default function SettingsPage() {
                     <p className="font-medium">{t.settings.danger.deleteAccount}</p>
                     <p className="text-sm text-muted-foreground">{t.settings.danger.deleteAccountHint}</p>
                   </div>
-                  <Button variant="destructive">{t.settings.danger.delete}</Button>
+                  <Button variant="destructive" onClick={() => setWithdrawOpen(true)}>
+                    {t.settings.danger.delete}
+                  </Button>
                 </div>
               </CardContent>
+              <WithdrawAccountDialog open={withdrawOpen} onOpenChange={setWithdrawOpen} />
             </Card>
           )}
         </TabsContent>

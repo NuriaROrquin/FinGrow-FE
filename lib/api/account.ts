@@ -86,3 +86,8 @@ export function getProfile(signal?: AbortSignal): Promise<EmployeeProfile> {
 export function updateProfile(payload: UpdateProfilePayload): Promise<void> {
   return api.patch("/account/profile", payload)
 }
+
+/** Baja del empleado (HU-74): borra sus datos financieros y cierra todas sus sesiones. */
+export function withdrawAccount(password: string): Promise<void> {
+  return api.post("/account/withdrawal", { password })
+}

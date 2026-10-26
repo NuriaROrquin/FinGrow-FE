@@ -50,7 +50,11 @@ el rol: un 401 vuelve siempre a la portada, y `/login/*` redirige ahí (`next.co
   pedirla. El switch de estado activa o desactiva el acceso (HU-55): desactivar conserva los
   datos, eliminar los borra. El responsable de un departamento (HU-52) es un empleado activo de
   la empresa elegido con `components/company/manager-picker.tsx`; si después pierde el acceso,
-  sigue figurando como "(sin acceso)" hasta que se cambie. En el panel principal de la empresa
+  sigue figurando como "(sin acceso)" hasta que se cambie. Un empleado que se dio de baja solo
+  (HU-74, `withdrawnAt`) sale como "Dado de baja", sin switch: no se puede reactivar. La baja la
+  pide el empleado desde la Zona de Peligro de Configuración
+  (`components/security/withdraw-account-dialog.tsx`, `POST /account/withdrawal`), con su
+  contraseña; al terminar, el backend ya cerró la sesión y el front vuelve al inicio. En el panel principal de la empresa
   (`/dashboard/company`) solo son reales las tarjetas de total de empleados y tasa de
   participación (HU-56, `components/company/participation-cards.tsx`,
   `GET /api/company/metrics/participation`); el resto sigue mock. Cuando el backend manda
@@ -78,6 +82,13 @@ el rol: un 401 vuelve siempre a la portada, y `/login/*` redirige ahí (`next.co
   anterior (`previousPeriod = null`), con `isAnonymized` o sin cambios significativos se muestra un aviso
   en lugar de las listas. Los textos están en `lib/i18n` (`companyTrends`), con un texto por cada
   `CompanyTrendIndicator`: un indicador nuevo en el backend necesita su texto en los tres idiomas.
+  **Departamentos que necesitan atención (HU-62)**: la pestaña "Por Departamento"
+  (`components/company/department-metrics-section.tsx`) muestra arriba de la tabla el bloque
+  "Necesitan atención", del puntaje más bajo al más alto, y resalta esas filas. Qué departamento
+  entra lo decide el backend con `needsAttention` de `GET /api/company/metrics/departments` (hoy,
+  banda crítica o frágil): no lo calcules con umbrales propios. Un departamento con las métricas
+  restringidas nunca se destaca. Si ninguno lo necesita y alguno tiene banda visible, se avisa que
+  ninguno está en banda crítica o frágil.
   **Exportar el reporte de la empresa (HU-65)**: "Exportar reporte", en el encabezado del panel, se
   habilita cuando terminó de cargar `/insights`. Al tocarlo pide `GET /api/company/metrics/report`
   (`getCompanyMonthlyReport`, siempre el último mes con foto contra el anterior) y monta
