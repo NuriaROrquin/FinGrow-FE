@@ -118,6 +118,10 @@ export function DeleteEmployeeDialog({
                 {pending === "deactivate" ? "Desactivando..." : "Desactivar acceso"}
               </Button>
             </div>
+          ) : employee.withdrawnAt ? (
+            <p className="rounded-md border bg-muted/50 p-3 text-muted-foreground">
+              Se dio de baja y ya borró su información financiera. Al eliminarlo deja de figurar en tu nómina.
+            </p>
           ) : (
             <p className="rounded-md border bg-muted/50 p-3 text-muted-foreground">
               Su acceso ya está desactivado. Mientras no elimines la cuenta, sus datos se conservan.
