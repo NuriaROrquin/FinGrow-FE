@@ -32,6 +32,7 @@ import {
   type DepartmentDto,
   type EmployeeDetailsPayload,
 } from "@/lib/api"
+import { useMessages, type Messages } from "@/lib/i18n"
 
 const NO_DEPARTMENT = "none"
 
@@ -61,25 +62,23 @@ function toPayload(draft: Draft): EmployeeDetailsPayload {
   }
 }
 
-function validate(payload: EmployeeDetailsPayload): FieldErrors {
+function validate(payload: EmployeeDetailsPayload, t: Messages["employees"]): FieldErrors {
   const errors: FieldErrors = {}
 
   if (payload.fullName.length < FULL_NAME_MIN_LENGTH) {
-    errors.fullName = payload.fullName
-      ? `El nombre tiene que tener al menos ${FULL_NAME_MIN_LENGTH} caracteres.`
-      : "El nombre es obligatorio."
+    errors.fullName = payload.fullName ? t.nameTooShort(FULL_NAME_MIN_LENGTH) : t.nameRequired
   }
 
   if (!payload.email) {
-    errors.email = "El email es obligatorio."
+    errors.email = t.emailRequired
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
-    errors.email = "El email no es una dirección válida."
+    errors.email = t.emailInvalid
   }
 
   if (payload.phoneNumber !== null) {
     const digits = payload.phoneNumber.replace(/\D/g, "").length
     if (!/^[\d\s+\-()]+$/.test(payload.phoneNumber) || digits < PHONE_NUMBER_MIN_DIGITS || digits > PHONE_NUMBER_MAX_DIGITS) {
-      errors.phoneNumber = `El teléfono solo admite números, espacios, +, - y paréntesis, con entre ${PHONE_NUMBER_MIN_DIGITS} y ${PHONE_NUMBER_MAX_DIGITS} dígitos.`
+      errors.phoneNumber = t.phoneInvalid(PHONE_NUMBER_MIN_DIGITS, PHONE_NUMBER_MAX_DIGITS)
     }
   }
 
@@ -101,6 +100,8 @@ export function EmployeeFormDialog({
   onCreated: (created: CreatedEmployeeDto) => void
   onUpdated: (employee: CompanyEmployeeDto) => void
 }) {
+  const messages = useMessages()
+  const t = messages.employees
   const isEditing = employee !== undefined
   const [draft, setDraft] = useState<Draft>(() => toDraft(employee))
   const [errors, setErrors] = useState<FieldErrors>({})
@@ -125,7 +126,7 @@ export function EmployeeFormDialog({
     event.preventDefault()
 
     const payload = toPayload(draft)
-    const fieldErrors = validate(payload)
+    const fieldErrors = validate(payload, t)
     if (Object.keys(fieldErrors).length > 0) {
       setErrors(fieldErrors)
       return
@@ -141,7 +142,7 @@ export function EmployeeFormDialog({
           saved = await changeEmployeeDepartment(employee.id, departmentId)
         }
         onUpdated(saved)
-        toast.success(`Datos de ${saved.fullName} actualizados`)
+        toast.success(t.updated(saved.fullName))
       } else {
         onCreated(await createEmployee({ ...payload, departmentId }))
       }
@@ -152,7 +153,7 @@ export function EmployeeFormDialog({
         return
       }
 
-      toastApiError(error, isEditing ? "No se pudo actualizar el empleado." : "No se pudo dar de alta el empleado.")
+      toastApiError(error, isEditing ? t.updateFailed : t.createFailed)
     } finally {
       setIsSaving(false)
     }
@@ -163,22 +164,20 @@ export function EmployeeFormDialog({
       <DialogContent className="sm:max-w-[500px]">
         <form onSubmit={handleSubmit} noValidate>
           <DialogHeader>
-            <DialogTitle>{isEditing ? "Editar empleado" : "Agregar empleado"}</DialogTitle>
+            <DialogTitle>{isEditing ? t.editTitle : t.addTitle}</DialogTitle>
             <DialogDescription>
-              {isEditing
-                ? "Corregí sus datos o cambialo de departamento. El email es con el que inicia sesión."
-                : "Al confirmar se crea su usuario con una contraseña temporal para que pueda ingresar."}
+              {isEditing ? t.editDescription : t.addDescription}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="employee-full-name">Nombre completo</Label>
+              <Label htmlFor="employee-full-name">{t.fullName}</Label>
               <div className="relative">
                 <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="employee-full-name"
-                  placeholder="Juan Pérez"
+                  placeholder={t.fullNamePlaceholder}
                   maxLength={FULL_NAME_MAX_LENGTH}
                   value={draft.fullName}
                   onChange={(event) => update("fullName", event.target.value)}
@@ -191,13 +190,13 @@ export function EmployeeFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="employee-email">Email corporativo</Label>
+              <Label htmlFor="employee-email">{t.email}</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="employee-email"
                   type="email"
-                  placeholder="juan.perez@empresa.com"
+                  placeholder={t.emailPlaceholder}
                   maxLength={EMPLOYEE_EMAIL_MAX_LENGTH}
                   value={draft.email}
                   onChange={(event) => update("email", event.target.value)}
@@ -209,12 +208,12 @@ export function EmployeeFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="employee-phone">Teléfono</Label>
+              <Label htmlFor="employee-phone">{t.phone}</Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="employee-phone"
-                  placeholder="+54 9 11 1234-5678"
+                  placeholder={t.phonePlaceholder}
                   maxLength={PHONE_NUMBER_MAX_LENGTH}
                   value={draft.phoneNumber}
                   onChange={(event) => update("phoneNumber", event.target.value)}
@@ -226,13 +225,13 @@ export function EmployeeFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="employee-department">Departamento</Label>
+              <Label htmlFor="employee-department">{t.department}</Label>
               <Select value={draft.departmentId} onValueChange={(value) => update("departmentId", value)}>
                 <SelectTrigger id="employee-department" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NO_DEPARTMENT}>Sin departamento</SelectItem>
+                  <SelectItem value={NO_DEPARTMENT}>{t.noDepartment}</SelectItem>
                   {selectableDepartments.map((department) => (
                     <SelectItem key={department.id} value={department.id}>
                       {department.name}
@@ -242,7 +241,7 @@ export function EmployeeFormDialog({
               </Select>
               {isEditing && (
                 <p className="text-xs text-muted-foreground">
-                  Las métricas de los meses ya cerrados no cambian: cuentan en el departamento donde estaba.
+                  {t.departmentHint}
                 </p>
               )}
             </div>
@@ -250,10 +249,10 @@ export function EmployeeFormDialog({
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
-              Cancelar
+              {messages.common.cancel}
             </Button>
             <Button type="submit" disabled={isSaving}>
-              {isSaving ? "Guardando..." : isEditing ? "Guardar cambios" : "Agregar empleado"}
+              {isSaving ? t.saving : isEditing ? t.saveChanges : t.addSubmit}
             </Button>
           </DialogFooter>
         </form>

@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createBudget, isApiError, toastApiError, type BudgetDto } from "@/lib/api"
-import { expenseCategoryLabels, type Currency, type ExpenseCategory } from "@/lib/api/transactions"
+import { EXPENSE_CATEGORIES, type Currency, type ExpenseCategory } from "@/lib/api/transactions"
+import { useMessages } from "@/lib/i18n"
 import { expenseCategoryIcons, formatYearMonth, type YearMonth } from "./budget-month"
 import { usePreferences } from "@/lib/preferences-context"
 
@@ -21,7 +22,6 @@ const currencyLabels: Record<Currency, string> = {
   BRL: "BRL (R$)",
 }
 
-const allCategories = Object.keys(expenseCategoryLabels) as ExpenseCategory[]
 
 interface LimitRow {
   key: number
@@ -41,6 +41,9 @@ export function CreateBudgetForm({
   onClose: () => void
 }) {
   const { preferences } = usePreferences()
+  const messages = useMessages()
+  const t = messages.budgets
+  const categoryLabels = messages.labels.expenseCategories
   const [currency, setCurrency] = useState<Currency>(preferences.currency)
   const [rows, setRows] = useState<LimitRow[]>([{ key: 0, category: "", amount: "" }])
   const [nextKey, setNextKey] = useState(1)
@@ -62,7 +65,7 @@ export function CreateBudgetForm({
     e.preventDefault()
 
     if (rows.some((row) => row.category === "")) {
-      toast.error("Elegí una categoría en cada fila, o quitá las que no uses.")
+      toast.error(t.pickCategoryPerRow)
       return
     }
 
@@ -78,10 +81,10 @@ export function CreateBudgetForm({
         })),
       })
       onCreated(budget)
-      toast.success(`Presupuesto de ${formatYearMonth(period)} creado`)
+      toast.success(t.created(formatYearMonth(period)))
       onClose()
     } catch (error) {
-      toastApiError(error, "No se pudo crear el presupuesto.")
+      toastApiError(error, t.createFailed)
 
       if (isApiError(error) && error.status === 409) {
         onConflict()
@@ -95,7 +98,7 @@ export function CreateBudgetForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="budget-currency">Moneda</Label>
+        <Label htmlFor="budget-currency">{t.currency}</Label>
         <Select value={currency} onValueChange={(value) => setCurrency(value as Currency)}>
           <SelectTrigger id="budget-currency" className="w-full">
             <SelectValue />
@@ -108,11 +111,11 @@ export function CreateBudgetForm({
             ))}
           </SelectContent>
         </Select>
-        <p className="text-xs text-muted-foreground">Todos los topes del presupuesto van en la misma moneda.</p>
+        <p className="text-xs text-muted-foreground">{t.currencyHint}</p>
       </div>
 
       <div className="space-y-2">
-        <Label>Topes por categoría</Label>
+        <Label>{t.limitsByCategory}</Label>
         <div className="space-y-2">
           {rows.map((row, index) => (
             <div key={row.key} className="flex items-center gap-2">
@@ -120,21 +123,21 @@ export function CreateBudgetForm({
                 value={row.category}
                 onValueChange={(value) => updateRow(row.key, { category: value as ExpenseCategory })}
               >
-                <SelectTrigger aria-label={`Categoría ${index + 1}`} className="flex-1">
-                  <SelectValue placeholder="Categoría" />
+                <SelectTrigger aria-label={t.categoryRow(index + 1)} className="flex-1">
+                  <SelectValue placeholder={t.categoryPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
-                  {allCategories
+                  {EXPENSE_CATEGORIES
                     .filter((category) => category === row.category || !usedCategories.has(category))
                     .map((category) => (
                       <SelectItem key={category} value={category}>
-                        {expenseCategoryIcons[category]} {expenseCategoryLabels[category]}
+                        {expenseCategoryIcons[category]} {categoryLabels[category]}
                       </SelectItem>
                     ))}
                 </SelectContent>
               </Select>
               <Input
-                aria-label={`Tope ${index + 1}`}
+                aria-label={t.limitRow(index + 1)}
                 type="number"
                 placeholder="0.00"
                 step="0.01"
@@ -148,7 +151,7 @@ export function CreateBudgetForm({
                 type="button"
                 variant="ghost"
                 size="icon"
-                aria-label="Quitar categoría"
+                aria-label={t.removeCategory}
                 onClick={() => removeRow(row.key)}
                 disabled={rows.length === 1}
               >
@@ -162,19 +165,19 @@ export function CreateBudgetForm({
           variant="outline"
           size="sm"
           onClick={addRow}
-          disabled={rows.length >= allCategories.length}
+          disabled={rows.length >= EXPENSE_CATEGORIES.length}
         >
           <PlusIcon className="size-4" />
-          Agregar categoría
+          {t.addCategoryRow}
         </Button>
       </div>
 
       <div className="flex gap-2 justify-end pt-4">
         <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-          Cancelar
+          {messages.common.cancel}
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Guardando..." : "Crear Presupuesto"}
+          {isSubmitting ? t.saving : t.create}
         </Button>
       </div>
     </form>

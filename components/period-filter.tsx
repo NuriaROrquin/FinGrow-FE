@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { formatDateText } from "@/lib/format"
+import { useMessages } from "@/lib/i18n"
 
 export type PeriodDateRange = {
   dateFrom: string
@@ -75,6 +76,7 @@ type PeriodFilterProps = {
 }
 
 export function PeriodFilter({ dateFrom, dateTo, onChange }: PeriodFilterProps) {
+  const t = useMessages().periodFilter
   const [customDateFrom, setCustomDateFrom] = useState(dateFrom)
   const [customDateTo, setCustomDateTo] = useState(dateTo)
   const [isCustomPeriodOpen, setIsCustomPeriodOpen] = useState(false)
@@ -100,13 +102,13 @@ export function PeriodFilter({ dateFrom, dateTo, onChange }: PeriodFilterProps) 
 
   return (
     <div className="w-full max-w-3xl space-y-3">
-      <Label className="text-xs text-muted-foreground">Período</Label>
+      <Label className="text-xs text-muted-foreground">{t.label}</Label>
       <div className="flex items-center gap-2">
         <Button
           variant="outline"
           size="icon"
-          aria-label="Período anterior"
-          title="Período anterior"
+          aria-label={t.previous}
+          title={t.previous}
           onClick={() => changePeriod(-1)}
         >
           <ChevronLeft className="size-4" />
@@ -117,8 +119,8 @@ export function PeriodFilter({ dateFrom, dateTo, onChange }: PeriodFilterProps) 
         <Button
           variant="outline"
           size="icon"
-          aria-label="Período siguiente"
-          title="Período siguiente"
+          aria-label={t.next}
+          title={t.next}
           onClick={() => changePeriod(1)}
         >
           <ChevronRight className="size-4" />
@@ -134,18 +136,18 @@ export function PeriodFilter({ dateFrom, dateTo, onChange }: PeriodFilterProps) 
           }}
         >
           <PopoverTrigger asChild>
-            <Button variant="outline" size="icon" aria-label="Personalizar período" title="Personalizar período">
+            <Button variant="outline" size="icon" aria-label={t.customize} title={t.customize}>
               <MoreHorizontal className="size-4" />
             </Button>
           </PopoverTrigger>
           <PopoverContent align="start" className="w-72 space-y-4">
             <div>
-              <p className="font-medium">Personalizar período</p>
-              <p className="text-sm text-muted-foreground">Elegí el rango de fechas.</p>
+              <p className="font-medium">{t.customize}</p>
+              <p className="text-sm text-muted-foreground">{t.customizeHint}</p>
             </div>
             <div className="grid gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="period-filter-date-from">Desde</Label>
+                <Label htmlFor="period-filter-date-from">{t.from}</Label>
                 <Input
                   id="period-filter-date-from"
                   type="date"
@@ -155,7 +157,7 @@ export function PeriodFilter({ dateFrom, dateTo, onChange }: PeriodFilterProps) 
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="period-filter-date-to">Hasta</Label>
+                <Label htmlFor="period-filter-date-to">{t.to}</Label>
                 <Input
                   id="period-filter-date-to"
                   type="date"
@@ -170,7 +172,7 @@ export function PeriodFilter({ dateFrom, dateTo, onChange }: PeriodFilterProps) 
               onClick={applyCustomPeriod}
               disabled={!customDateFrom || !customDateTo || customDateFrom > customDateTo}
             >
-              Aplicar período
+              {t.apply}
             </Button>
           </PopoverContent>
         </Popover>

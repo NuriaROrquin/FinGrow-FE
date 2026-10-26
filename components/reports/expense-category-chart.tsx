@@ -4,7 +4,6 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import type { ExpenseBreakdownDto } from "@/lib/api"
-import { expenseCategoryLabels } from "@/lib/api/transactions"
 import { formatMoney, formatNumber } from "@/lib/format"
 import { useMessages } from "@/lib/i18n"
 import { formatShare } from "./expense-variation"
@@ -18,13 +17,14 @@ interface ExpenseCategoryChartProps {
 }
 
 export function ExpenseCategoryChart({ breakdown }: ExpenseCategoryChartProps) {
-  const t = useMessages().expenseBreakdown
+  const messages = useMessages()
+  const t = messages.expenseBreakdown
   const isExport = useIsReportExport()
   const chartConfig = { amount: { label: t.chartAmount, color: "var(--destructive)" } } satisfies ChartConfig
   const chartData = breakdown.categories
     .filter((category) => category.amount > 0)
     .map((category) => ({
-      label: expenseCategoryLabels[category.category],
+      label: messages.labels.expenseCategories[category.category],
       amount: category.amount,
       percentage: category.percentage,
     }))

@@ -6,18 +6,6 @@ export type CourseLevel = "Beginner" | "Intermediate" | "Advanced"
 
 export type CourseProgressStatus = "NotStarted" | "InProgress" | "Completed"
 
-export const courseLevelLabels: Record<CourseLevel, string> = {
-  Beginner: "Principiante",
-  Intermediate: "Intermedio",
-  Advanced: "Avanzado",
-}
-
-export const courseProgressStatusLabels: Record<CourseProgressStatus, string> = {
-  NotStarted: "Sin empezar",
-  InProgress: "En curso",
-  Completed: "Completado",
-}
-
 export interface CourseSummaryDto {
   id: string
   slug: string

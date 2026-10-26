@@ -4,6 +4,11 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import type { CompanyMetricsDto } from "@/lib/api"
 import { CompanyEvolutionCharts } from "./company-evolution-charts"
 
+vi.mock("@/lib/i18n", async () => {
+  const { es } = await import("@/lib/i18n/es")
+  return { useMessages: () => es }
+})
+
 function month(overrides: Partial<CompanyMetricsDto> = {}): CompanyMetricsDto {
   return {
     period: "2026-09-01",

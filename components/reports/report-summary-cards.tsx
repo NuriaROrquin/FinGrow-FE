@@ -4,12 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton"
 import type { MonthlySummaryDto } from "@/lib/api"
 import { formatMoney } from "@/lib/format"
+import { useMessages, type Messages } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { useIsReportExport } from "./report-export-context"
-
-function monthsLabel(count: number): string {
-  return count === 1 ? "En 1 mes con datos" : `En ${count} meses con datos`
-}
 
 interface SummaryCard {
   label: string
@@ -18,14 +15,14 @@ interface SummaryCard {
   tone: "success" | "plain" | "signed"
 }
 
-function buildCards(summary: MonthlySummaryDto): SummaryCard[] {
-  const detail = monthsLabel(summary.months.length)
+function buildCards(summary: MonthlySummaryDto, t: Messages["reports"]): SummaryCard[] {
+  const detail = t.monthsWithData(summary.months.length)
 
   return [
-    { label: "Ingresos Totales", amount: summary.totalIncome, detail, tone: "success" },
-    { label: "Gastos Totales", amount: summary.totalExpenses, detail, tone: "plain" },
-    { label: "Ahorros Totales", amount: summary.totalSavings, detail, tone: "signed" },
-    { label: "Ahorro Mensual Promedio", amount: summary.averageMonthlySavings, detail: "Por mes", tone: "signed" },
+    { label: t.totalIncome, amount: summary.totalIncome, detail, tone: "success" },
+    { label: t.totalExpenses, amount: summary.totalExpenses, detail, tone: "plain" },
+    { label: t.totalSavings, amount: summary.totalSavings, detail, tone: "signed" },
+    { label: t.averageMonthlySavings, amount: summary.averageMonthlySavings, detail: t.perMonth, tone: "signed" },
   ]
 }
 
@@ -41,6 +38,7 @@ interface ReportSummaryCardsProps {
 }
 
 export function ReportSummaryCards({ summary, isLoading }: ReportSummaryCardsProps) {
+  const t = useMessages().reports
   const isExport = useIsReportExport()
 
   if (isLoading && !summary) {
@@ -54,11 +52,11 @@ export function ReportSummaryCards({ summary, isLoading }: ReportSummaryCardsPro
   }
 
   const cards: SummaryCard[] = summary
-    ? buildCards(summary)
-    : ["Ingresos Totales", "Gastos Totales", "Ahorros Totales", "Ahorro Mensual Promedio"].map((label): SummaryCard => ({
+    ? buildCards(summary, t)
+    : [t.totalIncome, t.totalExpenses, t.totalSavings, t.averageMonthlySavings].map((label): SummaryCard => ({
         label,
         amount: null,
-        detail: "Sin datos",
+        detail: t.noData,
         tone: "plain",
       }))
 

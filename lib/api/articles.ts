@@ -2,16 +2,6 @@ import { api } from "./client"
 import type { EducationCategory } from "./education"
 import type { InvestmentType } from "./investments"
 
-export const educationCategoryLabels: Record<EducationCategory, string> = {
-  Basics: "Básico",
-  Savings: "Ahorro",
-  Budgeting: "Presupuesto",
-  Investments: "Inversiones",
-  Credit: "Crédito",
-  Retirement: "Jubilación",
-  Taxes: "Impuestos",
-}
-
 export interface ArticleSummaryDto {
   id: string
   slug: string

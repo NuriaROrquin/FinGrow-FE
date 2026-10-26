@@ -22,12 +22,14 @@ import { ProfileCard } from "@/components/profile/profile-card"
 import { CompanyProfileCard } from "@/components/company/company-profile-card"
 import { TwoFactorCard } from "@/components/security/two-factor-card"
 import { ActiveSessionsCard } from "@/components/security/active-sessions-card"
+import { WithdrawAccountDialog } from "@/components/security/withdraw-account-dialog"
 import { NotificationPreferences } from "@/components/notifications/notification-preferences"
 import { CompanyNotificationPreferences } from "@/components/notifications/company-notification-preferences"
 import { PreferencesCard } from "@/components/preferences/preferences-card"
 import { IolCard } from "@/components/integrations/iol-card"
 import { GmailCard } from "@/components/integrations/gmail-card"
 import { MercadoPagoCard } from "@/components/integrations/mercado-pago-card"
+import { tabAfterLink } from "@/components/integrations/link-result"
 import { TELEGRAM_BOT_USERNAME, TelegramCard } from "@/components/integrations/telegram-card"
 import { WhatsAppCard } from "@/components/integrations/whatsapp-card"
 import { useEffect, useState, type FormEvent } from "react"
@@ -38,9 +40,9 @@ export default function SettingsPage() {
   const { role, logout } = useAuth()
   const t = useMessages()
   const searchParams = useSearchParams()
-  const [activeTab, setActiveTab] = useState(() => searchParams.get("tab") || "profile")
+  const [activeTab, setActiveTab] = useState(() => (tabAfterLink(searchParams) ?? searchParams.get("tab")) || "profile")
   useEffect(() => {
-    const tab = searchParams.get("tab")
+    const tab = tabAfterLink(searchParams) ?? searchParams.get("tab")
     if (tab) setActiveTab(tab)
   }, [searchParams])
   const visibleTab = role === "empresa" && activeTab === "integrations" ? "profile" : activeTab
@@ -50,6 +52,7 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [changingPassword, setChangingPassword] = useState(false)
+  const [withdrawOpen, setWithdrawOpen] = useState(false)
 
   const handleChangePassword = async (e: FormEvent) => {
     e.preventDefault()
@@ -272,9 +275,12 @@ export default function SettingsPage() {
                     <p className="font-medium">{t.settings.danger.deleteAccount}</p>
                     <p className="text-sm text-muted-foreground">{t.settings.danger.deleteAccountHint}</p>
                   </div>
-                  <Button variant="destructive">{t.settings.danger.delete}</Button>
+                  <Button variant="destructive" onClick={() => setWithdrawOpen(true)}>
+                    {t.settings.danger.delete}
+                  </Button>
                 </div>
               </CardContent>
+              <WithdrawAccountDialog open={withdrawOpen} onOpenChange={setWithdrawOpen} />
             </Card>
           )}
         </TabsContent>

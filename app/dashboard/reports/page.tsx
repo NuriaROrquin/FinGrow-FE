@@ -53,10 +53,10 @@ export default function ReportsPage() {
 		[savingsCurrency, savingsMonths],
 	)
 
-	const summary = useReportRequest(loadSummary, "No se pudo cargar el resumen mensual.")
+	const summary = useReportRequest(loadSummary, t.reports.summaryLoadFailed)
 	const breakdown = useReportRequest(loadBreakdown, t.expenseBreakdown.loadFailed)
-	const insights = useReportRequest(loadInsights, "No se pudieron cargar los hitos y recomendaciones.")
-	const savings = useReportRequest(loadSavings, "No se pudo cargar el reporte de ahorros.")
+	const insights = useReportRequest(loadInsights, t.reports.insightsLoadFailed)
+	const savings = useReportRequest(loadSavings, t.reports.savingsLoadFailed)
 
 	const isReportLoading = summary.isLoading || breakdown.isLoading || insights.isLoading || savings.isLoading
 	const isExporting = exportedAt !== null
@@ -72,8 +72,8 @@ export default function ReportsPage() {
 			{/* Header */}
 			<div className="flex items-center justify-between flex-col lg:flex-row gap-4">
 				<div>
-					<h1 className="text-3xl font-bold text-balance">Reportes Financieros</h1>
-					<p className="text-muted-foreground mt-1">Análisis completo de tus datos financieros</p>
+					<h1 className="text-3xl font-bold text-balance">{t.reports.title}</h1>
+					<p className="text-muted-foreground mt-1">{t.reports.subtitle}</p>
 				</div>
 				<div className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
 					<PeriodFilter
@@ -85,7 +85,7 @@ export default function ReportsPage() {
 						}}
 					/>
 					<Select value={currency} onValueChange={(value) => setCurrency(value as Currency)}>
-						<SelectTrigger className="w-[100px]" aria-label="Moneda del reporte">
+						<SelectTrigger className="w-[100px]" aria-label={t.reports.currencyAria}>
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
@@ -109,9 +109,9 @@ export default function ReportsPage() {
 				{/* Report Tabs */}
 				<Tabs defaultValue="overview" className="space-y-4 mt-8">
 					<TabsList>
-						<TabsTrigger value="overview">Resumen</TabsTrigger>
-						<TabsTrigger value="spending">Análisis de Gastos</TabsTrigger>
-						<TabsTrigger value="savings">Reporte de Ahorros</TabsTrigger>
+						<TabsTrigger value="overview">{t.reports.tabOverview}</TabsTrigger>
+						<TabsTrigger value="spending">{t.reports.tabSpending}</TabsTrigger>
+						<TabsTrigger value="savings">{t.reports.tabSavings}</TabsTrigger>
 					</TabsList>
 
 					{/* Overview Tab */}

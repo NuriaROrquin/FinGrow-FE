@@ -30,29 +30,20 @@ import {
   formatSignedMoney,
   formatSignedPercentage,
 } from "@/lib/format"
+import { useMessages } from "@/lib/i18n"
 
-const ranges: { value: PortfolioEvolutionRange; label: string; description: string }[] = [
-  { value: "OneMonth", label: "1M", description: "Último mes" },
-  { value: "ThreeMonths", label: "3M", description: "Últimos 3 meses" },
-  { value: "SixMonths", label: "6M", description: "Últimos 6 meses" },
-  { value: "OneYear", label: "1A", description: "Último año" },
-  { value: "All", label: "Todo", description: "Desde tu primera inversión" },
-]
-
-const chartConfig = {
-  value: { label: "Valor del portafolio", color: "var(--chart-1)" },
-  investedAmount: { label: "Capital invertido", color: "var(--muted-foreground)" },
-} satisfies ChartConfig
+const ranges: PortfolioEvolutionRange[] = ["OneMonth", "ThreeMonths", "SixMonths", "OneYear", "All"]
 
 const daysShownByDay = 186
 
 function TooltipResult({ point, currency }: { point: PortfolioEvolutionPointDto; currency: Currency }) {
+  const t = useMessages().portfolioEvolution
   const result = point.value - point.investedAmount
   const percentage = point.investedAmount === 0 ? 0 : (result / point.investedAmount) * 100
 
   return (
     <div className="flex items-center justify-between gap-4 border-t pt-1.5">
-      <span className="text-muted-foreground">Resultado</span>
+      <span className="text-muted-foreground">{t.result}</span>
       <span className={`font-mono font-medium tabular-nums ${result >= 0 ? "text-success" : "text-destructive"}`}>
         {formatSignedMoney(result, currency)} ({formatSignedPercentage(percentage)})
       </span>
@@ -61,18 +52,15 @@ function TooltipResult({ point, currency }: { point: PortfolioEvolutionPointDto;
 }
 
 function EvolutionNotes({ evolution, range }: { evolution: PortfolioEvolutionDto; range: PortfolioEvolutionRange }) {
+  const t = useMessages().portfolioEvolution
   const historyStart =
     range !== "All" && evolution.points[0]?.date === evolution.historyStartsOn ? evolution.historyStartsOn : null
 
   return (
     <div className="mt-4 space-y-1 text-xs text-muted-foreground">
-      <p>Cada día suma el último valor conocido de cada activo: los que todavía no cotizan figuran al costo.</p>
-      {historyStart && (
-        <p>
-          Tu historial en {evolution.currency} empieza el {formatDate(historyStart)}, con tu primera compra.
-        </p>
-      )}
-      {evolution.interval === "Week" && <p>Como abarca más de un año, se muestra un punto por semana.</p>}
+      <p>{t.dailyNote}</p>
+      {historyStart && <p>{t.historyStart(evolution.currency, formatDate(historyStart))}</p>}
+      {evolution.interval === "Week" && <p>{t.weekly}</p>}
     </div>
   )
 }
@@ -84,6 +72,11 @@ export function PortfolioEvolutionCard({
   currencies: Currency[] | null
   refreshKey: number
 }) {
+  const t = useMessages().portfolioEvolution
+  const chartConfig = {
+    value: { label: t.value, color: "var(--chart-1)" },
+    investedAmount: { label: t.invested, color: "var(--muted-foreground)" },
+  } satisfies ChartConfig
   const [range, setRange] = useState<PortfolioEvolutionRange>("ThreeMonths")
   const [chosenCurrency, setChosenCurrency] = useState<Currency | "">("")
   const [evolution, setEvolution] = useState<PortfolioEvolutionDto | null>(null)
@@ -106,25 +99,25 @@ export function PortfolioEvolutionCard({
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return
         setLoadFailed(true)
-        toastApiError(error, "No se pudo cargar la evolución de tu portafolio.")
+        toastApiError(error, t.loadFailed)
       })
       .finally(() => {
         if (!controller.signal.aborted) setIsLoading(false)
       })
 
     return () => controller.abort()
-  }, [currency, range, refreshKey])
+  }, [currency, range, refreshKey, t])
 
   const points = evolution?.points ?? []
   const showsMonths = evolution?.interval === "Week" || points.length > daysShownByDay
 
   const renderContent = () => {
     if (currencies !== null && currencies.length === 0) {
-      return <p className="text-sm text-muted-foreground">Todavía no registraste inversiones</p>
+      return <p className="text-sm text-muted-foreground">{t.noInvestments}</p>
     }
 
     if (loadFailed && !isLoading) {
-      return <p className="text-sm text-muted-foreground">No pudimos cargar la evolución. Probá de nuevo en un rato.</p>
+      return <p className="text-sm text-muted-foreground">{t.failed}</p>
     }
 
     if (currencies === null || !evolution) {
@@ -133,9 +126,7 @@ export function PortfolioEvolutionCard({
 
     if (points.length < 2) {
       return (
-        <p className="text-sm text-muted-foreground">
-          Tu portafolio en {evolution.currency} empezó hoy: su evolución se empieza a ver a partir de mañana.
-        </p>
+        <p className="text-sm text-muted-foreground">{t.startedToday(evolution.currency)}</p>
       )
     }
 
@@ -226,12 +217,12 @@ export function PortfolioEvolutionCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Evolución del Portafolio</CardTitle>
-        <CardDescription>Cuánto valieron tus inversiones frente al capital que pusiste</CardDescription>
+        <CardTitle>{t.title}</CardTitle>
+        <CardDescription>{t.description}</CardDescription>
         {currency && currencies && currencies.length > 1 && (
           <CardAction>
             <Select value={currency} onValueChange={(selected) => setChosenCurrency(selected as Currency)}>
-              <SelectTrigger className="w-[100px]" aria-label="Moneda de la evolución">
+              <SelectTrigger className="w-[100px]" aria-label={t.currencyAria}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -255,18 +246,18 @@ export function PortfolioEvolutionCard({
             onValueChange={(value) => {
               if (value) setRange(value as PortfolioEvolutionRange)
             }}
-            aria-label="Rango de la evolución"
+            aria-label={t.rangeAria}
             className="mb-4"
           >
             {ranges.map((option) => (
               <ToggleGroupItem
-                key={option.value}
-                value={option.value}
-                aria-label={option.description}
-                title={option.description}
+                key={option}
+                value={option}
+                aria-label={t.ranges[option].description}
+                title={t.ranges[option].description}
                 className="flex-none px-3"
               >
-                {option.label}
+                {t.ranges[option].label}
               </ToggleGroupItem>
             ))}
           </ToggleGroup>

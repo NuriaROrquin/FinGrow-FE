@@ -1,6 +1,7 @@
 import { api } from "./client"
 import type { Currency } from "./transactions"
 import { formatNumber } from "@/lib/format"
+import { currentMessages } from "@/lib/i18n/messages"
 
 export type InvestmentType =
   | "Stock"
@@ -65,21 +66,21 @@ export function isPricedPerNominal(type: InvestmentType): boolean {
 }
 
 export function quantityUnit(type: InvestmentType, quantity: number): string {
-  const isOne = quantity === 1
+  const units = currentMessages().quantityUnits
 
   if (isPricedPerNominal(type)) {
-    return isOne ? "nominal" : "nominales"
+    return units.nominal(quantity)
   }
 
   if (type === "MutualFund") {
-    return isOne ? "cuotaparte" : "cuotapartes"
+    return units.fundShare(quantity)
   }
 
   if (type === "Crypto") {
     return ""
   }
 
-  return isOne ? "unidad" : "unidades"
+  return units.unit(quantity)
 }
 
 export function formatQuantity(quantity: number, type: InvestmentType): string {
@@ -89,19 +90,20 @@ export function formatQuantity(quantity: number, type: InvestmentType): string {
   return unit === "" ? amount : `${amount} ${unit}`
 }
 
-export const investmentTypeLabels: Record<InvestmentType, string> = {
-  Stock: "Acción",
-  Cedear: "CEDEAR",
-  Etf: "ETF",
-  Bond: "Bono",
-  CorporateBond: "Obligación Negociable",
-  TreasuryBill: "Letra del Tesoro",
-  MutualFund: "Fondo Común",
-  FixedTermDeposit: "Plazo Fijo",
-  Repo: "Caución",
-  RemuneratedAccount: "Cuenta Remunerada",
-  Crypto: "Criptomoneda",
-}
+// Las etiquetas de cada tipo están en `lib/i18n` (`labels.investmentTypes`).
+export const INVESTMENT_TYPES: InvestmentType[] = [
+  "Stock",
+  "Cedear",
+  "Etf",
+  "Bond",
+  "CorporateBond",
+  "TreasuryBill",
+  "MutualFund",
+  "FixedTermDeposit",
+  "Repo",
+  "RemuneratedAccount",
+  "Crypto",
+]
 
 /** De donde vino la inversion: la cargo el empleado o la importo IOL. */
 export type InvestmentSource = "Manual" | "Iol"
@@ -212,15 +214,6 @@ export type InvestmentSortField =
 export type SortDirection = "Ascending" | "Descending"
 
 export type InvestmentPerformance = "Gain" | "Loss"
-
-export const investmentSortFieldLabels: Record<InvestmentSortField, string> = {
-  PurchasedOn: "Fecha de compra",
-  AssetName: "Nombre del activo",
-  AssetType: "Tipo de activo",
-  InvestedAmount: "Capital invertido",
-  CurrentValue: "Valor actual",
-  ReturnPercentage: "Rendimiento",
-}
 
 export interface InvestmentListQuery {
   pageNumber: number

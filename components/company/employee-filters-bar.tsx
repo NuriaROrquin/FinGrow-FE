@@ -11,13 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { FilterField } from "@/components/company/filter-field"
 import {
   hasActiveFilters,
-  lastLoginFilterLabels,
   NO_DEPARTMENT_FILTER,
-  statusFilterLabels,
   type EmployeeFilterValues,
   type EmployeeStatusFilter,
   type LastLoginFilter,
 } from "@/components/company/employee-filters"
+import { useMessages, type Messages } from "@/lib/i18n"
 
 export interface DepartmentFilterOption {
   id: string
@@ -26,13 +25,13 @@ export interface DepartmentFilterOption {
   isActive: boolean
 }
 
-function departmentsSummary(selected: string[], options: DepartmentFilterOption[]): string {
+function departmentsSummary(selected: string[], options: DepartmentFilterOption[], t: Messages["employees"]): string {
   if (selected.length === 0) {
-    return "Todos"
+    return t.allDepartments
   }
 
   if (selected.length > 2) {
-    return `${selected.length} departamentos`
+    return t.departmentsCount(selected.length)
   }
 
   return options
@@ -52,8 +51,9 @@ export function EmployeeFiltersBar({
   departmentOptions: DepartmentFilterOption[]
   onChange: (values: EmployeeFilterValues) => void
   onClear: () => void
-  error: string | null
+  error: boolean
 }) {
+  const t = useMessages().employees
   const [isDepartmentPickerOpen, setIsDepartmentPickerOpen] = useState(false)
 
   const update = <Key extends keyof EmployeeFilterValues>(key: Key, value: EmployeeFilterValues[Key]) =>
@@ -71,13 +71,13 @@ export function EmployeeFiltersBar({
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 2xl:grid-cols-[minmax(0,2fr)_repeat(5,minmax(0,1fr))_auto]">
         <div className="col-span-2 2xl:col-span-1">
-          <FilterField id="employee-filter-search" label="Buscar">
+          <FilterField id="employee-filter-search" label={t.search}>
             <div className="relative">
               <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="employee-filter-search"
                 className="pl-9"
-                placeholder="Nombre, email o teléfono"
+                placeholder={t.searchPlaceholder}
                 value={values.search}
                 onChange={(event) => update("search", event.target.value)}
               />
@@ -85,7 +85,7 @@ export function EmployeeFiltersBar({
           </FilterField>
         </div>
 
-        <FilterField id="employee-filter-department" label="Departamento">
+        <FilterField id="employee-filter-department" label={t.department}>
           <Popover open={isDepartmentPickerOpen} onOpenChange={setIsDepartmentPickerOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -95,19 +95,19 @@ export function EmployeeFiltersBar({
                 aria-expanded={isDepartmentPickerOpen}
                 className="w-full justify-between font-normal"
               >
-                <span className="truncate">{departmentsSummary(values.departments, departmentOptions)}</span>
+                <span className="truncate">{departmentsSummary(values.departments, departmentOptions, t)}</span>
                 <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[240px] p-0" align="start">
               <Command>
-                {departmentOptions.length > 6 && <CommandInput placeholder="Buscar departamento..." />}
+                {departmentOptions.length > 6 && <CommandInput placeholder={t.searchDepartment} />}
                 <CommandList>
-                  <CommandEmpty>No hay departamentos con ese nombre.</CommandEmpty>
+                  <CommandEmpty>{t.noDepartmentsFound}</CommandEmpty>
                   <CommandGroup>
-                    <CommandItem value="Todos" onSelect={() => update("departments", [])}>
+                    <CommandItem value={t.allDepartments} onSelect={() => update("departments", [])}>
                       <Checkbox checked={values.departments.length === 0} tabIndex={-1} />
-                      Todos
+                      {t.allDepartments}
                     </CommandItem>
                     {departmentOptions.map((option) => (
                       <CommandItem
@@ -117,7 +117,7 @@ export function EmployeeFiltersBar({
                       >
                         <Checkbox checked={values.departments.includes(option.id)} tabIndex={-1} />
                         <span className={option.id === NO_DEPARTMENT_FILTER ? "italic" : undefined}>{option.name}</span>
-                        {!option.isActive && <span className="text-xs text-muted-foreground">(inactivo)</span>}
+                        {!option.isActive && <span className="text-xs text-muted-foreground">{t.inactiveSuffix}</span>}
                         <span className="ml-auto text-xs tabular-nums text-muted-foreground">{option.employees}</span>
                       </CommandItem>
                     ))}
@@ -128,13 +128,13 @@ export function EmployeeFiltersBar({
           </Popover>
         </FilterField>
 
-        <FilterField id="employee-filter-status" label="Estado">
+        <FilterField id="employee-filter-status" label={t.status}>
           <Select value={values.status} onValueChange={(value) => update("status", value as EmployeeStatusFilter)}>
             <SelectTrigger id="employee-filter-status" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(statusFilterLabels).map(([value, label]) => (
+              {Object.entries(t.statuses).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
                 </SelectItem>
@@ -143,13 +143,13 @@ export function EmployeeFiltersBar({
           </Select>
         </FilterField>
 
-        <FilterField id="employee-filter-last-login" label="Último ingreso" className="col-span-2 sm:col-span-1">
+        <FilterField id="employee-filter-last-login" label={t.lastLogin} className="col-span-2 sm:col-span-1">
           <Select value={values.lastLogin} onValueChange={(value) => update("lastLogin", value as LastLoginFilter)}>
             <SelectTrigger id="employee-filter-last-login" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(lastLoginFilterLabels).map(([value, label]) => (
+              {Object.entries(t.lastLogins).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
                 </SelectItem>
@@ -158,7 +158,7 @@ export function EmployeeFiltersBar({
           </Select>
         </FilterField>
 
-        <FilterField id="employee-filter-hired-from" label="Alta desde" className="col-span-2 sm:col-span-1">
+        <FilterField id="employee-filter-hired-from" label={t.hiredFrom} className="col-span-2 sm:col-span-1">
           <Input
             id="employee-filter-hired-from"
             type="date"
@@ -168,7 +168,7 @@ export function EmployeeFiltersBar({
           />
         </FilterField>
 
-        <FilterField id="employee-filter-hired-to" label="Alta hasta" className="col-span-2 sm:col-span-1">
+        <FilterField id="employee-filter-hired-to" label={t.hiredTo} className="col-span-2 sm:col-span-1">
           <Input
             id="employee-filter-hired-to"
             type="date"
@@ -182,13 +182,13 @@ export function EmployeeFiltersBar({
           <div className="col-span-2 flex items-end sm:col-span-1">
             <Button type="button" variant="ghost" className="w-full lg:w-auto" onClick={onClear}>
               <XIcon className="size-4" />
-              Limpiar filtros
+              {t.clearFilters}
             </Button>
           </div>
         )}
       </div>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-sm text-destructive">{t.hiredRangeError}</p>}
     </div>
   )
 }

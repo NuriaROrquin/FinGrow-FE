@@ -11,12 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
-  educationCategoryLabels,
   listArticles,
   toastApiError,
   type ArticleSummaryDto,
   type EducationCategory,
 } from "@/lib/api"
+import { useMessages } from "@/lib/i18n"
 import { formatDateText } from "@/lib/format"
 
 const ALL = "all"
@@ -24,6 +24,9 @@ const ALL = "all"
 const readingTimeOptions = [3, 5, 10]
 
 export function ArticlesCatalog() {
+  const messages = useMessages()
+  const labels = messages.labels
+  const t = messages.education
   const router = useRouter()
   const [category, setCategory] = useState<EducationCategory | typeof ALL>(ALL)
   const [maxReadingTime, setMaxReadingTime] = useState<string>(ALL)
@@ -46,12 +49,12 @@ export function ArticlesCatalog() {
       .then(setArticles)
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return
-        toastApiError(error, "No se pudieron cargar los artículos.")
+        toastApiError(error, t.articlesLoadFailed)
         setLoadFailed(true)
       })
 
     return () => controller.abort()
-  }, [category, maxReadingTime, retryCount])
+  }, [category, maxReadingTime, retryCount, t])
 
   const hasFilters = category !== ALL || maxReadingTime !== ALL
 
@@ -59,17 +62,17 @@ export function ArticlesCatalog() {
     <Card>
       <CardHeader className="gap-4">
         <div>
-          <CardTitle>Lectura Recomendada</CardTitle>
-          <CardDescription>Artículos cortos para aprender en un rato libre</CardDescription>
+          <CardTitle>{t.recommendedReading}</CardTitle>
+          <CardDescription>{t.recommendedReadingDescription}</CardDescription>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Select value={category} onValueChange={(value) => setCategory(value as EducationCategory | typeof ALL)}>
-            <SelectTrigger className="w-full sm:w-52" aria-label="Filtrar por categoría">
+            <SelectTrigger className="w-full sm:w-52" aria-label={t.filterByCategory}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>Todas las categorías</SelectItem>
-              {Object.entries(educationCategoryLabels).map(([value, label]) => (
+              <SelectItem value={ALL}>{t.allCategories}</SelectItem>
+              {Object.entries(labels.educationCategories).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
                 </SelectItem>
@@ -82,14 +85,14 @@ export function ArticlesCatalog() {
             variant="outline"
             value={maxReadingTime}
             onValueChange={(value) => setMaxReadingTime(value || ALL)}
-            aria-label="Filtrar por tiempo de lectura"
+            aria-label={t.filterByReadingTime}
           >
             <ToggleGroupItem value={ALL} className="flex-none px-3">
-              Cualquiera
+              {t.anyReadingTime}
             </ToggleGroupItem>
             {readingTimeOptions.map((minutes) => (
               <ToggleGroupItem key={minutes} value={String(minutes)} className="flex-none px-3">
-                ≤ {minutes} min
+                {t.upToMinutes(minutes)}
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
@@ -102,11 +105,11 @@ export function ArticlesCatalog() {
               <EmptyMedia variant="icon">
                 <AlertCircleIcon />
               </EmptyMedia>
-              <EmptyTitle>No se pudieron cargar los artículos</EmptyTitle>
-              <EmptyDescription>Probá de nuevo en un momento.</EmptyDescription>
+              <EmptyTitle>{t.articlesFailedTitle}</EmptyTitle>
+              <EmptyDescription>{t.tryAgainShortly}</EmptyDescription>
             </EmptyHeader>
             <Button variant="outline" onClick={() => setRetryCount((count) => count + 1)}>
-              Reintentar
+              {t.retry}
             </Button>
           </Empty>
         ) : articles === null ? (
@@ -121,12 +124,8 @@ export function ArticlesCatalog() {
               <EmptyMedia variant="icon">
                 <BookOpenIcon />
               </EmptyMedia>
-              <EmptyTitle>No hay artículos para mostrar</EmptyTitle>
-              <EmptyDescription>
-                {hasFilters
-                  ? "Probá con otra categoría o con más tiempo de lectura."
-                  : "Todavía no hay artículos publicados."}
-              </EmptyDescription>
+              <EmptyTitle>{t.noArticles}</EmptyTitle>
+              <EmptyDescription>{hasFilters ? t.noArticlesFiltered : t.noArticlesPublished}</EmptyDescription>
             </EmptyHeader>
             {hasFilters && (
               <Button
@@ -136,7 +135,7 @@ export function ArticlesCatalog() {
                   setMaxReadingTime(ALL)
                 }}
               >
-                Limpiar filtros
+                {t.clearFilters}
               </Button>
             )}
           </Empty>
@@ -157,11 +156,11 @@ export function ArticlesCatalog() {
                     <p className="text-sm text-muted-foreground line-clamp-1">{article.summary}</p>
                     <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mt-1">
                       <Badge variant="outline" className="text-xs">
-                        {educationCategoryLabels[article.category]}
+                        {labels.educationCategories[article.category]}
                       </Badge>
                       <span className="flex items-center gap-1">
                         <ClockIcon className="size-3" />
-                        {article.readingTimeMinutes} min de lectura
+                        {messages.educationContent.readingTime(article.readingTimeMinutes)}
                       </span>
                       <span>
                         {formatDateText(article.publishedAt, { month: "short", day: "numeric" })}
@@ -170,7 +169,7 @@ export function ArticlesCatalog() {
                   </div>
                 </div>
                 <Button variant="ghost" size="sm">
-                  Leer
+                  {t.read}
                 </Button>
               </div>
             ))}

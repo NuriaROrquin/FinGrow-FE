@@ -1,5 +1,6 @@
 import { buildUrl } from "./config"
 import { ApiError, ClientErrorCodes, parseApiError } from "./errors"
+import { currentMessages } from "@/lib/i18n/messages"
 
 export interface RequestOptions {
   /** Parámetros de query. Los `undefined` y `null` se omiten. */
@@ -81,7 +82,7 @@ async function request<TResponse>(
 
     throw new ApiError({
       code: ClientErrorCodes.Network,
-      description: "No pudimos conectarnos con el servidor. Revisá tu conexión e intentá de nuevo.",
+      description: currentMessages().apiErrors.network,
       status: 0,
     })
   }

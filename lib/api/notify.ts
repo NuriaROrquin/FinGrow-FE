@@ -1,6 +1,7 @@
 import { toast } from "sonner"
 
 import { ApiError, isApiError } from "./errors"
+import { currentMessages } from "@/lib/i18n/messages"
 
 /**
  * Muestra un error de la API como toast.
@@ -15,7 +16,7 @@ export interface ToastApiErrorOptions {
 
 export function toastApiError(
   error: unknown,
-  fallbackMessage = "Ocurrió un error inesperado.",
+  fallbackMessage = currentMessages().apiErrors.unexpected,
   { showCode = true }: ToastApiErrorOptions = {},
 ): void {
   if (!isApiError(error)) {
@@ -29,6 +30,7 @@ export function toastApiError(
 }
 
 function buildDetail(error: ApiError, showCode: boolean): string | undefined {
+  const texts = currentMessages().apiErrors
   const parts: string[] = []
 
   if (error.fieldErrors) {
@@ -36,11 +38,11 @@ function buildDetail(error: ApiError, showCode: boolean): string | undefined {
   }
 
   if (parts.length === 0 && showCode) {
-    parts.push(`Código: ${error.code}`)
+    parts.push(texts.code(error.code))
   }
 
   if (error.traceId) {
-    parts.push(`Referencia: ${error.traceId}`)
+    parts.push(texts.reference(error.traceId))
   }
 
   return parts.length > 0 ? parts.join(" · ") : undefined

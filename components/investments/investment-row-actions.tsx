@@ -2,10 +2,10 @@
 
 import type { ReactNode } from "react"
 import { GraduationCapIcon, PencilIcon, Trash2 } from "lucide-react"
-import { investmentTypeTopics } from "@/components/investments/investment-type-topics"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import type { InvestmentDto, InvestmentType } from "@/lib/api"
+import { useMessages } from "@/lib/i18n"
 
 function ActionButton({
   label,
@@ -43,7 +43,8 @@ export function InvestmentRowActions({
   onEdit: (investment: InvestmentDto) => void
   onDelete: (investment: InvestmentDto) => void
 }) {
-  const learnLabel = `Aprender sobre ${investmentTypeTopics[investment.type]}`
+  const t = useMessages().investments
+  const learnLabel = t.learnAbout(t.topics[investment.type])
 
   return (
     <div className="flex items-center justify-end gap-1">
@@ -56,16 +57,16 @@ export function InvestmentRowActions({
         <GraduationCapIcon className="size-4" />
       </ActionButton>
       <ActionButton
-        label="Editar inversión"
-        ariaLabel={`Editar ${investment.assetName}`}
+        label={t.editAction}
+        ariaLabel={t.editAria(investment.assetName)}
         className="size-8"
         onClick={() => onEdit(investment)}
       >
         <PencilIcon className="size-4" />
       </ActionButton>
       <ActionButton
-        label="Eliminar inversión"
-        ariaLabel={`Eliminar ${investment.assetName}`}
+        label={t.deleteAction}
+        ariaLabel={t.deleteAria(investment.assetName)}
         className="size-8 text-destructive hover:text-destructive"
         onClick={() => onDelete(investment)}
       >

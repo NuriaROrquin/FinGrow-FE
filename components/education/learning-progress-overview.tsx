@@ -5,8 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { getLearningProgress, toastApiError, type LearningProgressDto } from "@/lib/api"
+import { useMessages, type Messages } from "@/lib/i18n"
 
 export function LearningProgressOverview() {
+  const t = useMessages().education
   const [progress, setProgress] = useState<LearningProgressDto | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
 
@@ -17,12 +19,12 @@ export function LearningProgressOverview() {
       .then(setProgress)
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return
-        toastApiError(error, "No se pudo cargar tu progreso de aprendizaje.")
+        toastApiError(error, t.progressLoadFailed)
         setLoadFailed(true)
       })
 
     return () => controller.abort()
-  }, [])
+  }, [t])
 
   const value = (amount: number | undefined, suffix = "") =>
     progress === null ? (
@@ -39,14 +41,14 @@ export function LearningProgressOverview() {
     <>
       <Card>
         <CardHeader className="pb-2">
-          <CardDescription>Progreso General</CardDescription>
+          <CardDescription>{t.overallProgress}</CardDescription>
           <CardTitle className="text-2xl">{value(progress?.progressPercentage, "%")}</CardTitle>
         </CardHeader>
         <CardContent>
           <Progress value={progress?.progressPercentage ?? 0} className="h-2" />
           {progress && (
             <p className="text-sm text-muted-foreground mt-2">
-              {progress.completedLessons} de {progress.lessonCount} lecciones
+              {t.lessonsOf(progress.completedLessons, progress.lessonCount)}
             </p>
           )}
         </CardContent>
@@ -54,13 +56,13 @@ export function LearningProgressOverview() {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardDescription>Cursos Completados</CardDescription>
+          <CardDescription>{t.completedCourses}</CardDescription>
           <CardTitle className="text-2xl">{value(progress?.completedCourses)}</CardTitle>
         </CardHeader>
         <CardContent>
           {progress && (
             <p className="text-sm text-muted-foreground">
-              de {progress.courseCount} {progress.courseCount === 1 ? "curso disponible" : "cursos disponibles"}
+              {t.ofAvailableCourses(progress.courseCount)}
             </p>
           )}
         </CardContent>
@@ -68,32 +70,30 @@ export function LearningProgressOverview() {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardDescription>Cursos En Curso</CardDescription>
+          <CardDescription>{t.inProgressCourses}</CardDescription>
           <CardTitle className="text-2xl">{value(progress?.inProgressCourses)}</CardTitle>
         </CardHeader>
         <CardContent>
-          {progress && <p className="text-sm text-muted-foreground">{progress.notStartedCourses} sin empezar</p>}
+          {progress && <p className="text-sm text-muted-foreground">{t.notStarted(progress.notStartedCourses)}</p>}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="pb-2">
-          <CardDescription>Racha de Aprendizaje</CardDescription>
+          <CardDescription>{t.streak}</CardDescription>
           <CardTitle className="text-2xl">
-            {value(progress?.streakWeeks, progress?.streakWeeks === 1 ? " semana" : " semanas")}
+            {value(progress?.streakWeeks, t.weeksSuffix(progress?.streakWeeks ?? 0))}
           </CardTitle>
         </CardHeader>
-        <CardContent>{progress && <p className="text-sm text-muted-foreground">{streakMessage(progress)}</p>}</CardContent>
+        <CardContent>{progress && <p className="text-sm text-muted-foreground">{streakMessage(progress, t)}</p>}</CardContent>
       </Card>
     </>
   )
 }
 
-function streakMessage(progress: LearningProgressDto): string {
+function streakMessage(progress: LearningProgressDto, t: Messages["education"]): string {
   if (progress.streakWeeks > 0) {
-    return progress.studiedThisWeek ? "¡Sigue así!" : "Completa una lección esta semana para sostenerla"
+    return progress.studiedThisWeek ? t.keepItUp : t.keepStreak
   }
-  return progress.completedLessons > 0
-    ? "Retoma tu racha completando una lección"
-    : "Completa tu primera lección para empezar"
+  return progress.completedLessons > 0 ? t.resumeStreak : t.startStreak
 }

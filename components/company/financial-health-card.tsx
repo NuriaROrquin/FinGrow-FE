@@ -11,7 +11,8 @@ import {
   type CompanyMetricsDto,
   type HealthBand,
 } from "@/lib/api"
-import { plural } from "@/lib/utils"
+import { formatDateText, formatNumber } from "@/lib/format"
+import { useMessages } from "@/lib/i18n"
 import { HealthBandBadge } from "./department-metrics-section"
 
 const ANONYMIZED_ERROR_CODE = "Metrics.Anonymized"
@@ -58,55 +59,48 @@ function toState(metrics: CompanyMetricsDto[]): FinancialHealthState {
   }
 }
 
-function toDate(period: string) {
-  const [year, month] = period.split("-").map(Number)
-  return new Date(year, month - 1, 1)
-}
-
 function monthAndYear(period: string) {
-  return new Intl.DateTimeFormat("es-AR", { month: "long", year: "numeric" }).format(toDate(period))
+  return formatDateText(period, { month: "long", year: "numeric" })
 }
 
 function monthName(period: string) {
-  return new Intl.DateTimeFormat("es-AR", { month: "long" }).format(toDate(period))
+  return formatDateText(period, { month: "long" })
 }
 
 function formatScore(value: number) {
-  return value.toLocaleString("es-AR", { maximumFractionDigits: 2 })
+  return formatNumber(value, { maximumFractionDigits: 2 })
 }
 
 function ScoreChange({ change, previousPeriod }: { change: number; previousPeriod: string }) {
-  const versus = `vs. ${monthName(previousPeriod)}`
+  const t = useMessages().companyPanel
+  const month = monthName(previousPeriod)
 
   if (change === 0) {
     return (
       <div className="flex items-center gap-1 text-muted-foreground">
         <MinusIcon className="size-4" />
-        <span>Sin cambios {versus}</span>
+        <span>{t.noChanges(month)}</span>
       </div>
     )
   }
 
-  const points = `${Math.abs(change).toLocaleString("es-AR", { maximumFractionDigits: 1 })} ${plural(Math.abs(change), "punto", "puntos")}`
+  const points = t.pointsVersus(formatNumber(Math.abs(change), { maximumFractionDigits: 1 }), Math.abs(change), month)
 
   return change > 0 ? (
     <div className="flex items-center gap-1 text-success">
       <TrendingUpIcon className="size-4" />
-      <span>
-        +{points} {versus}
-      </span>
+      <span>+{points}</span>
     </div>
   ) : (
     <div className="flex items-center gap-1 text-destructive">
       <TrendingDownIcon className="size-4" />
-      <span>
-        −{points} {versus}
-      </span>
+      <span>−{points}</span>
     </div>
   )
 }
 
 export function FinancialHealthCard() {
+  const t = useMessages().companyPanel
   const [state, setState] = useState<FinancialHealthState>({ status: "loading" })
 
   useEffect(() => {
@@ -123,16 +117,16 @@ export function FinancialHealthCard() {
         }
 
         setState({ status: "error" })
-        toastApiError(error, "No se pudo cargar la salud financiera promedio.")
+        toastApiError(error, t.healthLoadFailed)
       })
 
     return () => controller.abort()
-  }, [])
+  }, [t])
 
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardDescription>Salud Financiera Promedio</CardDescription>
+        <CardDescription>{t.averageHealth}</CardDescription>
         <CardTitle className="text-2xl">
           {state.status === "loading" ? (
             <Skeleton className="h-8 w-20" />
@@ -149,18 +143,16 @@ export function FinancialHealthCard() {
       <CardContent>
         {state.status === "loading" && <Skeleton className="h-5 w-full" />}
 
-        {state.status === "error" && <p className="text-sm text-muted-foreground">No disponible</p>}
+        {state.status === "error" && <p className="text-sm text-muted-foreground">{t.notAvailable}</p>}
 
         {state.status === "noPeriods" && (
-          <p className="text-sm text-muted-foreground">Todavía no hay meses cerrados para calcularla.</p>
+          <p className="text-sm text-muted-foreground">{t.noClosedMonths}</p>
         )}
 
         {state.status === "hidden" && (
           <div className="flex items-start gap-1 text-sm text-muted-foreground">
             <ShieldCheckIcon className="size-4 mt-0.5 shrink-0" />
-            <span>
-              Se muestra cuando hay suficientes empleados con actividad para calcularla sin identificar a nadie.
-            </span>
+            <span>{t.healthHidden}</span>
           </div>
         )}
 
@@ -169,7 +161,7 @@ export function FinancialHealthCard() {
             {state.change !== null && state.previousPeriod && (
               <ScoreChange change={state.change} previousPeriod={state.previousPeriod} />
             )}
-            <p>Promedio de {monthAndYear(state.period)}</p>
+            <p>{t.averageOf(monthAndYear(state.period))}</p>
           </div>
         )}
       </CardContent>

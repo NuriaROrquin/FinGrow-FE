@@ -36,6 +36,7 @@ import {
 } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
 import { formatDate, formatMoney } from "@/lib/format"
+import { useMessages } from "@/lib/i18n"
 
 function todayLocal(): string {
   const now = new Date()
@@ -63,6 +64,8 @@ export function GoalContributionsDialog({
   onOpenChange: (open: boolean) => void
   onGoalChange: (goal: GoalDto) => void
 }) {
+  const messages = useMessages()
+  const t = messages.goals
   const [contributions, setContributions] = useState<GoalContributionDto[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<GoalContributionDto | null>(null)
@@ -87,14 +90,14 @@ export function GoalContributionsDialog({
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return
-        toastApiError(error, "No se pudo cargar el historial de aportes.")
+        toastApiError(error, t.historyLoadFailed)
       })
       .finally(() => {
         if (!controller.signal.aborted) setIsLoading(false)
       })
 
     return () => controller.abort()
-  }, [goal.id, open])
+  }, [goal.id, open, t])
 
   const handleConfirmDelete = async () => {
     if (!pendingDelete) return
@@ -104,10 +107,10 @@ export function GoalContributionsDialog({
       const updatedGoal = await removeContribution(goal.id, pendingDelete.id)
       setContributions((current) => current.filter((contribution) => contribution.id !== pendingDelete.id))
       onGoalChange(updatedGoal)
-      toast.success("Aporte eliminado")
+      toast.success(t.contributionDeleted)
       setPendingDelete(null)
     } catch (error) {
-      toastApiError(error, "No se pudo eliminar el aporte.")
+      toastApiError(error, t.contributionDeleteFailed)
     } finally {
       setIsDeleting(false)
     }
@@ -134,8 +137,7 @@ export function GoalContributionsDialog({
           <DialogHeader>
             <DialogTitle>{goal.name}</DialogTitle>
             <DialogDescription>
-              {formatAmount(goal.currentAmount, goal.currency)} ahorrados de{" "}
-              {formatAmount(goal.targetAmount, goal.currency)}
+              {t.savedOf(formatAmount(goal.currentAmount, goal.currency), formatAmount(goal.targetAmount, goal.currency))}
             </DialogDescription>
           </DialogHeader>
 
@@ -157,16 +159,14 @@ export function GoalContributionsDialog({
             />
           ) : (
             <p className="text-sm text-muted-foreground">
-              {goal.status === "Achieved"
-                ? "¡Meta alcanzada! Ya no se pueden registrar más aportes."
-                : "Esta meta está cancelada."}
+              {goal.status === "Achieved" ? t.achievedNoMore : t.cancelled}
             </p>
           )}
 
           <Separator />
 
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold">Historial de aportes</h3>
+            <h3 className="text-sm font-semibold">{t.history}</h3>
             <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
               {isLoading ? (
                 <>
@@ -174,7 +174,7 @@ export function GoalContributionsDialog({
                   <Skeleton className="h-12 w-full" />
                 </>
               ) : contributions.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-2">Todavía no registraste aportes en esta meta.</p>
+                <p className="text-sm text-muted-foreground py-2">{t.noContributions}</p>
               ) : (
                 contributions.map((contribution) => (
                   <div
@@ -195,7 +195,7 @@ export function GoalContributionsDialog({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        aria-label="Eliminar aporte"
+                        aria-label={t.deleteContributionAria}
                         onClick={() => setPendingDelete(contribution)}
                       >
                         <Trash2Icon className="size-4 text-destructive" />
@@ -212,14 +212,17 @@ export function GoalContributionsDialog({
       <AlertDialog open={pendingDelete !== null} onOpenChange={(isOpen) => !isOpen && setPendingDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar este aporte?</AlertDialogTitle>
+            <AlertDialogTitle>{t.deleteContributionTitle}</AlertDialogTitle>
             <AlertDialogDescription>
               {pendingDelete &&
-                `Se va a quitar el aporte de ${formatAmount(pendingDelete.amount, pendingDelete.currency)} del ${formatDate(pendingDelete.contributedOn)} y el acumulado de la meta se va a recalcular.`}
+                t.deleteContributionWarning(
+                  formatAmount(pendingDelete.amount, pendingDelete.currency),
+                  formatDate(pendingDelete.contributedOn),
+                )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{messages.common.cancel}</AlertDialogCancel>
             <AlertDialogAction
               disabled={isDeleting}
               onClick={(e) => {
@@ -228,7 +231,7 @@ export function GoalContributionsDialog({
                 void handleConfirmDelete()
               }}
             >
-              {isDeleting ? "Eliminando..." : "Eliminar"}
+              {isDeleting ? t.deleting : t.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -248,6 +251,7 @@ function AddContributionForm({
   onRefreshGoal: () => Promise<GoalDto | null>
   isRefreshing: boolean
 }) {
+  const t = useMessages().goals
   const [amount, setAmount] = useState("")
   const [contributedOn, setContributedOn] = useState(todayLocal)
   const [note, setNote] = useState("")
@@ -270,7 +274,7 @@ function AddContributionForm({
       })
       onAdded(result.contribution, result.goal)
       toast.success(
-        result.goal.status === "Achieved" ? `¡Alcanzaste la meta "${result.goal.name}"!` : "Aporte registrado",
+        result.goal.status === "Achieved" ? t.goalReached(result.goal.name) : t.contributionAdded,
       )
       setAmount("")
       setNote("")
@@ -281,13 +285,13 @@ function AddContributionForm({
         fresh !== null && Math.abs(fresh.currentAmount - goal.currentAmount - attemptedAmount) < 0.005
 
       if (isApiError(error) && error.status === 409) {
-        toast.info("Esta meta ya no está activa: actualizamos su estado.")
+        toast.info(t.goalNoLongerActive)
       } else if (savedAnyway) {
-        toast.success("No recibimos la confirmación, pero el aporte quedó registrado.")
+        toast.success(t.savedWithoutConfirmation)
         setAmount("")
         setNote("")
       } else {
-        toastApiError(error, "No se pudo registrar el aporte.")
+        toastApiError(error, t.contributionFailed)
       }
     } finally {
       submittingRef.current = false
@@ -299,7 +303,7 @@ function AddContributionForm({
     <form onSubmit={handleSubmit} className="space-y-3">
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-2">
-          <Label htmlFor="contribution-amount">Monto ({goal.currency})</Label>
+          <Label htmlFor="contribution-amount">{t.amount(goal.currency)}</Label>
           <Input
             id="contribution-amount"
             type="number"
@@ -312,7 +316,7 @@ function AddContributionForm({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="contribution-date">Fecha</Label>
+          <Label htmlFor="contribution-date">{t.date}</Label>
           <Input
             id="contribution-date"
             type="date"
@@ -325,10 +329,10 @@ function AddContributionForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="contribution-note">Nota (opcional)</Label>
+        <Label htmlFor="contribution-note">{t.note}</Label>
         <Textarea
           id="contribution-note"
-          placeholder="ej., Parte del aguinaldo"
+          placeholder={t.notePlaceholder}
           maxLength={CONTRIBUTION_NOTE_MAX_LENGTH}
           value={note}
           onChange={(e) => setNote(e.target.value)}
@@ -338,7 +342,7 @@ function AddContributionForm({
 
       <div className="flex justify-end">
         <Button type="submit" disabled={isSubmitting || isRefreshing}>
-          {isSubmitting ? "Guardando..." : "Registrar aporte"}
+          {isSubmitting ? t.saving : t.addContribution}
         </Button>
       </div>
     </form>

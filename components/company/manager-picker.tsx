@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import type { CompanyEmployeeDto, DepartmentManagerDto } from "@/lib/api"
+import { useMessages } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
 interface ManagerOption {
@@ -31,6 +32,7 @@ export function ManagerPicker({
   onChange: (managerId: string | null) => void
   disabled?: boolean
 }) {
+  const t = useMessages().departments
   const [open, setOpen] = useState(false)
 
   const options = useMemo<ManagerOption[]>(() => {
@@ -72,21 +74,21 @@ export function ManagerPicker({
           className="w-full justify-between font-normal"
         >
           <span className={cn("truncate", !selected && "text-muted-foreground")}>
-            {selected ? selected.fullName : "Sin responsable"}
-            {selected && !selected.isActive && <span className="text-muted-foreground"> (sin acceso)</span>}
+            {selected ? selected.fullName : t.noManager}
+            {selected && !selected.isActive && <span className="text-muted-foreground">{t.withoutAccess}</span>}
           </span>
           <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[260px] p-0" align="start">
         <Command>
-          <CommandInput placeholder="Buscar por nombre o email..." />
+          <CommandInput placeholder={t.searchManager} />
           <CommandList>
-            <CommandEmpty>No hay empleados activos con ese nombre.</CommandEmpty>
+            <CommandEmpty>{t.noActiveEmployees}</CommandEmpty>
             <CommandGroup>
-              <CommandItem value="Sin responsable" onSelect={() => choose(null)}>
+              <CommandItem value={t.noManager} onSelect={() => choose(null)}>
                 <Check className={cn("size-4", value === null ? "opacity-100" : "opacity-0")} />
-                <span className="italic">Sin responsable</span>
+                <span className="italic">{t.noManager}</span>
               </CommandItem>
               {options.map((option) => (
                 <CommandItem
@@ -98,7 +100,7 @@ export function ManagerPicker({
                   <div className="flex min-w-0 flex-col">
                     <span className="truncate">
                       {option.fullName}
-                      {!option.isActive && <span className="text-muted-foreground"> (sin acceso)</span>}
+                      {!option.isActive && <span className="text-muted-foreground">{t.withoutAccess}</span>}
                     </span>
                     {(option.email || option.departmentName) && (
                       <span className="truncate text-xs text-muted-foreground">

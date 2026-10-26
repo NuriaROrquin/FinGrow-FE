@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { deleteGoal, toastApiError, type GoalDto } from "@/lib/api"
 import { formatMoney } from "@/lib/format"
+import { useMessages } from "@/lib/i18n"
 
 export function DeleteGoalDialog({
   goal,
@@ -26,6 +27,8 @@ export function DeleteGoalDialog({
   onOpenChange: (open: boolean) => void
   onDeleted: (goalId: string) => void
 }) {
+  const messages = useMessages()
+  const t = messages.goals
   const [isDeleting, setIsDeleting] = useState(false)
 
   const handleDelete = async () => {
@@ -33,10 +36,10 @@ export function DeleteGoalDialog({
     try {
       await deleteGoal(goal.id)
       onDeleted(goal.id)
-      toast.success(`Meta "${goal.name}" eliminada`)
+      toast.success(t.deleted(goal.name))
       onOpenChange(false)
     } catch (error) {
-      toastApiError(error, "No se pudo eliminar la meta.")
+      toastApiError(error, t.deleteFailed)
     } finally {
       setIsDeleting(false)
     }
@@ -46,15 +49,16 @@ export function DeleteGoalDialog({
     <AlertDialog open={open} onOpenChange={(next) => !isDeleting && onOpenChange(next)}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>¿Eliminar la meta &quot;{goal.name}&quot;?</AlertDialogTitle>
+          <AlertDialogTitle>{t.deleteTitle(goal.name)}</AlertDialogTitle>
           <AlertDialogDescription>
-            Llevás ahorrado {formatMoney(goal.currentAmount, goal.currency)} de{" "}
-            {formatMoney(goal.targetAmount, goal.currency)}. La meta deja de mostrarse y de contar en tus
-            reportes. Esta acción no se puede deshacer.
+            {t.deleteWarning(
+              formatMoney(goal.currentAmount, goal.currency),
+              formatMoney(goal.targetAmount, goal.currency),
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+          <AlertDialogCancel disabled={isDeleting}>{messages.common.cancel}</AlertDialogCancel>
           <AlertDialogAction
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             disabled={isDeleting}
@@ -63,7 +67,7 @@ export function DeleteGoalDialog({
               void handleDelete()
             }}
           >
-            {isDeleting ? "Eliminando..." : "Eliminar"}
+            {isDeleting ? t.deleting : t.delete}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

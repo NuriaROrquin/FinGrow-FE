@@ -34,10 +34,10 @@ import {
 import { useMessages } from "@/lib/i18n"
 
 import { LastSync } from "./last-sync"
+import { GMAIL_RESULT_PARAM } from "./link-result"
 import { formatLinkedDate, LINKED_ICON_CLASS } from "./link-code-integration-card"
 
 const PROVIDER = "gmail"
-const RESULT_PARAM = "gmail"
 
 export function GmailCard() {
   const t = useMessages()
@@ -64,7 +64,7 @@ export function GmailCard() {
 
   useEffect(() => {
     const url = new URL(window.location.href)
-    const result = url.searchParams.get(RESULT_PARAM) as GmailLinkResult | null
+    const result = url.searchParams.get(GMAIL_RESULT_PARAM) as GmailLinkResult | null
     if (result === null) return
 
     if (result === "linked") {
@@ -78,7 +78,7 @@ export function GmailCard() {
       })
     }
 
-    url.searchParams.delete(RESULT_PARAM)
+    url.searchParams.delete(GMAIL_RESULT_PARAM)
     url.searchParams.delete("reason")
     window.history.replaceState(window.history.state, "", url.toString())
   }, [t])
