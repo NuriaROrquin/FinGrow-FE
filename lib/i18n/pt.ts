@@ -1902,6 +1902,11 @@ export const pt: Messages = {
     columnAverageScore: "Pontuação Média",
     columnParticipation: "Participação",
     columnStatus: "Status",
+    attentionTitle: (count: number) => `Precisam de atenção (${count})`,
+    attentionDescription: "Departamentos com a pontuação média na faixa crítica ou frágil, da mais baixa para a mais alta.",
+    attentionParticipation: (percentage: string) => `${percentage} de participação`,
+    needsAttentionHint: "(precisa de atenção)",
+    noDepartmentNeedsAttention: "Nenhum departamento está na faixa crítica ou frágil.",
     anonymizedInsights: (month: string, minimum: number) =>
       `Em ${month} menos de ${minimum} funcionários tiveram atividade suficiente para medir sua saúde financeira. É exibida quando há funcionários suficientes para não identificar ninguém.`,
     concerns: {

@@ -1930,6 +1930,11 @@ export const es = {
     columnAverageScore: "Puntaje Promedio",
     columnParticipation: "Participación",
     columnStatus: "Estado",
+    attentionTitle: (count: number) => `Necesitan atención (${count})`,
+    attentionDescription: "Departamentos con el puntaje promedio en banda crítica o frágil, del más bajo al más alto.",
+    attentionParticipation: (percentage: string) => `${percentage} de participación`,
+    needsAttentionHint: "(necesita atención)",
+    noDepartmentNeedsAttention: "Ningún departamento está en banda crítica o frágil.",
     anonymizedInsights: (month: string, minimum: number) =>
       `En ${month} menos de ${minimum} empleados tuvieron actividad suficiente para medir su salud financiera. Se muestra cuando hay suficientes para no identificar a nadie.`,
     concerns: {

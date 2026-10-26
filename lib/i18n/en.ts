@@ -1896,6 +1896,11 @@ export const en: Messages = {
     columnAverageScore: "Average Score",
     columnParticipation: "Participation",
     columnStatus: "Status",
+    attentionTitle: (count: number) => `Need attention (${count})`,
+    attentionDescription: "Departments whose average score is in the critical or fragile band, from lowest to highest.",
+    attentionParticipation: (percentage: string) => `${percentage} participation`,
+    needsAttentionHint: "(needs attention)",
+    noDepartmentNeedsAttention: "No department is in the critical or fragile band.",
     anonymizedInsights: (month: string, minimum: number) =>
       `In ${month} fewer than ${minimum} employees had enough activity to measure their financial health. It's shown when there are enough to keep everyone anonymous.`,
     concerns: {

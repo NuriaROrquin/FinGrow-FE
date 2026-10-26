@@ -90,6 +90,7 @@ export function HealthBandBadge({ band }: { band: HealthBand | null }) {
 }
 
 function AttentionSummary({ departments }: { departments: DepartmentMetricsSummary[] }) {
+  const t = useMessages().companyPanel
   const titleId = useId()
   const departmentsNeedingAttention = departments.filter(needsAttention).sort(compareByScore)
   const hasVisibleBand = departments.some(
@@ -106,7 +107,7 @@ function AttentionSummary({ departments }: { departments: DepartmentMetricsSumma
         data-testid="departments-attention-none"
       >
         <CheckCircleIcon className="size-4 shrink-0 text-success" />
-        <span>Ningún departamento está en banda crítica o frágil.</span>
+        <span>{t.noDepartmentNeedsAttention}</span>
       </div>
     )
   }
@@ -120,11 +121,11 @@ function AttentionSummary({ departments }: { departments: DepartmentMetricsSumma
       <div className="flex items-center gap-2">
         <AlertTriangleIcon className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
         <h3 id={titleId} className="font-medium">
-          Necesitan atención ({departmentsNeedingAttention.length})
+          {t.attentionTitle(departmentsNeedingAttention.length)}
         </h3>
       </div>
       <p className="mt-1 text-sm text-muted-foreground">
-        Departamentos con el puntaje promedio en banda crítica o frágil, del más bajo al más alto.
+        {t.attentionDescription}
       </p>
       <ul className="mt-3 space-y-2">
         {departmentsNeedingAttention.map((department) => (
@@ -142,7 +143,7 @@ function AttentionSummary({ departments }: { departments: DepartmentMetricsSumma
               )}
               {department.participationRate !== null && (
                 <span className="text-muted-foreground whitespace-nowrap">
-                  {formatNumber(department.participationRate, 2)}% de participación
+                  {t.attentionParticipation(`${formatNumber(department.participationRate, 2)}%`)}
                 </span>
               )}
               <HealthBandBadge band={department.financialHealthBand} />
@@ -170,7 +171,7 @@ function DepartmentRow({ department }: { department: DepartmentMetricsSummary })
           <span className="flex items-center gap-2">
             <AlertTriangleIcon className="size-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
             {department.departmentName}
-            <span className="sr-only">(necesita atención)</span>
+            <span className="sr-only">{t.needsAttentionHint}</span>
           </span>
         ) : (
           department.departmentName
