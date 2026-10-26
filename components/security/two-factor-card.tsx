@@ -76,8 +76,8 @@ export function TwoFactorCard() {
       setEnabled(true)
       setSetup(null)
       setCode("")
-      toast.success("Doble factor activado", {
-        description: "Desde ahora te vamos a pedir el código de la app al iniciar sesión.",
+      toast.success(t.twoFactor.enabledToast, {
+        description: t.twoFactor.enabledToastDescription,
       })
     } catch (error) {
       toastApiError(error, t.twoFactor.enableFailed, { showCode: false })
@@ -97,8 +97,8 @@ export function TwoFactorCard() {
       await disableTwoFactor(code)
       setEnabled(false)
       setAskingDisableCode(false)
-      toast.success("Doble factor desactivado", {
-        description: "Ya no te vamos a pedir el código al iniciar sesión.",
+      toast.success(t.twoFactor.disabledToast, {
+        description: t.twoFactor.disabledToastDescription,
       })
     } catch (error) {
       if (isApiError(error) && error.status === 409) {
@@ -107,7 +107,7 @@ export function TwoFactorCard() {
         return
       }
 
-      toastApiError(error, "No pudimos desactivar el doble factor.", { showCode: false })
+      toastApiError(error, t.twoFactor.disableFailed, { showCode: false })
     } finally {
       setCode("")
       setDisabling(false)
@@ -147,17 +147,13 @@ export function TwoFactorCard() {
         <>
           <Alert>
             <CheckCircle2 className="h-4 w-4" />
-            <AlertDescription>
-              Al iniciar sesión, además de la contraseña te pedimos el código de 6 dígitos de tu app de autenticación.
-            </AlertDescription>
+            <AlertDescription>{t.twoFactor.enabledInfo}</AlertDescription>
           </Alert>
 
           {askingDisableCode ? (
             <form onSubmit={disable} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="two-factor-disable-code">
-                  Para desactivarlo, ingresá el código que muestra tu app de autenticación
-                </Label>
+                <Label htmlFor="two-factor-disable-code">{t.twoFactor.disableCodeLabel}</Label>
                 <InputOTP
                   id="two-factor-disable-code"
                   maxLength={TWO_FACTOR_CODE_LENGTH}
@@ -182,16 +178,16 @@ export function TwoFactorCard() {
                   disabled={disabling || code.length !== TWO_FACTOR_CODE_LENGTH}
                 >
                   {disabling && <Spinner className="mr-2" />}
-                  Desactivar doble factor
+                  {t.twoFactor.disable}
                 </Button>
                 <Button type="button" variant="ghost" onClick={cancelDisable} disabled={disabling}>
-                  Cancelar
+                  {t.common.cancel}
                 </Button>
               </div>
             </form>
           ) : (
             <Button variant="outline" onClick={() => setAskingDisableCode(true)} className="w-full sm:w-auto">
-              Desactivar doble factor
+              {t.twoFactor.disable}
             </Button>
           )}
         </>

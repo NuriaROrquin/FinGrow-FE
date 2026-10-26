@@ -11,6 +11,10 @@ const api = vi.hoisted(() => ({
 }))
 
 vi.mock("@/lib/api", () => api)
+vi.mock("@/lib/i18n", async () => {
+  const { es } = await import("@/lib/i18n/es")
+  return { useMessages: () => es }
+})
 
 function month(period: string, averageFinancialHealthScore: number | null): CompanyMetricsDto {
   return {

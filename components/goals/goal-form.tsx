@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { currencyLabels } from "@/components/budgets/budget-month"
 import { createGoal, GOAL_NAME_MAX_LENGTH, toastApiError, updateGoal, type GoalDto } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
+import { useMessages } from "@/lib/i18n"
 import { usePreferences } from "@/lib/preferences-context"
 
 function todayLocal(): string {
@@ -28,6 +29,8 @@ export function GoalForm({
   onSaved?: (goal: GoalDto) => void
   onClose: () => void
 }) {
+  const messages = useMessages()
+  const t = messages.goals
   const isEditing = goal !== undefined
   const { preferences } = usePreferences()
   const [name, setName] = useState(goal?.name ?? "")
@@ -46,11 +49,11 @@ export function GoalForm({
         ? await updateGoal(goal.id, details)
         : await createGoal({ ...details, currency })
       onSaved?.(saved)
-      toast.success(isEditing ? `Meta "${saved.name}" actualizada` : `Meta "${saved.name}" creada`)
+      toast.success(isEditing ? t.updated(saved.name) : t.created(saved.name))
       onClose()
     } catch (error) {
       // Si el validador del backend rechaza la fecha o el monto, el mensaje ya viene en castellano.
-      toastApiError(error, isEditing ? "No se pudo actualizar la meta." : "No se pudo crear la meta.")
+      toastApiError(error, isEditing ? t.updateFailed : t.createFailed)
     } finally {
       setIsSubmitting(false)
     }
@@ -59,10 +62,10 @@ export function GoalForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="goal-name">Nombre de la Meta</Label>
+        <Label htmlFor="goal-name">{t.name}</Label>
         <Input
           id="goal-name"
-          placeholder="ej., Fondo de Emergencia"
+          placeholder={t.namePlaceholder}
           maxLength={GOAL_NAME_MAX_LENGTH}
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -72,7 +75,7 @@ export function GoalForm({
 
       <div className="grid grid-cols-3 gap-2">
         <div className="col-span-2 space-y-2">
-          <Label htmlFor="goal-target">Monto Objetivo</Label>
+          <Label htmlFor="goal-target">{t.targetAmount}</Label>
           <Input
             id="goal-target"
             type="number"
@@ -85,9 +88,9 @@ export function GoalForm({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="goal-currency">Moneda</Label>
+          <Label htmlFor="goal-currency">{t.currency}</Label>
           <Select value={currency} onValueChange={(value) => setCurrency(value as Currency)} disabled={isEditing}>
-            <SelectTrigger id="goal-currency" title={isEditing ? "La moneda de una meta no se puede cambiar" : undefined}>
+            <SelectTrigger id="goal-currency" title={isEditing ? t.currencyLocked : undefined}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -102,7 +105,7 @@ export function GoalForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="goal-deadline">Fecha Límite</Label>
+        <Label htmlFor="goal-deadline">{t.deadline}</Label>
         <Input
           id="goal-deadline"
           type="date"
@@ -115,10 +118,10 @@ export function GoalForm({
 
       <div className="flex gap-2 justify-end pt-4">
         <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-          Cancelar
+          {messages.common.cancel}
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Guardando..." : isEditing ? "Guardar cambios" : "Crear Meta"}
+          {isSubmitting ? t.saving : isEditing ? t.saveChanges : t.create}
         </Button>
       </div>
     </form>

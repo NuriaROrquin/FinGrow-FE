@@ -1,13 +1,9 @@
 "use client"
 
-import type { Language } from "@/lib/api/preferences"
 import { usePreferences } from "@/lib/preferences-context"
 
-import { en } from "./en"
-import { es, type Messages } from "./es"
-import { pt } from "./pt"
-
-const messagesByLanguage: Record<Language, Messages> = { es, en, pt }
+import type { Messages } from "./es"
+import { messagesFor } from "./messages"
 
 /**
  * Textos de la interfaz en el idioma que eligió el empleado.
@@ -22,8 +18,5 @@ export function useMessages(): Messages {
   return messagesFor(applicationLanguage ?? preferences.language)
 }
 
-export function messagesFor(language: Language): Messages {
-  return messagesByLanguage[language]
-}
-
+export { currentMessages, messagesFor } from "./messages"
 export type { Messages }

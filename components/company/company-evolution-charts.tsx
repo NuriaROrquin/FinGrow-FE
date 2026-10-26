@@ -6,6 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useIsReportExport } from "@/components/reports/report-export-context"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts"
 import type { CompanyMetricsDto } from "@/lib/api"
+import { formatDateText, formatNumber } from "@/lib/format"
+import { useMessages } from "@/lib/i18n"
 
 /** Lo que la página pide una sola vez a `GET /api/company/metrics` y comparten el panel y el PDF (HU-65). */
 export interface CompanyMetricsState {
@@ -14,29 +16,13 @@ export interface CompanyMetricsState {
   isLoading: boolean
 }
 
-const chartConfig = {
-  active: {
-    label: "Tasa de participación",
-    color: "#8b5cf6",
-  },
-  enrolled: {
-    label: "Empleados participantes",
-    color: "#a78bfa",
-  },
-  score: {
-    label: "Puntaje de Salud",
-    color: "#8b5cf6",
-  },
-}
-
 function formatPeriod(period: string): string {
-  const [year, month, day] = period.split("-").map(Number)
-  const label = new Intl.DateTimeFormat("es-AR", { month: "short" }).format(new Date(year, month - 1, day))
-  return label.charAt(0).toLocaleUpperCase("es-AR") + label.slice(1)
+  const label = formatDateText(period, { month: "short" })
+  return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
 function formatRate(rate: number): string {
-  return `${rate.toLocaleString("es-AR", { maximumFractionDigits: 1 })}%`
+  return `${formatNumber(rate, { maximumFractionDigits: 1 })}%`
 }
 
 /**
@@ -45,7 +31,13 @@ function formatRate(rate: number): string {
  * (`ReportExportProvider`) van uno debajo del otro y sin animación, para que se capturen completos.
  */
 export function CompanyEvolutionCharts({ metrics, error, isLoading }: CompanyMetricsState) {
+  const t = useMessages().companyPanel
   const isExport = useIsReportExport()
+  const chartConfig = {
+    active: { label: t.chartParticipationRate, color: "#8b5cf6" },
+    enrolled: { label: t.chartParticipatingEmployees, color: "#a78bfa" },
+    score: { label: t.chartHealthScore, color: "#8b5cf6" },
+  }
   const periods = metrics
   const participationChartData = periods.map((metric) => ({
     month: formatPeriod(metric.period),
@@ -61,8 +53,8 @@ export function CompanyEvolutionCharts({ metrics, error, isLoading }: CompanyMet
     <div className={isExport ? "grid gap-4" : "grid gap-4 grid-cols-1 md:grid-cols-2"}>
       <Card>
         <CardHeader>
-          <CardTitle>Participación de Empleados</CardTitle>
-          <CardDescription>Usuarios activos vs empleados inscritos en el tiempo</CardDescription>
+          <CardTitle>{t.participationTitle}</CardTitle>
+          <CardDescription>{t.participationDescription}</CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {isLoading ? (
@@ -71,7 +63,7 @@ export function CompanyEvolutionCharts({ metrics, error, isLoading }: CompanyMet
             <p className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">{error}</p>
           ) : periods.length === 0 ? (
             <p className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
-              No hay períodos para mostrar.
+              {t.noPeriods}
             </p>
           ) : (
             <ChartContainer config={chartConfig} className="h-[300px] w-full min-w-[300px]">
@@ -85,7 +77,7 @@ export function CompanyEvolutionCharts({ metrics, error, isLoading }: CompanyMet
                     <ChartTooltipContent
                       formatter={(value, name) => {
                         if (typeof value !== "number") return "—"
-                        return name === chartConfig.enrolled.label ? value.toLocaleString("es-AR") : formatRate(value)
+                        return name === chartConfig.enrolled.label ? formatNumber(value) : formatRate(value)
                       }}
                     />
                   }
@@ -115,8 +107,8 @@ export function CompanyEvolutionCharts({ metrics, error, isLoading }: CompanyMet
 
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>Tendencia de Salud Financiera</CardTitle>
-          <CardDescription>Puntaje promedio de salud financiera de empleados</CardDescription>
+          <CardTitle>{t.healthTrendTitle}</CardTitle>
+          <CardDescription>{t.healthTrendDescription}</CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {isLoading ? (
@@ -125,11 +117,11 @@ export function CompanyEvolutionCharts({ metrics, error, isLoading }: CompanyMet
             <p className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">{error}</p>
           ) : periods.length === 0 ? (
             <p className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
-              No hay períodos para mostrar.
+              {t.noPeriods}
             </p>
           ) : financialHealthChartData.every(({ score }) => score === null) ? (
             <p className="flex h-[300px] items-center justify-center text-center text-sm text-muted-foreground">
-              El puntaje se oculta en los meses con pocos empleados con actividad, para no identificar a nadie.
+              {t.scoreHiddenAll}
             </p>
           ) : (
             <ChartContainer config={chartConfig} className="h-[300px] w-full min-w-[300px]">
@@ -138,7 +130,13 @@ export function CompanyEvolutionCharts({ metrics, error, isLoading }: CompanyMet
                 <XAxis dataKey="month" />
                 <YAxis domain={[0, 100]} />
                 <ChartTooltip
-                  content={<ChartTooltipContent formatter={(value) => typeof value === "number" ? `${value.toLocaleString("es-AR", { maximumFractionDigits: 2 })}/100` : "Oculto"} />}
+                  content={
+                    <ChartTooltipContent
+                      formatter={(value) =>
+                        typeof value === "number" ? `${formatNumber(value, { maximumFractionDigits: 2 })}/100` : t.hidden
+                      }
+                    />
+                  }
                   cursor={{ stroke: "rgba(0, 0, 0, 0.2)" }}
                 />
                 <Line

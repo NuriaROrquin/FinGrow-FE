@@ -4,15 +4,18 @@ import { AchievementMedal } from "@/components/achievements/achievement-medal"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import type { AchievementDto } from "@/lib/api"
 import { formatDate } from "@/lib/format"
+import { useMessages } from "@/lib/i18n"
 
 // Los meses destacados (mayor ingreso, mayor gasto, mejor ahorro) son de HU-41 y están en
 // `monthly-highlights-card.tsx`: acá quedan los hitos alcanzados de HU-44, que son los logros del período.
 export function FinancialSummaryCard({ achievements }: { achievements: AchievementDto[] }) {
+  const t = useMessages().reports
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Hitos Alcanzados</CardTitle>
-        <CardDescription>Los logros que ganaste en el período</CardDescription>
+        <CardTitle>{t.milestonesTitle}</CardTitle>
+        <CardDescription>{t.milestonesDescription}</CardDescription>
       </CardHeader>
       <CardContent>
         {achievements.length > 0 ? (
@@ -31,7 +34,7 @@ export function FinancialSummaryCard({ achievements }: { achievements: Achieveme
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">Todavía no ganaste logros en este período.</p>
+          <p className="text-sm text-muted-foreground">{t.noMilestones}</p>
         )}
       </CardContent>
     </Card>

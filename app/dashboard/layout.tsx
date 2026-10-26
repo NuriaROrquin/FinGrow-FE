@@ -123,7 +123,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               >
                 <Image
                     src="/9.png"
-                    alt="FinGrow Logo"
+                    alt={t.home.logoAlt}
                     width={60}
                     height={40}
                     className="object-contain"
@@ -201,7 +201,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             >
               <Image
                   src="/9.png"
-                  alt="FinGrow Logo"
+                  alt={t.home.logoAlt}
                   width={20}
                   height={10}
                   className="object-contain cursor-pointer"

@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { educationCategoryLabels, getArticle, isApiError, toastApiError, type ArticleDto } from "@/lib/api"
+import { getArticle, isApiError, toastApiError, type ArticleDto } from "@/lib/api"
+import { useMessages } from "@/lib/i18n"
 import { formatDateText } from "@/lib/format"
 
 const BACK_TO_ARTICLES = "/dashboard/education?tab=articles"
@@ -18,10 +19,13 @@ const BACK_TO_ARTICLES = "/dashboard/education?tab=articles"
 type LoadState = { status: "loading" } | { status: "loaded"; article: ArticleDto } | { status: "not-found" } | { status: "error" }
 
 export default function ArticlePage() {
+  const messages = useMessages()
+  const labels = messages.labels
+  const t = messages.education
   const params = useParams<{ slug: string }>()
   const router = useRouter()
   const [state, setState] = useState<LoadState>({ status: "loading" })
-  const back = useBackTarget({ href: BACK_TO_ARTICLES, label: "Volver a Educación" })
+  const back = useBackTarget({ href: BACK_TO_ARTICLES, label: t.backToEducation })
 
   useEffect(() => {
     const controller = new AbortController()
@@ -35,12 +39,12 @@ export default function ArticlePage() {
           setState({ status: "not-found" })
           return
         }
-        toastApiError(error, "No se pudo cargar el artículo.")
+        toastApiError(error, t.articleLoadFailed)
         setState({ status: "error" })
       })
 
     return () => controller.abort()
-  }, [params.slug])
+  }, [params.slug, t])
 
   const backButton = (
     <Button variant="ghost" size="icon" aria-label={back.label} onClick={() => router.push(back.href)}>
@@ -69,7 +73,7 @@ export default function ArticlePage() {
         <div className="flex items-center gap-4">
           {backButton}
           <h1 className="text-3xl font-bold">
-            {state.status === "not-found" ? "Artículo no encontrado" : "No se pudo cargar el artículo"}
+            {state.status === "not-found" ? t.articleNotFound : t.articleFailedTitle}
           </h1>
         </div>
       </div>
@@ -85,10 +89,10 @@ export default function ArticlePage() {
         <div className="flex-1">
           <h1 className="text-3xl font-bold">{article.title}</h1>
           <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-muted-foreground">
-            <Badge variant="outline">{educationCategoryLabels[article.category]}</Badge>
+            <Badge variant="outline">{labels.educationCategories[article.category]}</Badge>
             <span className="flex items-center gap-1">
               <ClockIcon className="size-3" />
-              {article.readingTimeMinutes} min de lectura
+              {messages.educationContent.readingTime(article.readingTimeMinutes)}
             </span>
             <span>
               {formatDateText(article.publishedAt, { month: "long", day: "numeric", year: "numeric" })}

@@ -1,12 +1,17 @@
+"use client"
+
 import Image from "next/image"
 import { AuthenticatedRedirect } from "@/components/home/authenticated-redirect"
 import { CurrentYear } from "@/components/home/current-year"
 import { LoginForm } from "@/components/home/login-form"
 import { FINGROW_CONTACT_EMAIL } from "@/lib/contact"
+import { useMessages } from "@/lib/i18n"
 
 const leafColors = ["bg-[#559AC8]", "bg-[#7154B3]", "bg-[#FDA540]", "bg-[#F1573C]"]
 
 export default function HomePage() {
+  const t = useMessages().home
+
   return (
     <div className="min-h-screen bg-background lg:grid lg:grid-cols-[1.15fr_1fr]">
       <AuthenticatedRedirect />
@@ -15,7 +20,7 @@ export default function HomePage() {
         <div className="relative h-48 overflow-hidden rounded-3xl sm:h-64 lg:h-full">
           <Image
             src="/login-hero.webp"
-            alt="Empleada revisando sus finanzas en el celular, con el panel de FinGrow abierto en la notebook"
+            alt={t.heroAlt}
             fill
             priority
             sizes="(min-width: 1024px) 55vw, 100vw"
@@ -35,10 +40,10 @@ export default function HomePage() {
               ))}
             </div>
             <p className="mt-6 max-w-lg text-5xl font-semibold leading-[1.05] tracking-tight text-white xl:text-6xl">
-              Tus finanzas, en crecimiento.
+              {t.heroTitle}
             </p>
             <p className="mt-4 max-w-md text-lg text-white/80">
-              Bienestar financiero para cada persona y para la empresa que la acompaña.
+              {t.heroSubtitle}
             </p>
           </div>
         </div>
@@ -50,14 +55,14 @@ export default function HomePage() {
             <LoginForm />
 
             <div className="mt-8 space-y-1.5 border-t pt-6 text-sm text-muted-foreground">
-              <p>¿No tenés cuenta? Tu empresa te da el acceso.</p>
+              <p>{t.noAccount}</p>
               <p>
-                ¿Sos una empresa?{" "}
+                {t.areYouCompany}{" "}
                 <a
                   href={`mailto:${FINGROW_CONTACT_EMAIL}`}
                   className="font-medium text-primary underline-offset-4 hover:underline"
                 >
-                  Contactá a FinGrow
+                  {t.contactLink}
                 </a>
               </p>
             </div>
@@ -65,7 +70,7 @@ export default function HomePage() {
         </div>
 
         <footer className="pt-10 text-center text-xs text-muted-foreground">
-          © <CurrentYear /> FinGrow. Plataforma de educación y bienestar financiero.
+          © <CurrentYear /> {t.footer}
         </footer>
       </main>
     </div>

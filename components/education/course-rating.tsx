@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { rateCourse, toastApiError, type CourseDetailDto } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { formatNumber } from "@/lib/format"
+import { useMessages } from "@/lib/i18n"
 
 const scores = [1, 2, 3, 4, 5]
 
@@ -23,6 +24,7 @@ function formatAverage(average: number): string {
 }
 
 export function CourseRating({ slug, averageRating, ratingCount, myRating, canRate, onRated }: CourseRatingProps) {
+  const t = useMessages().education
   const [hovered, setHovered] = useState(0)
   const [isSaving, setIsSaving] = useState(false)
 
@@ -31,9 +33,9 @@ export function CourseRating({ slug, averageRating, ratingCount, myRating, canRa
     try {
       const updated = await rateCourse(slug, score)
       onRated(updated)
-      toast.success(myRating === null ? "¡Gracias por calificar el curso!" : "Actualizamos tu calificación")
+      toast.success(myRating === null ? t.ratingThanks : t.ratingUpdated)
     } catch (error) {
-      toastApiError(error, "No se pudo guardar tu calificación.")
+      toastApiError(error, t.ratingFailed)
     } finally {
       setIsSaving(false)
     }
@@ -46,11 +48,11 @@ export function CourseRating({ slug, averageRating, ratingCount, myRating, canRa
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <StarIcon className={cn("size-4", averageRating !== null && "fill-yellow-400 text-yellow-400")} />
         {averageRating === null ? (
-          <span>Sin calificaciones todavía</span>
+          <span>{t.noRatings}</span>
         ) : (
           <span>
             <span className="font-medium text-foreground">{formatAverage(averageRating)}</span> ·{" "}
-            {ratingCount === 1 ? "1 calificación" : `${ratingCount} calificaciones`}
+            {t.ratingCount(ratingCount)}
           </span>
         )}
       </div>
@@ -58,7 +60,7 @@ export function CourseRating({ slug, averageRating, ratingCount, myRating, canRa
       {canRate ? (
         <div className="space-y-1">
           <p className="text-sm font-medium text-muted-foreground">
-            {myRating === null ? "Calificá este curso:" : "Tu calificación:"}
+            {myRating === null ? t.rateThisCourse : t.yourRating}
           </p>
           <div className="flex items-center gap-1" onMouseLeave={() => setHovered(0)}>
             {scores.map((score) => (
@@ -69,7 +71,7 @@ export function CourseRating({ slug, averageRating, ratingCount, myRating, canRa
                 onClick={() => handleRate(score)}
                 onMouseEnter={() => setHovered(score)}
                 className="transition-transform hover:scale-110 focus:outline-none disabled:opacity-50"
-                aria-label={`Calificar con ${score} estrella${score > 1 ? "s" : ""}`}
+                aria-label={t.rateWith(score)}
                 aria-pressed={myRating === score}
               >
                 <StarIcon
@@ -84,7 +86,7 @@ export function CourseRating({ slug, averageRating, ratingCount, myRating, canRa
           </div>
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground">Terminá el curso para calificarlo.</p>
+        <p className="text-xs text-muted-foreground">{t.finishToRate}</p>
       )}
     </div>
   )

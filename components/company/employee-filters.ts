@@ -26,20 +26,6 @@ export const defaultEmployeeFilters: EmployeeFilterValues = {
   hiredTo: "",
 }
 
-export const statusFilterLabels: Record<EmployeeStatusFilter, string> = {
-  all: "Todos",
-  active: "Activos",
-  inactive: "Inactivos",
-}
-
-export const lastLoginFilterLabels: Record<LastLoginFilter, string> = {
-  any: "Cualquiera",
-  last7: "En los últimos 7 días",
-  last30: "En los últimos 30 días",
-  over30: "Hace más de 30 días",
-  never: "Nunca ingresó",
-}
-
 export type EmployeeSortField =
   | "fullName"
   | "email"
@@ -68,10 +54,9 @@ export function hasActiveFilters(values: EmployeeFilterValues): boolean {
   )
 }
 
-export function filtersError(values: EmployeeFilterValues): string | null {
-  return values.hiredFrom && values.hiredTo && values.hiredFrom > values.hiredTo
-    ? "La fecha de alta desde no puede ser posterior a la fecha hasta."
-    : null
+/** `true` cuando el rango de fechas de alta está al revés: el texto del error lo pone la barra de filtros. */
+export function hasHiredRangeError(values: EmployeeFilterValues): boolean {
+  return Boolean(values.hiredFrom && values.hiredTo && values.hiredFrom > values.hiredTo)
 }
 
 function matchesSearch(employee: CompanyEmployeeDto, search: string): boolean {
@@ -155,7 +140,7 @@ const employeeSortValues: SortAccessors<CompanyEmployeeDto, EmployeeSortField> =
   departmentName: (employee) => employee.departmentName,
   hiredOn: (employee) => toDate(employee.hiredOn),
   lastLoginAt: (employee) => toDate(employee.lastLoginAt),
-  isActive: (employee) => (employee.isActive ? statusFilterLabels.active : statusFilterLabels.inactive),
+  isActive: (employee) => (employee.isActive ? "active" : "inactive"),
 }
 
 export function sortEmployees(employees: CompanyEmployeeDto[], sort: EmployeeSort): CompanyEmployeeDto[] {

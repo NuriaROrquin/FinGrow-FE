@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import type { MonthAmountDto, MonthlySummaryDto } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
 import { formatDateText, formatMoney } from "@/lib/format"
+import { useMessages } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
 type Tone = "success" | "destructive" | "primary"
@@ -23,11 +24,12 @@ interface Highlight {
   tone: Tone
 }
 
-function monthLabel(month: MonthAmountDto | null): string {
-  return month ? formatDateText(new Date(month.year, month.month - 1, 1), { month: "long", year: "numeric" }) : "Sin datos"
+function monthLabel(month: MonthAmountDto | null, noData: string): string {
+  return month ? formatDateText(new Date(month.year, month.month - 1, 1), { month: "long", year: "numeric" }) : noData
 }
 
 function HighlightRow({ highlight, currency }: { highlight: Highlight; currency: Currency }) {
+  const t = useMessages().reports
   const Icon = highlight.icon
   const tone = toneStyles[highlight.tone]
 
@@ -37,7 +39,7 @@ function HighlightRow({ highlight, currency }: { highlight: Highlight; currency:
         <Icon className={cn("size-5 shrink-0", tone.text)} />
         <div>
           <p className="font-medium">{highlight.label}</p>
-          <p className="text-sm text-muted-foreground first-letter:uppercase">{monthLabel(highlight.month)}</p>
+          <p className="text-sm text-muted-foreground first-letter:uppercase">{monthLabel(highlight.month, t.noData)}</p>
         </div>
       </div>
       <span className={cn("font-semibold whitespace-nowrap", tone.text)}>
@@ -54,28 +56,27 @@ interface MonthlyHighlightsCardProps {
 
 /** Los tres meses destacados de HU-41: los calcula el backend sobre la misma serie del gráfico. */
 export function MonthlyHighlightsCard({ summary, isLoading }: MonthlyHighlightsCardProps) {
+  const t = useMessages().reports
   const highlights: Highlight[] = summary
     ? [
-        { label: "Mes con Mayor Ingreso", month: summary.highlights.highestIncomeMonth, icon: TrendingUpIcon, tone: "success" },
-        { label: "Mes con Mayor Gasto", month: summary.highlights.highestExpenseMonth, icon: TrendingDownIcon, tone: "destructive" },
-        { label: "Mejor Mes de Ahorro", month: summary.highlights.bestSavingsMonth, icon: DollarSignIcon, tone: "primary" },
+        { label: t.highestIncomeMonth, month: summary.highlights.highestIncomeMonth, icon: TrendingUpIcon, tone: "success" },
+        { label: t.highestExpenseMonth, month: summary.highlights.highestExpenseMonth, icon: TrendingDownIcon, tone: "destructive" },
+        { label: t.bestSavingsMonth, month: summary.highlights.bestSavingsMonth, icon: DollarSignIcon, tone: "primary" },
       ]
     : []
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Meses Destacados</CardTitle>
-        <CardDescription>{summary ? `Sobre la serie del gráfico, en ${summary.currency}` : "Sobre la serie del gráfico"}</CardDescription>
+        <CardTitle>{t.highlightsTitle}</CardTitle>
+        <CardDescription>{summary ? t.highlightsDescriptionIn(summary.currency) : t.highlightsDescription}</CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading && !summary ? (
           <Skeleton className="h-[220px] w-full" />
         ) : !summary || summary.months.length === 0 ? (
           <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
-            {summary
-              ? `No hay movimientos confirmados en ${summary.currency} en este período.`
-              : "No se pudieron cargar los meses destacados."}
+            {summary ? t.noMovements(summary.currency) : t.highlightsLoadFailed}
           </p>
         ) : (
           <div className="space-y-4">

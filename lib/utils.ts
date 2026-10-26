@@ -11,7 +11,3 @@ export function normalizeForSearch(text: string): string {
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
 }
-
-export function plural(count: number, singular: string, pluralForm: string): string {
-  return count === 1 ? singular : pluralForm
-}

@@ -11,14 +11,9 @@ import { ConfidenceBadge } from "@/components/transactions/confidence-badge"
 import { PendingReviewDialogs, usePendingReview } from "@/components/transactions/pending-review"
 import { getCategoryIcon } from "@/components/transactions/transaction-icons"
 import type { PendingTransactionsState } from "@/components/transactions/use-pending-transactions"
-import {
-  expenseCategoryLabels,
-  incomeCategoryLabels,
-  type ConfidenceLevel,
-  type PendingTransactionDto,
-} from "@/lib/api/transactions"
+import type { ConfidenceLevel, PendingTransactionDto } from "@/lib/api/transactions"
 import { formatDate, formatMoney } from "@/lib/format"
-import { useMessages } from "@/lib/i18n"
+import { useMessages, type Messages } from "@/lib/i18n"
 import { sortRows, toDate, toggleSort, type SortAccessors, type SortState } from "@/lib/sort"
 
 const headClassName = "py-3 pr-2 text-left align-middle whitespace-nowrap"
@@ -32,8 +27,9 @@ function signedAmount(transaction: PendingTransactionDto): number {
   return transaction.type === "Income" ? Math.abs(transaction.amount) : -Math.abs(transaction.amount)
 }
 
-function categoryLabel(transaction: PendingTransactionDto): string {
-  const labels: Record<string, string> = transaction.type === "Expense" ? expenseCategoryLabels : incomeCategoryLabels
+function categoryLabel(transaction: PendingTransactionDto, { labels: allLabels }: Messages): string {
+  const labels: Record<string, string> =
+    transaction.type === "Expense" ? allLabels.expenseCategories : allLabels.incomeCategories
 
   return labels[transaction.category] ?? transaction.category
 }
@@ -47,7 +43,8 @@ export function PendingInbox({
   onConfirmed: () => void
   className?: string
 }) {
-  const t = useMessages().pendingInbox
+  const messages = useMessages()
+  const t = messages.pendingInbox
   const { items, isLoading, hasError, reload, remove } = pending
   const review = usePendingReview({ onRemoved: remove, onConfirmed })
   const [sort, setSort] = useState<SortState<PendingSortField> | null>(null)
@@ -57,7 +54,7 @@ export function PendingInbox({
       occurredOn: (transaction) => toDate(transaction.occurredOn),
       type: (transaction) => (transaction.type === "Income" ? t.typeIncome : t.typeExpense),
       description: (transaction) => transaction.description,
-      category: categoryLabel,
+      category: (transaction) => categoryLabel(transaction, messages),
       confidence: (transaction) =>
         transaction.aiConfidenceLevel === null ? null : confidenceRank[transaction.aiConfidenceLevel],
       source: (transaction) => t.sources[transaction.source] ?? transaction.source,
@@ -65,7 +62,7 @@ export function PendingInbox({
     }
 
     return sortRows(items, sort, accessors)
-  }, [items, sort, t])
+  }, [items, sort, t, messages])
 
   const handleSort = (field: PendingSortField) =>
     setSort((current) => toggleSort(current, field, ["occurredOn", "amount"]))
@@ -152,7 +149,7 @@ export function PendingInbox({
                 </TableHeader>
                 <TableBody>
                   {sortedItems.map((transaction) => {
-                    const label = categoryLabel(transaction)
+                    const label = categoryLabel(transaction, messages)
                     const CategoryIcon = getCategoryIcon(transaction.category)
 
                     return (

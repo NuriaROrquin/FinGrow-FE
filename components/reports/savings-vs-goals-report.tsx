@@ -16,18 +16,11 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { formatDateInput, formatPeriodLabel } from "@/components/period-filter"
 import type { SavingsVsGoalsDto } from "@/lib/api"
 import type { Currency } from "@/lib/api/transactions"
-import { formatMoney } from "@/lib/format"
+import { formatDateText, formatMoney, formatNumber } from "@/lib/format"
 import { useMessages } from "@/lib/i18n"
 import { useIsReportExport } from "./report-export-context"
 
 const currencies: Currency[] = ["ARS", "USD", "EUR", "BRL"]
-
-const monthLabels = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
-
-const chartConfig = {
-  committed: { label: "Objetivo", color: "#c084fc" },
-  contributed: { label: "Aportado", color: "#a78bfa" },
-} satisfies ChartConfig
 
 function toMonthKey(year: number, month: number): string {
   return `${year}-${String(month).padStart(2, "0")}`
@@ -71,14 +64,22 @@ export function SavingsVsGoalsReport({
   dateFrom,
   dateTo,
 }: SavingsVsGoalsReportProps) {
-  const t = useMessages().savingsReport
+  const messages = useMessages()
+  const t = messages.reports
   const isExport = useIsReportExport()
-  const periodNote = shownPeriodNote(report, dateFrom, dateTo, t.periodNote)
+  const periodNote = shownPeriodNote(report, dateFrom, dateTo, messages.savingsReport.periodNote)
+  const chartConfig = {
+    committed: { label: t.committed, color: "#c084fc" },
+    contributed: { label: t.contributed, color: "#a78bfa" },
+  } satisfies ChartConfig
 
   const spansSeveralYears = new Set(report?.months.map((month) => month.year)).size > 1
   const chartData =
     report?.months.map((month) => ({
-      label: `${monthLabels[month.month - 1]}${spansSeveralYears ? ` ${String(month.year).slice(2)}` : ""}`,
+      label: formatDateText(
+        new Date(month.year, month.month - 1, 1),
+        spansSeveralYears ? { month: "short", year: "2-digit" } : { month: "short" },
+      ),
       committed: month.committed,
       contributed: month.contributed,
     })) ?? []
@@ -91,14 +92,14 @@ export function SavingsVsGoalsReport({
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
           <div className="space-y-1.5">
-            <CardTitle>Rendimiento de Ahorros</CardTitle>
-            <CardDescription>Lo que tus metas te pedían aportar cada mes vs lo que aportaste</CardDescription>
+            <CardTitle>{t.savingsTitle}</CardTitle>
+            <CardDescription>{t.savingsDescription}</CardDescription>
           </div>
           {isExport ? (
             <Badge variant="outline">{currency}</Badge>
           ) : (
             <Select value={currency} onValueChange={(value) => onCurrencyChange(value as Currency)}>
-              <SelectTrigger className="w-[100px]" aria-label="Moneda del reporte">
+              <SelectTrigger className="w-[100px]" aria-label={t.currencyAria}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -121,8 +122,7 @@ export function SavingsVsGoalsReport({
               )}
               {report && !report.hasGoals && (
                 <p className="mb-4 rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
-                  No tenés metas de ahorro en {currency}, así que no hay un objetivo contra el cual comparar. Creá
-                  una desde Presupuestos y Ahorros para ver la línea de objetivo.
+                  {t.noGoalsIn(currency)}
                 </p>
               )}
               <ChartContainer config={chartConfig} className="h-[400px] w-full">
@@ -157,7 +157,7 @@ export function SavingsVsGoalsReport({
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Meses Sobre el Objetivo</CardDescription>
+            <CardDescription>{t.monthsOnTarget}</CardDescription>
             <CardTitle className="text-2xl text-success">
               {report && report.monthsWithCommitment > 0 ? `${report.monthsOnTarget}/${report.monthsWithCommitment}` : "—"}
             </CardTitle>
@@ -165,36 +165,36 @@ export function SavingsVsGoalsReport({
           <CardContent>
             <p className="text-sm text-muted-foreground">
               {successRate !== null
-                ? `${successRate.toFixed(0)}% de éxito`
+                ? t.successRate(formatNumber(successRate, { maximumFractionDigits: 0 }))
                 : report?.hasGoals
-                  ? "El mes en curso cuenta cuando llegues a la cuota"
-                  : "Sin metas en el período"}
+                  ? t.currentMonthCounts
+                  : t.noGoalsInPeriod}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Aportado vs Objetivo</CardDescription>
+            <CardDescription>{t.contributedVsTarget}</CardDescription>
             <CardTitle className="text-2xl">{report ? formatMoney(report.totalContributed, currency) : "—"}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Objetivo: {report ? formatMoney(report.totalCommitted, currency) : "—"}
+              {t.target(report ? formatMoney(report.totalCommitted, currency) : "—")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Cumplimiento</CardDescription>
+            <CardDescription>{t.completion}</CardDescription>
             <CardTitle className="text-2xl text-success">
               {report?.completionRate != null ? `${report.completionRate}%` : "—"}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              {report?.completionRate != null ? "Del objetivo del período" : "Sin metas en el período"}
+              {report?.completionRate != null ? t.ofPeriodTarget : t.noGoalsInPeriod}
             </p>
           </CardContent>
         </Card>

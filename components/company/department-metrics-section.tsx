@@ -15,14 +15,9 @@ import {
   type DepartmentMetricsSummary,
   type HealthBand,
 } from "@/lib/api"
+import { formatNumber as formatLocaleNumber } from "@/lib/format"
+import { useMessages } from "@/lib/i18n"
 import { compareText, sortRows, toggleSort, type SortAccessors, type SortState } from "@/lib/sort"
-
-export const healthBandLabels: Record<HealthBand, string> = {
-  Critical: "Crítica",
-  Fragile: "Frágil",
-  Stable: "Estable",
-  Healthy: "Saludable",
-}
 
 const NOT_AVAILABLE = "—"
 
@@ -67,11 +62,12 @@ type DepartmentMetricsState =
   | { status: "ready"; departments: DepartmentMetricsSummary[] }
 
 function formatNumber(value: number, maximumFractionDigits: number) {
-  return value.toLocaleString("es-AR", { maximumFractionDigits })
+  return formatLocaleNumber(value, { maximumFractionDigits })
 }
 
 export function HealthBandBadge({ band }: { band: HealthBand | null }) {
-  const label = band ? healthBandLabels[band] : undefined
+  const healthBands = useMessages().labels.healthBands
+  const label = band ? healthBands[band] : undefined
   if (!band || !label) return <span className="text-muted-foreground">{NOT_AVAILABLE}</span>
 
   if (band === "Healthy") {
@@ -159,6 +155,7 @@ function AttentionSummary({ departments }: { departments: DepartmentMetricsSumma
 }
 
 function DepartmentRow({ department }: { department: DepartmentMetricsSummary }) {
+  const t = useMessages().companyPanel
   const hasNoData = !department.isMetricsHidden && department.period === null
   const isHighlighted = needsAttention(department)
 
@@ -185,9 +182,9 @@ function DepartmentRow({ department }: { department: DepartmentMetricsSummary })
           <div className="flex items-start gap-2 text-sm text-muted-foreground" role="status">
             <ShieldCheckIcon className="size-4 mt-0.5 shrink-0" />
             <div>
-              <p className="font-medium text-foreground">Métricas restringidas</p>
+              <p className="font-medium text-foreground">{t.restrictedMetrics}</p>
               {department.hiddenReason && <p>{department.hiddenReason}</p>}
-              <p>Se requiere un mínimo de {department.minimumGroupSize} empleados.</p>
+              <p>{t.minimumGroup(department.minimumGroupSize)}</p>
             </div>
           </div>
         </TableCell>
@@ -195,7 +192,7 @@ function DepartmentRow({ department }: { department: DepartmentMetricsSummary })
         <TableCell colSpan={4}>
           <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
             <InboxIcon className="size-4 shrink-0" />
-            <span>Sin datos disponibles</span>
+            <span>{t.noDataAvailable}</span>
           </div>
         </TableCell>
       ) : (
@@ -228,6 +225,7 @@ function DepartmentRow({ department }: { department: DepartmentMetricsSummary })
 }
 
 export function DepartmentMetricsSection() {
+  const t = useMessages().companyPanel
   const [state, setState] = useState<DepartmentMetricsState>({ status: "loading" })
   const [attempt, setAttempt] = useState(0)
   const [sort, setSort] = useState<SortState<DepartmentMetricsSortField> | null>(null)
@@ -253,11 +251,11 @@ export function DepartmentMetricsSection() {
       .catch((error) => {
         if (controller.signal.aborted) return
         setState({ status: "error" })
-        toastApiError(error, "No se pudieron cargar las métricas por departamento.")
+        toastApiError(error, t.departmentMetricsLoadFailed)
       })
 
     return () => controller.abort()
-  }, [attempt])
+  }, [attempt, t])
 
   const retry = useCallback(() => {
     setState({ status: "loading" })
@@ -267,8 +265,8 @@ export function DepartmentMetricsSection() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Desglose por Departamento</CardTitle>
-        <CardDescription>Métricas de bienestar financiero por departamento</CardDescription>
+        <CardTitle>{t.breakdownTitle}</CardTitle>
+        <CardDescription>{t.breakdownDescription}</CardDescription>
       </CardHeader>
       <CardContent>
         {state.status === "loading" && (
@@ -282,15 +280,15 @@ export function DepartmentMetricsSection() {
         {state.status === "error" && (
           <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground" role="alert">
             <AlertCircleIcon className="size-4 shrink-0" />
-            <span>No se pudieron cargar las métricas por departamento.</span>
+            <span>{t.departmentMetricsLoadFailed}</span>
             <Button variant="outline" size="sm" onClick={retry}>
-              Reintentar
+              {t.retry}
             </Button>
           </div>
         )}
 
         {state.status === "ready" && state.departments.length === 0 && (
-          <p className="text-sm text-muted-foreground">No hay departamentos disponibles</p>
+          <p className="text-sm text-muted-foreground">{t.noDepartments}</p>
         )}
 
         {state.status === "ready" && state.departments.length > 0 && (
@@ -301,11 +299,11 @@ export function DepartmentMetricsSection() {
           <Table>
             <TableHeader>
               <TableRow>
-                <SortableTableHead label="Departamento" field="departmentName" sort={sort} onSort={handleSort} />
-                <SortableTableHead label="Empleados" field="employees" sort={sort} onSort={handleSort} />
-                <SortableTableHead label="Puntaje Promedio" field="averageScore" sort={sort} onSort={handleSort} />
-                <SortableTableHead label="Participación" field="participation" sort={sort} onSort={handleSort} />
-                <SortableTableHead label="Estado" field="status" sort={sort} onSort={handleSort} />
+                <SortableTableHead label={t.columnDepartment} field="departmentName" sort={sort} onSort={handleSort} />
+                <SortableTableHead label={t.columnEmployees} field="employees" sort={sort} onSort={handleSort} />
+                <SortableTableHead label={t.columnAverageScore} field="averageScore" sort={sort} onSort={handleSort} />
+                <SortableTableHead label={t.columnParticipation} field="participation" sort={sort} onSort={handleSort} />
+                <SortableTableHead label={t.columnStatus} field="status" sort={sort} onSort={handleSort} />
               </TableRow>
             </TableHeader>
             <TableBody>

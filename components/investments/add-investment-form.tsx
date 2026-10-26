@@ -23,7 +23,6 @@ import {
   formatQuantity,
   getSecurityPrice,
   hasTerm,
-  investmentTypeLabels,
   isApiError,
   isPricedPerNominal,
   quoteMarketOf,
@@ -35,6 +34,7 @@ import {
   type QuoteMarket,
   type SecurityPriceDto,
 } from "@/lib/api"
+import { useMessages, type Messages } from "@/lib/i18n"
 import type { Currency } from "@/lib/api/transactions"
 import { formatDate, formatDateText, formatMoney } from "@/lib/format"
 
@@ -55,13 +55,6 @@ const currencyLabels: Record<Currency, string> = {
   BRL: "BRL (R$)",
 }
 
-const currencyNames: Record<Currency, string> = {
-  ARS: "pesos",
-  USD: "dólares",
-  EUR: "euros",
-  BRL: "reales",
-}
-
 type QuoteResult =
   | { status: "loading" }
   | { status: "found"; price: SecurityPriceDto }
@@ -73,23 +66,6 @@ interface SearchState {
   scope: string
   key: string
   options: SecurityPriceDto[] | null
-}
-
-const symbolPlaceholders: Partial<Record<InvestmentType, string>> = {
-  Stock: "ej. YPFD, GGAL",
-  Cedear: "ej. AAPL, MELI",
-  Etf: "ej. SPY, QQQ",
-  Bond: "ej. AL30, GD30",
-  CorporateBond: "ej. YMCXO",
-  TreasuryBill: "ej. S30N6",
-  MutualFund: "ej. Balanz Money Market",
-  Crypto: "ej. BTC, Ethereum",
-}
-
-const quoteHelp: Record<QuoteMarket, string> = {
-  Exchange: "Buscá el símbolo de BYMA en la moneda de la inversión: AL30 en pesos, AL30D en dólares.",
-  MutualFund: "Buscá el fondo por nombre y cargá tus cuotapartes.",
-  Crypto: "Buscá la cripto por símbolo o por nombre.",
 }
 
 function todayForDateInput(): string {
@@ -107,6 +83,7 @@ function accrualPreview(
   termDays: number,
   purchasedOn: string,
   currency: Currency,
+  t: Messages["investmentForm"],
 ): string | null {
   if (!(capital > 0) || !(annualRate > 0)) {
     return null
@@ -117,7 +94,7 @@ function accrualPreview(
   if (!hasTerm(type)) {
     const monthlyInterest = capital * ((1 + dailyRate) ** DAYS_PER_MONTH - 1)
 
-    return `Con esta TNA, ${formatMoney(capital, currency)} rinden unos ${formatMoney(monthlyInterest, currency)} por mes.`
+    return t.accrualMonthly(formatMoney(capital, currency), formatMoney(monthlyInterest, currency))
   }
 
   if (!Number.isInteger(termDays) || termDays < 1 || purchasedOn === "") {
@@ -127,31 +104,31 @@ function accrualPreview(
   const interest = roundToCents(capital * dailyRate * termDays)
   const maturesOn = addDays(parseISO(purchasedOn), termDays)
 
-  return `Vence el ${formatDate(maturesOn)}: cobrás ${formatMoney(capital + interest, currency)}, ${formatMoney(interest, currency)} de interés.`
+  return t.accrualTerm(formatDate(maturesOn), formatMoney(capital + interest, currency), formatMoney(interest, currency))
 }
 
-function quantityLabel(type: InvestmentType | "", symbol: string): string {
+function quantityLabel(type: InvestmentType | "", symbol: string, t: Messages["investmentForm"]): string {
   if (type !== "" && isPricedPerNominal(type)) {
-    return "Nominales"
+    return t.nominals
   }
 
   if (type === "MutualFund") {
-    return "Cuotapartes"
+    return t.fundShares
   }
 
   if (type === "Crypto") {
-    return symbol === "" ? "Cantidad" : `Cantidad de ${symbol}`
+    return symbol === "" ? t.quantity : t.quantityOf(symbol)
   }
 
-  return "Unidades"
+  return t.units
 }
 
-function pricePerLabel(type: InvestmentType | ""): string {
+function pricePerLabel(type: InvestmentType | "", t: Messages["investmentForm"]): string {
   if (type !== "" && isPricedPerNominal(type)) {
-    return "por nominal"
+    return t.perNominal
   }
 
-  return type === "MutualFund" ? "por cuotaparte" : "por unidad"
+  return type === "MutualFund" ? t.perFundShare : t.perUnit
 }
 
 function normalizeSymbol(symbol: string, market: QuoteMarket | null): string {
@@ -165,14 +142,16 @@ function formatUnitPrice(amount: number, currency: Currency): string {
   return formatMoney(amount, currency, digits)
 }
 
-function pricedOnLabel(price: SecurityPriceDto): string {
+function pricedOnLabel(price: SecurityPriceDto, t: Messages["investmentForm"]): string {
   return price.pricedOn === todayForDateInput()
-    ? `${price.source}, hoy`
-    : `${price.source}, al ${formatDateText(price.pricedOn, { day: "2-digit", month: "2-digit" })}`
+    ? t.pricedToday(price.source)
+    : t.pricedOn(price.source, formatDateText(price.pricedOn, { day: "2-digit", month: "2-digit" }))
 }
 
-function quotedOnText(price: SecurityPriceDto): string {
-  return price.pricedOn === todayForDateInput() ? "de hoy" : `del ${formatDateText(price.pricedOn, { day: "2-digit", month: "2-digit" })}`
+function quotedOnText(price: SecurityPriceDto, t: Messages["investmentForm"]): string {
+  return price.pricedOn === todayForDateInput()
+    ? t.quotedToday
+    : t.quotedOn(formatDateText(price.pricedOn, { day: "2-digit", month: "2-digit" }))
 }
 
 function roundToCents(amount: number): number {
@@ -192,6 +171,9 @@ export function AddInvestmentForm({
   onSubmit: (payload: CreateInvestmentPayload) => Promise<void>
   onClose: () => void
 }) {
+  const messages = useMessages()
+  const labels = messages.labels
+  const t = messages.investmentForm
   const isEditing = Boolean(initialInvestment)
   const isImported = initialInvestment?.source === "Iol"
   const [type, setType] = useState<InvestmentType | "">(initialInvestment?.type ?? "")
@@ -383,9 +365,7 @@ export function AddInvestmentForm({
 
     if ((trimmedSymbol === "") !== (trimmedQuantity === "")) {
       setTrackingError(
-        isFund
-          ? "Para cotizar la inversión completá el fondo y las cuotapartes, o dejá los dos vacíos."
-          : "Para cotizar la inversión completá el símbolo y la cantidad, o dejá los dos vacíos.",
+        isFund ? t.fundTrackingError : t.symbolTrackingError,
       )
       return
     }
@@ -406,7 +386,7 @@ export function AddInvestmentForm({
       })
       onClose()
     } catch (error) {
-      toastApiError(error, isEditing ? "No se pudo actualizar la inversión." : "No se pudo registrar la inversión.")
+      toastApiError(error, isEditing ? t.updateFailed : t.createFailed)
     } finally {
       setIsSubmitting(false)
     }
@@ -416,7 +396,7 @@ export function AddInvestmentForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-3 gap-2">
         <div className="col-span-2 space-y-2">
-          <Label htmlFor="investment-type">Tipo de activo</Label>
+          <Label htmlFor="investment-type">{t.type}</Label>
           <Select
             value={type}
             onValueChange={(value) => handleTypeChange(value as InvestmentType)}
@@ -424,10 +404,10 @@ export function AddInvestmentForm({
             required
           >
             <SelectTrigger id="investment-type" className="w-full">
-              <SelectValue placeholder="Seleccioná el tipo" />
+              <SelectValue placeholder={t.typePlaceholder} />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(investmentTypeLabels).map(([value, label]) => (
+              {Object.entries(labels.investmentTypes).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
                 </SelectItem>
@@ -436,7 +416,7 @@ export function AddInvestmentForm({
           </Select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="investment-currency">Moneda</Label>
+          <Label htmlFor="investment-currency">{t.currency}</Label>
           <Select value={currency} onValueChange={(value) => setCurrency(value as Currency)} disabled={isImported}>
             <SelectTrigger id="investment-currency" className="w-full">
               <SelectValue />
@@ -461,37 +441,34 @@ export function AddInvestmentForm({
                 {symbol} · {formatQuantity(Number(quantity), type)}
               </p>
             )}
-            <p>
-              Esta inversión la trae IOL: el tipo, la moneda, la cantidad, el capital y la fecha se actualizan solos en
-              cada sincronización. Acá solo podés cambiarle el nombre.
-            </p>
+            <p>{t.importedNote}</p>
           </AlertDescription>
         </Alert>
       ) : canBeQuoted && (
         <section aria-labelledby="investment-quote-title" className="space-y-3 rounded-md border p-3">
           <div>
             <p id="investment-quote-title" className="text-sm font-medium">
-              Cotización automática
+              {t.autoQuote}
             </p>
-            <p className="text-xs text-muted-foreground">{quoteHelp[market]}</p>
+            <p className="text-xs text-muted-foreground">{t.quoteHelp[market]}</p>
           </div>
 
           <div className={isFund ? "grid grid-cols-1 gap-3" : "grid grid-cols-5 gap-2"}>
             <div className={isFund ? "space-y-2" : "col-span-3 space-y-2"}>
-              <Label htmlFor="investment-symbol">{isFund ? "Fondo" : "Símbolo"}</Label>
+              <Label htmlFor="investment-symbol">{isFund ? t.fund : t.symbol}</Label>
               <SecurityCombobox
                 id="investment-symbol"
                 value={symbol}
                 options={comboboxOptions}
                 isSearching={isSearching}
-                placeholder={(type === "" ? undefined : symbolPlaceholders[type]) ?? "ej. AL30, YPFD, SPY"}
+                placeholder={(type === "" ? undefined : t.symbolPlaceholders[type]) ?? t.defaultSymbolPlaceholder}
                 maxLength={isFund ? FUND_NAME_MAX_LENGTH : SYMBOL_MAX_LENGTH}
                 onValueChange={(value) => setSymbol(isFund ? value : value.toUpperCase())}
                 onSelect={handleSymbolSelect}
               />
             </div>
             <div className={isFund ? "space-y-2" : "col-span-2 space-y-2"}>
-              <Label htmlFor="investment-quantity">{quantityLabel(type, isValidTicker ? normalizedSymbol : "")}</Label>
+              <Label htmlFor="investment-quantity">{quantityLabel(type, isValidTicker ? normalizedSymbol : "", t)}</Label>
               <Input
                 id="investment-quantity"
                 type="number"
@@ -507,16 +484,14 @@ export function AddInvestmentForm({
 
           {!isFund && normalizedSymbol !== "" && !currencyIsQuotable && (
             <p className="text-sm text-muted-foreground">
-              {market === "Crypto"
-                ? "Las criptomonedas se cotizan en pesos o en dólares: elegí ARS o USD para ver el precio."
-                : "BYMA cotiza en pesos y en dólares: elegí ARS o USD para ver el precio."}
+              {market === "Crypto" ? t.cryptoCurrencyHint : t.bymaCurrencyHint}
             </p>
           )}
 
           {!isFund && quoteResult?.status === "loading" && (
             <p className="flex items-center gap-2 text-sm text-muted-foreground" aria-live="polite">
               <Spinner />
-              Buscando la cotización de {normalizedSymbol}…
+              {t.searchingQuote(normalizedSymbol)}
             </p>
           )}
 
@@ -527,29 +502,29 @@ export function AddInvestmentForm({
                   <span className="font-medium">{quotedPrice.symbol}</span>
                   {quotedPrice.name && <span className="text-muted-foreground"> · {quotedPrice.name}</span>}
                 </p>
-                <p className="shrink-0 text-xs text-muted-foreground">{pricedOnLabel(quotedPrice)}</p>
+                <p className="shrink-0 text-xs text-muted-foreground">{pricedOnLabel(quotedPrice, t)}</p>
               </div>
               {marketValue !== null ? (
                 <>
                   <p className="text-2xl font-semibold tabular-nums">{formatMoney(marketValue, currency)}</p>
                   <p className="text-xs text-muted-foreground tabular-nums">
-                    {quantityText} × {formatUnitPrice(quotedPrice.unitPrice, priceCurrency)} {pricePerLabel(type)}
+                    {quantityText} × {formatUnitPrice(quotedPrice.unitPrice, priceCurrency)} {pricePerLabel(type, t)}
                   </p>
                 </>
               ) : (
                 <>
                   <p className="text-2xl font-semibold tabular-nums">
                     {formatUnitPrice(quotedPrice.unitPrice, priceCurrency)}{" "}
-                    <span className="text-sm font-normal text-muted-foreground">{pricePerLabel(type)}</span>
+                    <span className="text-sm font-normal text-muted-foreground">{pricePerLabel(type, t)}</span>
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Cargá {isFund ? "tus cuotapartes" : "la cantidad"} para ver cuánto vale tu inversión.
+                    {isFund ? t.enterFundShares : t.enterQuantity}
                   </p>
                 </>
               )}
               {fundCurrencyDiffers && (
                 <p className="text-sm text-amber-700 dark:text-amber-300">
-                  Por el nombre, este fondo parece estar en {currencyNames[quotedPrice.currency]}: revisá la moneda.
+                  {t.fundCurrencyDiffers(t.currencyNames[quotedPrice.currency])}
                 </p>
               )}
             </div>
@@ -557,23 +532,23 @@ export function AddInvestmentForm({
 
           {quoteResult?.status === "choose" && (
             <p className="text-sm text-muted-foreground" aria-live="polite">
-              Elegí uno de los fondos de la lista para ver el valor de la cuotaparte.
+              {t.chooseFund}
             </p>
           )}
 
           {quoteResult?.status === "missing" && (
             <p className="text-sm text-amber-700 dark:text-amber-300" aria-live="polite">
               {isFund
-                ? "No encontramos fondos con ese nombre. Probá con otra parte del nombre."
+                ? t.fundNotFound
                 : market === "Crypto"
-                  ? `No encontramos ${normalizedSymbol} en CoinGecko. Probá con el nombre, por ejemplo Bitcoin.`
-                  : `No encontramos ${normalizedSymbol} en ${currencyNames[currency]} en BYMA. Si es en dólares, probá con la variante D (AL30D).`}
+                  ? t.cryptoNotFound(normalizedSymbol)
+                  : t.bymaNotFound(normalizedSymbol, t.currencyNames[currency])}
             </p>
           )}
 
           {quoteResult?.status === "unavailable" && (
             <p className="text-sm text-muted-foreground" aria-live="polite">
-              No pudimos traer la cotización ahora. Podés guardar igual: la cotizamos con el cierre del día.
+              {t.quoteUnavailable}
             </p>
           )}
 
@@ -585,23 +560,21 @@ export function AddInvestmentForm({
         <section aria-labelledby="investment-rate-title" className="space-y-3 rounded-md border p-3">
           <div>
             <p id="investment-rate-title" className="text-sm font-medium">
-              Tasa pactada
+              {t.agreedRate}
             </p>
             <p className="text-xs text-muted-foreground">
-              {withTerm
-                ? "Con la TNA y el plazo calculamos cuánto vale hoy y cuánto cobrás al vencimiento."
-                : "Con la TNA calculamos cuánto vale hoy, con los intereses que se suman todos los días."}
+              {withTerm ? t.rateHintTerm : t.rateHint}
             </p>
           </div>
 
           <div className={withTerm ? "grid grid-cols-2 gap-2" : "grid grid-cols-1 gap-3"}>
             <div className="space-y-2">
-              <Label htmlFor="investment-rate">TNA (%)</Label>
+              <Label htmlFor="investment-rate">{t.rate}</Label>
               <Input
                 id="investment-rate"
                 type="number"
                 inputMode="decimal"
-                placeholder="ej. 32.5"
+                placeholder={t.ratePlaceholder}
                 step="0.01"
                 min="0.01"
                 max={ANNUAL_RATE_MAX}
@@ -612,12 +585,12 @@ export function AddInvestmentForm({
             </div>
             {withTerm && (
               <div className="space-y-2">
-                <Label htmlFor="investment-term">Plazo (días)</Label>
+                <Label htmlFor="investment-term">{t.term}</Label>
                 <Input
                   id="investment-term"
                   type="number"
                   inputMode="numeric"
-                  placeholder="ej. 30"
+                  placeholder={t.termPlaceholder}
                   step="1"
                   min="1"
                   max={TERM_DAYS_MAX}
@@ -637,16 +610,17 @@ export function AddInvestmentForm({
               Number(termDays),
               purchasedOn,
               currency,
-            ) ?? (withTerm ? "Cargá la TNA y el plazo para ver cuánto cobrás." : "Cargá la TNA para ver cuánto rinde.")}
+              t,
+            ) ?? (withTerm ? t.enterRateAndTerm : t.enterRate)}
           </p>
         </section>
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="investment-asset">Nombre del activo</Label>
+        <Label htmlFor="investment-asset">{t.assetName}</Label>
         <Input
           id="investment-asset"
-          placeholder="ej. AL30, Apple, Bitcoin"
+          placeholder={t.assetNamePlaceholder}
           maxLength={ASSET_NAME_MAX_LENGTH}
           value={effectiveAssetName}
           onChange={(e) => handleAssetNameChange(e.target.value)}
@@ -655,7 +629,7 @@ export function AddInvestmentForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="investment-amount">Capital invertido</Label>
+        <Label htmlFor="investment-amount">{t.invested}</Label>
         <Input
           id="investment-amount"
           type="number"
@@ -670,18 +644,18 @@ export function AddInvestmentForm({
         />
         {isAmountCalculated && quotedPrice && (
           <p className="text-xs text-muted-foreground">
-            Calculado con la cotización {quotedOnText(quotedPrice)}. Si pagaste otro precio, escribí lo que pagaste.
+            {t.calculatedWithQuote(quotedOnText(quotedPrice, t))}
           </p>
         )}
         {canUseMarketValue && quotedPrice && (
           <Button type="button" variant="link" className="h-auto p-0 text-xs" onClick={applyMarketValue}>
-            Usar el valor a la cotización {quotedOnText(quotedPrice)} ({formatMoney(marketValue, currency)})
+            {t.useMarketValue(quotedOnText(quotedPrice, t), formatMoney(marketValue, currency))}
           </Button>
         )}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="investment-date">{accrues ? "Fecha de inicio" : "Fecha de compra"}</Label>
+        <Label htmlFor="investment-date">{accrues ? t.startDate : t.purchaseDate}</Label>
         <Input
           id="investment-date"
           type="date"
@@ -695,10 +669,10 @@ export function AddInvestmentForm({
 
       <div className="flex gap-2 justify-end pt-2">
         <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-          Cancelar
+          {messages.common.cancel}
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Guardando..." : isEditing ? "Guardar cambios" : "Agregar Inversión"}
+          {isSubmitting ? t.saving : isEditing ? t.saveChanges : t.add}
         </Button>
       </div>
     </form>

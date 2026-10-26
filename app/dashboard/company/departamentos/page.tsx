@@ -36,13 +36,14 @@ import {
   type DepartmentDto,
 } from "@/lib/api"
 import { formatDate } from "@/lib/format"
-import { plural } from "@/lib/utils"
+import { useMessages } from "@/lib/i18n"
 
 function Placeholder() {
   return <span className="text-muted-foreground">—</span>
 }
 
 export default function DepartamentosPage() {
+  const t = useMessages().departments
   const [departments, setDepartments] = useState<DepartmentDto[] | null>(null)
   const [employees, setEmployees] = useState<CompanyEmployeeDto[]>([])
   const [loadFailed, setLoadFailed] = useState(false)
@@ -64,9 +65,9 @@ export default function DepartamentosPage() {
         return
       }
       setLoadFailed(true)
-      toastApiError(error, "No se pudieron cargar los departamentos.")
+      toastApiError(error, t.loadFailed)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -87,9 +88,9 @@ export default function DepartamentosPage() {
     setReactivatingId(department.id)
     try {
       handleSaved(await changeDepartmentStatus(department.id, true))
-      toast.success(`Se reactivó "${department.name}": ya se le pueden asignar empleados`)
+      toast.success(t.reactivated(department.name))
     } catch (error) {
-      toastApiError(error, "No se pudo reactivar el departamento.")
+      toastApiError(error, t.reactivateFailed)
     } finally {
       setReactivatingId(null)
     }
@@ -116,35 +117,35 @@ export default function DepartamentosPage() {
   const assignedEmployees = departments?.reduce((sum, department) => sum + department.employeeCount, 0) ?? 0
   const inactiveDepartments = departments?.filter((department) => !department.isActive).length ?? 0
   const totalHint = [
-    `${assignedEmployees} ${plural(assignedEmployees, "empleado asignado", "empleados asignados")}`,
-    inactiveDepartments > 0 ? `${inactiveDepartments} ${plural(inactiveDepartments, "inactivo", "inactivos")}` : null,
+    t.assignedEmployees(assignedEmployees),
+    inactiveDepartments > 0 ? t.inactiveCount(inactiveDepartments) : null,
   ]
     .filter(Boolean)
     .join(" · ")
   const isFiltered = hasActiveDepartmentFilters(filters)
 
   const listDescription = isLoading
-    ? "Cargando departamentos..."
+    ? t.loading
     : isFiltered
-      ? `${visibleDepartments.length} de ${totalDepartments} ${plural(totalDepartments, "departamento", "departamentos")}`
-      : `${totalDepartments} ${plural(totalDepartments, "departamento", "departamentos")}`
+      ? t.filteredCount(visibleDepartments.length, totalDepartments)
+      : t.count(totalDepartments)
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Gestión de Departamentos</h1>
-          <p className="text-muted-foreground mt-1">Administrá los departamentos de tu organización</p>
+          <h1 className="text-3xl font-bold text-foreground">{t.title}</h1>
+          <p className="text-muted-foreground mt-1">{t.subtitle}</p>
         </div>
         <Button className="gap-2 self-start sm:self-auto" onClick={() => setFormState({ open: true })} disabled={loadFailed}>
           <Plus className="h-4 w-4" />
-          Agregar Departamento
+          {t.add}
         </Button>
       </div>
 
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <FilterStatCard
-          label="Total Departamentos"
+          label={t.total}
           value={totalDepartments}
           hint={totalHint}
           isLoading={isLoading}
@@ -152,7 +153,7 @@ export default function DepartamentosPage() {
           onSelect={() => setFilters((current) => ({ ...current, staff: "all", manager: "all" }))}
         />
         <FilterStatCard
-          label="Sin Empleados"
+          label={t.withoutEmployees}
           value={emptyDepartments}
           valueClassName="text-orange-600"
           isLoading={isLoading}
@@ -160,7 +161,7 @@ export default function DepartamentosPage() {
           onSelect={() => toggleStaff("empty")}
         />
         <FilterStatCard
-          label="Sin Responsable"
+          label={t.withoutManager}
           value={departmentsWithoutManager}
           valueClassName="text-orange-600"
           isLoading={isLoading}
@@ -177,7 +178,7 @@ export default function DepartamentosPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Departamentos</CardTitle>
+          <CardTitle>{t.listTitle}</CardTitle>
           <CardDescription>{listDescription}</CardDescription>
         </CardHeader>
         <CardContent>
@@ -185,13 +186,13 @@ export default function DepartamentosPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <SortableTableHead label="Nombre" field="name" sort={sort} onSort={handleSort} />
-                  <SortableTableHead label="Descripción" field="description" sort={sort} onSort={handleSort} />
-                  <SortableTableHead label="Responsable" field="manager" sort={sort} onSort={handleSort} />
-                  <SortableTableHead label="Empleados" field="employeeCount" sort={sort} onSort={handleSort} />
-                  <SortableTableHead label="Fecha Creación" field="createdAt" sort={sort} onSort={handleSort} />
-                  <SortableTableHead label="Estado" field="isActive" sort={sort} onSort={handleSort} />
-                  <TableHead className="text-right">Acciones</TableHead>
+                  <SortableTableHead label={t.columnName} field="name" sort={sort} onSort={handleSort} />
+                  <SortableTableHead label={t.columnDescription} field="description" sort={sort} onSort={handleSort} />
+                  <SortableTableHead label={t.columnManager} field="manager" sort={sort} onSort={handleSort} />
+                  <SortableTableHead label={t.columnEmployees} field="employeeCount" sort={sort} onSort={handleSort} />
+                  <SortableTableHead label={t.columnCreatedAt} field="createdAt" sort={sort} onSort={handleSort} />
+                  <SortableTableHead label={t.columnStatus} field="isActive" sort={sort} onSort={handleSort} />
+                  <TableHead className="text-right">{t.columnActions}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -206,9 +207,9 @@ export default function DepartamentosPage() {
                 ) : loadFailed ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      <p>No pudimos cargar los departamentos.</p>
+                      <p>{t.listLoadFailed}</p>
                       <Button variant="outline" size="sm" className="mt-3" onClick={() => void loadDepartments()}>
-                        Reintentar
+                        {t.retry}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -216,12 +217,12 @@ export default function DepartamentosPage() {
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       {totalDepartments === 0 ? (
-                        "Todavía no cargaste ningún departamento"
+                        t.empty
                       ) : (
                         <>
-                          <p>Ningún departamento coincide con los filtros.</p>
+                          <p>{t.noMatches}</p>
                           <Button variant="outline" size="sm" className="mt-3" onClick={clearFilters}>
-                            Limpiar filtros
+                            {t.clearFilters}
                           </Button>
                         </>
                       )}
@@ -238,7 +239,7 @@ export default function DepartamentosPage() {
                         {department.manager ? (
                           <span className={department.manager.isActive ? undefined : "text-muted-foreground"}>
                             {department.manager.fullName}
-                            {!department.manager.isActive && " (sin acceso)"}
+                            {!department.manager.isActive && t.withoutAccess}
                           </span>
                         ) : (
                           <Placeholder />
@@ -259,10 +260,10 @@ export default function DepartamentosPage() {
                             onCheckedChange={(checked) =>
                               checked ? void reactivate(department) : setDepartmentToDeactivate(department)
                             }
-                            aria-label={`${department.isActive ? "Desactivar" : "Reactivar"} ${department.name}`}
+                            aria-label={department.isActive ? t.deactivateAria(department.name) : t.reactivateAria(department.name)}
                           />
                           <span className={department.isActive ? "text-sm" : "text-sm text-muted-foreground"}>
-                            {department.isActive ? "Activo" : "Inactivo"}
+                            {department.isActive ? t.active : t.inactive}
                           </span>
                         </div>
                       </TableCell>
@@ -272,8 +273,8 @@ export default function DepartamentosPage() {
                             variant="ghost"
                             size="icon"
                             onClick={() => setFormState({ open: true, department })}
-                            title="Editar"
-                            aria-label={`Editar ${department.name}`}
+                            title={t.edit}
+                            aria-label={t.editAria(department.name)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -281,8 +282,8 @@ export default function DepartamentosPage() {
                             variant="ghost"
                             size="icon"
                             onClick={() => setDepartmentToDelete(department)}
-                            title="Eliminar"
-                            aria-label={`Eliminar ${department.name}`}
+                            title={t.delete}
+                            aria-label={t.deleteAria(department.name)}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>

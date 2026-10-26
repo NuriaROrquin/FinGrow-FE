@@ -26,7 +26,9 @@ import { useMessages } from "@/lib/i18n"
 import { useCallback, useEffect, useState } from "react"
 
 export default function CompanyDashboardPage() {
-  const reportTexts = useMessages().companyReportPdf
+  const messages = useMessages()
+  const t = messages.companyPanel
+  const reportTexts = messages.companyReportPdf
   const [metrics, setMetrics] = useState<CompanyMetricsDto[]>([])
   const [comparisonError, setComparisonError] = useState<string | null>(null)
   const [isComparisonLoading, setIsComparisonLoading] = useState(true)
@@ -41,16 +43,16 @@ export default function CompanyDashboardPage() {
 
         if (isApiError(error)) {
           if (error.status === 400) {
-            setComparisonError("Se necesitan al menos dos períodos con datos para mostrar la evolución.")
+            setComparisonError(t.needTwoPeriods)
           } else if (error.status === 403) {
-            setComparisonError(error.description || "No tenés permiso para consultar estas métricas.")
+            setComparisonError(error.description || t.noPermission)
           } else if (error.status === 503) {
-            setComparisonError("Las métricas no están disponibles para preservar el anonimato de grupos pequeños.")
+            setComparisonError(t.metricsAnonymized)
           } else {
             setComparisonError(error.description)
           }
         } else {
-          setComparisonError("No se pudieron cargar las métricas de participación y bienestar.")
+          setComparisonError(t.metricsLoadFailed)
         }
       })
       .finally(() => {
@@ -58,7 +60,7 @@ export default function CompanyDashboardPage() {
       })
 
     return () => controller.abort()
-  }, [])
+  }, [t])
 
   // Preocupaciones (HU-61) y recomendaciones (HU-64) salen de un solo pedido: las dos tarjetas
   // muestran el mismo mes y la IA no se consulta dos veces.
@@ -131,8 +133,8 @@ export default function CompanyDashboardPage() {
             <BuildingIcon className="size-6" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-balance">Panel Empresarial</h1>
-            <p className="text-muted-foreground mt-1">Resumen de bienestar financiero de empleados</p>
+            <h1 className="text-3xl font-bold text-balance">{t.title}</h1>
+            <p className="text-muted-foreground mt-1">{t.subtitle}</p>
           </div>
         </div>
         <Button onClick={startExport} disabled={insightsState.isLoading || isComparisonLoading || isExporting} className="self-start lg:self-auto">
@@ -156,9 +158,9 @@ export default function CompanyDashboardPage() {
       {/* Tabs for detailed views */}
       <Tabs defaultValue="departments" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="departments">Por Departamento</TabsTrigger>
-          <TabsTrigger value="concerns">Principales Preocupaciones</TabsTrigger>
-          <TabsTrigger value="insights">Análisis</TabsTrigger>
+          <TabsTrigger value="departments">{t.tabDepartments}</TabsTrigger>
+          <TabsTrigger value="concerns">{t.tabConcerns}</TabsTrigger>
+          <TabsTrigger value="insights">{t.tabInsights}</TabsTrigger>
         </TabsList>
 
         {/* Departments Tab */}

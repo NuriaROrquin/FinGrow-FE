@@ -6,46 +6,49 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { getCompanyParticipation, toastApiError, type CompanyParticipationDto } from "@/lib/api"
-import { plural } from "@/lib/utils"
+import { formatDateText, formatNumber } from "@/lib/format"
+import { useMessages } from "@/lib/i18n"
 
 function monthLabel(periodStart: string) {
-  const [year, month] = periodStart.split("-").map(Number)
-  return new Intl.DateTimeFormat("es-AR", { month: "long", year: "numeric" }).format(new Date(year, month - 1, 1))
+  return formatDateText(periodStart, { month: "long", year: "numeric" })
 }
 
 function formatRate(rate: number) {
-  return `${rate.toLocaleString("es-AR", { maximumFractionDigits: 1 })}%`
+  return `${formatNumber(rate, { maximumFractionDigits: 1 })}%`
 }
 
 function ParticipationDetail({ participation }: { participation: CompanyParticipationDto }) {
+  const t = useMessages().companyPanel
+
   if (participation.isParticipationHidden) {
     return (
       <div className="flex items-start gap-1 text-sm text-muted-foreground">
         <ShieldCheckIcon className="size-4 mt-0.5 shrink-0" />
-        <span>
-          Se muestra a partir de {participation.minimumGroupSize} empleados activos, para que no se pueda identificar a
-          nadie.
-        </span>
+        <span>{t.participationShownFrom(participation.minimumGroupSize)}</span>
       </div>
     )
   }
 
   if (participation.participationRate === null) {
-    return <p className="text-sm text-muted-foreground">Todavía no hay empleados activos.</p>
+    return <p className="text-sm text-muted-foreground">{t.noActiveEmployees}</p>
   }
 
   return (
     <>
       <Progress value={participation.participationRate} className="h-2" />
       <p className="text-sm text-muted-foreground mt-2">
-        {participation.participatingEmployees} de {participation.activeEmployees} activos registraron movimientos o
-        aportes en {monthLabel(participation.periodStart)}
+        {t.participationDetail(
+          participation.participatingEmployees ?? 0,
+          participation.activeEmployees,
+          monthLabel(participation.periodStart),
+        )}
       </p>
     </>
   )
 }
 
 export function ParticipationCards() {
+  const t = useMessages().companyPanel
   const [participation, setParticipation] = useState<CompanyParticipationDto | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -56,7 +59,7 @@ export function ParticipationCards() {
       .then(setParticipation)
       .catch((error) => {
         if (!controller.signal.aborted) {
-          toastApiError(error, "No se pudieron cargar las métricas de participación.")
+          toastApiError(error, t.participationLoadFailed)
         }
       })
       .finally(() => {
@@ -66,12 +69,12 @@ export function ParticipationCards() {
       })
 
     return () => controller.abort()
-  }, [])
+  }, [t])
 
   if (isLoading || !participation) {
     return (
       <>
-        {["Total de Empleados", "Tasa de Participación"].map((title) => (
+        {[t.totalEmployees, t.participationRate].map((title) => (
           <Card key={title}>
             <CardHeader className="pb-2">
               <CardDescription>{title}</CardDescription>
@@ -81,7 +84,7 @@ export function ParticipationCards() {
               {isLoading ? (
                 <Skeleton className="h-5 w-full" />
               ) : (
-                <p className="text-sm text-muted-foreground">No disponible</p>
+                <p className="text-sm text-muted-foreground">{t.notAvailable}</p>
               )}
             </CardContent>
           </Card>
@@ -96,15 +99,15 @@ export function ParticipationCards() {
     <>
       <Card>
         <CardHeader className="pb-2">
-          <CardDescription>Total de Empleados</CardDescription>
+          <CardDescription>{t.totalEmployees}</CardDescription>
           <CardTitle className="text-2xl">{participation.totalEmployees}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <UsersIcon className="size-4" />
             <span>
-              {participation.activeEmployees} {plural(participation.activeEmployees, "activo", "activos")}
-              {inactiveEmployees > 0 && ` · ${inactiveEmployees} sin acceso`}
+              {t.activeCount(participation.activeEmployees)}
+              {inactiveEmployees > 0 && t.withoutAccess(inactiveEmployees)}
             </span>
           </div>
         </CardContent>
@@ -112,7 +115,7 @@ export function ParticipationCards() {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardDescription>Tasa de Participación</CardDescription>
+          <CardDescription>{t.participationRate}</CardDescription>
           <CardTitle className="text-2xl">
             {participation.participationRate === null ? "—" : formatRate(participation.participationRate)}
           </CardTitle>

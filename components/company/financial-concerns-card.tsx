@@ -3,40 +3,18 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
-import type { CompanyConcern, CompanyConcernDto } from "@/lib/api"
-import { plural } from "@/lib/utils"
+import type { CompanyConcernDto } from "@/lib/api"
+import { formatNumber } from "@/lib/format"
+import { useMessages } from "@/lib/i18n"
 import { AnonymizedNotice, EmptyNotice, monthAndYear, type CompanyInsightsState } from "./company-insights-state"
 
-const concernTexts: Record<CompanyConcern, { title: string; description: string; evaluated: [string, string] }> = {
-  LowSavings: {
-    title: "Ahorro bajo",
-    description: "Ahorraron menos del 10 % de sus ingresos del mes.",
-    evaluated: ["empleado medido", "empleados medidos"],
-  },
-  ThinCushion: {
-    title: "Fondo de emergencia insuficiente",
-    description: "Lo que tienen acumulado cubre menos de un mes y medio de sus gastos.",
-    evaluated: ["empleado medido", "empleados medidos"],
-  },
-  BudgetOverruns: {
-    title: "Presupuestos excedidos",
-    description: "Se pasaron en más de la mitad de los topes de su presupuesto mensual.",
-    evaluated: ["empleado con presupuesto", "empleados con presupuesto"],
-  },
-  MissedGoalContributions: {
-    title: "Metas de ahorro sin cubrir",
-    description: "Aportaron menos de la mitad de la cuota mensual de sus metas.",
-    evaluated: ["empleado con metas", "empleados con metas"],
-  },
-}
-
 function formatPercentage(value: number) {
-  return `${value.toLocaleString("es-AR", { maximumFractionDigits: 1 })}%`
+  return `${formatNumber(value, { maximumFractionDigits: 1 })}%`
 }
 
 function ConcernItem({ concern, rank }: { concern: CompanyConcernDto; rank: number }) {
-  const texts = concernTexts[concern.concern]
-  const [singular, pluralForm] = texts.evaluated
+  const t = useMessages().companyPanel
+  const texts = t.concerns[concern.concern]
 
   return (
     <li className="space-y-2">
@@ -53,8 +31,11 @@ function ConcernItem({ concern, rank }: { concern: CompanyConcernDto; rank: numb
         <div className="shrink-0 text-right">
           <p className="font-semibold">{formatPercentage(concern.percentage)}</p>
           <p className="text-xs text-muted-foreground">
-            {concern.affectedEmployees} de {concern.evaluatedEmployees}{" "}
-            {plural(concern.evaluatedEmployees, singular, pluralForm)}
+            {t.affectedOf(
+              concern.affectedEmployees,
+              concern.evaluatedEmployees,
+              texts.evaluated(concern.evaluatedEmployees),
+            )}
           </p>
         </div>
       </div>
@@ -65,16 +46,17 @@ function ConcernItem({ concern, rank }: { concern: CompanyConcernDto; rank: numb
 
 /** Principales preocupaciones financieras de la plantilla, agregadas y anónimas (HU-61). */
 export function FinancialConcernsCard({ insights, isLoading, hasFailed }: CompanyInsightsState) {
+  const t = useMessages().companyPanel
   const ready = !isLoading && !hasFailed && insights?.period && !insights.isAnonymized ? insights : null
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Principales Preocupaciones Financieras</CardTitle>
+        <CardTitle>{t.concernsTitle}</CardTitle>
         <CardDescription>
           {ready?.period && ready.measuredEmployees !== null
-            ? `${monthAndYear(ready.period)} · ${ready.measuredEmployees} ${plural(ready.measuredEmployees, "empleado medido", "empleados medidos")}`
-            : "Desafíos financieros más comunes entre empleados"}
+            ? t.measured(monthAndYear(ready.period), ready.measuredEmployees)
+            : t.concernsDescription}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -85,16 +67,13 @@ export function FinancialConcernsCard({ insights, isLoading, hasFailed }: Compan
             <Skeleton className="h-12 w-full" />
           </div>
         ) : hasFailed || !insights ? (
-          <EmptyNotice>No se pudieron cargar las preocupaciones financieras.</EmptyNotice>
+          <EmptyNotice>{t.concernsLoadFailed}</EmptyNotice>
         ) : !insights.period ? (
-          <EmptyNotice>Todavía no hay meses cerrados para analizar.</EmptyNotice>
+          <EmptyNotice>{t.noClosedMonthsToAnalyze}</EmptyNotice>
         ) : insights.isAnonymized ? (
           <AnonymizedNotice period={insights.period} minimumGroupSize={insights.minimumGroupSize} />
         ) : insights.concerns.length === 0 ? (
-          <EmptyNotice>
-            En {monthAndYear(insights.period)} no hubo preocupaciones que afecten a {insights.minimumGroupSize} empleados
-            o más.
-          </EmptyNotice>
+          <EmptyNotice>{t.noConcerns(monthAndYear(insights.period), insights.minimumGroupSize)}</EmptyNotice>
         ) : (
           <ol className="space-y-5">
             {insights.concerns.map((concern, index) => (
@@ -105,8 +84,7 @@ export function FinancialConcernsCard({ insights, isLoading, hasFailed }: Compan
       </CardContent>
       {ready && (
         <CardFooter className="text-xs text-muted-foreground">
-          Solo se muestran las preocupaciones que afectan al menos a {ready.minimumGroupSize} empleados, para cuidar el
-          anonimato.
+          {t.concernsFooter(ready.minimumGroupSize)}
         </CardFooter>
       )}
     </Card>

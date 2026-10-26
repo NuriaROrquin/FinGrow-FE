@@ -61,7 +61,6 @@ import {
   accruesInterest,
   isApiError,
   formatQuantity,
-  investmentTypeLabels,
   listInvestments,
   syncIol,
   toastApiError,
@@ -85,7 +84,7 @@ import {
   formatSignedMoney,
   formatSignedPercentage,
 } from "@/lib/format"
-import { useMessages } from "@/lib/i18n"
+import { useMessages, type Messages } from "@/lib/i18n"
 import { toggleSort, type SortState } from "@/lib/sort"
 
 const investmentTypeColors: Record<InvestmentType, string> = {
@@ -132,34 +131,32 @@ interface LearningState {
   open: boolean
 }
 
-function listCurrencies(currencies: Currency[]): string {
-  return currencies.join(" y ")
-}
-
-function pluralizeAssets(count: number): string {
-  return `${count} ${count === 1 ? "activo" : "activos"}`
+function listCurrencies(currencies: Currency[], t: Messages["investments"]): string {
+  return currencies.join(t.listSeparator)
 }
 
 function isValuedAtMaturity(investment: InvestmentDto): boolean {
   return investment.maturesOn !== null && investment.valuedOn >= investment.maturesOn
 }
 
-function rateDetail(investment: InvestmentDto): string | null {
+function rateDetail(investment: InvestmentDto, t: Messages["investments"]): string | null {
   if (investment.annualRate === null) {
     return null
   }
 
-  const rate = `TNA ${formatNumber(investment.annualRate, { maximumFractionDigits: 2 })}%`
+  const rate = t.rate(formatNumber(investment.annualRate, { maximumFractionDigits: 2 }))
 
   if (investment.maturesOn === null) {
     return rate
   }
 
-  return `${rate} · ${isValuedAtMaturity(investment) ? "venció" : "vence"} el ${formatDate(investment.maturesOn)}`
+  return isValuedAtMaturity(investment)
+    ? t.rateMatured(rate, formatDate(investment.maturesOn))
+    : t.rateMatures(rate, formatDate(investment.maturesOn))
 }
 
-function unvaluedLabel(investment: InvestmentDto): string {
-  return accruesInterest(investment.type) && investment.annualRate === null ? "Falta la TNA" : "Sin cotizar"
+function unvaluedLabel(investment: InvestmentDto, t: Messages["investments"]): string {
+  return accruesInterest(investment.type) && investment.annualRate === null ? t.missingRate : t.unquoted
 }
 
 function convertWithMep(amount: number, from: Currency, to: Currency, quote: MepQuoteDto | null): number | null {
@@ -196,15 +193,15 @@ function consolidateInDollars(currencies: CurrencyPortfolioDto[], quote: MepQuot
   }
 }
 
-function valuationStatus(summary: PortfolioSummaryDto): string {
+function valuationStatus(summary: PortfolioSummaryDto, t: Messages["investments"]): string {
   if (summary.unquotedCount === summary.investmentCount) {
-    return "Sin cotizaciones de mercado todavía: se muestra el capital invertido."
+    return t.noQuotesYet
   }
 
-  const valuedOn = summary.oldestQuotedOn ? `valuado al ${formatDate(summary.oldestQuotedOn)}` : "valuado al vencimiento"
+  const valuedOn = summary.oldestQuotedOn ? t.valuedOn(formatDate(summary.oldestQuotedOn)) : t.valuedAtMaturity
 
   if (summary.unquotedCount > 0) {
-    return `${pluralizeAssets(summary.unquotedCount)} sin cotizar, al costo. El resto, ${valuedOn}.`
+    return t.partlyUnquoted(t.assets(summary.unquotedCount), valuedOn)
   }
 
   return `${valuedOn.charAt(0).toUpperCase()}${valuedOn.slice(1)}`
@@ -217,7 +214,12 @@ function heldTypesOf(groups: AllocationGroupDto[], slices: AllocationSlice[]): I
   return Array.from(new Set([...byValue, ...rest]))
 }
 
-function allocationByType(groups: AllocationGroupDto[], currency: Currency, quote: MepQuoteDto | null): Allocation {
+function allocationByType(
+  groups: AllocationGroupDto[],
+  currency: Currency,
+  quote: MepQuoteDto | null,
+  typeLabels: Messages["labels"]["investmentTypes"],
+): Allocation {
   const valueByType = new Map<InvestmentType, number>()
   const convertedCurrencies = new Set<Currency>()
   const excludedCurrencies = new Set<Currency>()
@@ -242,7 +244,7 @@ function allocationByType(groups: AllocationGroupDto[], currency: Currency, quot
   const slices = Array.from(valueByType.entries())
     .map(([type, value]) => ({
       type,
-      label: investmentTypeLabels[type],
+      label: typeLabels[type],
       value: Math.round(value * 100) / 100,
       share: total === 0 ? 0 : (value / total) * 100,
       color: investmentTypeColors[type],
@@ -283,6 +285,7 @@ function AllocationNotice({
   quote: MepQuoteDto | null
   mepStatus: MepStatus
 }) {
+  const t = useMessages().investments
   const messages: string[] = []
   const missingMep = allocation.excludedCurrencies.filter((excluded) => mepConvertibleCurrencies.includes(excluded))
   const notConvertible = allocation.excludedCurrencies.filter(
@@ -291,19 +294,24 @@ function AllocationNotice({
 
   if (quote && allocation.convertedCurrencies.length > 0) {
     messages.push(
-      `Los activos en ${listCurrencies(allocation.convertedCurrencies)} se muestran en ${currency} con el dólar MEP a ${formatMoney(quote.sell, "ARS")} (venta), actualizado el ${formatDateTime(quote.updatedAt)}.`,
+      t.convertedWithMep(
+        listCurrencies(allocation.convertedCurrencies, t),
+        currency,
+        formatMoney(quote.sell, "ARS"),
+        formatDateTime(quote.updatedAt),
+      ),
     )
   }
 
   if (mepStatus === "unavailable" && missingMep.length > 0) {
     messages.push(
-      `No pudimos obtener la cotización del dólar MEP, así que no se incluyen los activos en ${listCurrencies(missingMep)}.`,
+      t.mepUnavailable(listCurrencies(missingMep, t)),
     )
   }
 
   if (notConvertible.length > 0) {
     messages.push(
-      `No se incluyen los activos en ${listCurrencies(notConvertible)}: el dólar MEP solo convierte entre pesos y dólares.`,
+      t.notConvertible(listCurrencies(notConvertible, t)),
     )
   }
 
@@ -355,7 +363,8 @@ function CurrencyPicker({
 }
 
 export default function InvestmentsPage() {
-  const t = useMessages()
+  const messages = useMessages()
+  const t = messages.investments
   const [page, setPage] = useState<PagedResultDto<InvestmentDto> | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [filterValues, setFilterValues] = useState<InvestmentFilterValues>(defaultInvestmentFilters)
@@ -392,14 +401,14 @@ export default function InvestmentsPage() {
       .then(setPage)
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return
-        toastApiError(error, "No se pudieron cargar tus inversiones.")
+        toastApiError(error, t.loadFailed)
       })
       .finally(() => {
         if (!controller.signal.aborted) setIsLoading(false)
       })
 
     return () => controller.abort()
-  }, [appliedFilters, pageNumber, pageSize, listVersion])
+  }, [appliedFilters, pageNumber, pageSize, listVersion, t])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -408,11 +417,11 @@ export default function InvestmentsPage() {
       .then(setSummary)
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return
-        toastApiError(error, "No se pudo cargar el resumen de tu portafolio.")
+        toastApiError(error, t.summaryLoadFailed)
       })
 
     return () => controller.abort()
-  }, [summaryVersion])
+  }, [summaryVersion, t])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -449,19 +458,19 @@ export default function InvestmentsPage() {
       const result = await syncIol()
       refreshList()
       refreshSummary()
-      toast.success(t.iol.synced, {
-        description: t.iol.syncDetail(result.imported, result.updated, result.ignored),
+      toast.success(messages.iol.synced, {
+        description: messages.iol.syncDetail(result.imported, result.updated, result.ignored),
       })
     } catch (error) {
       const reason = isApiError(error)
         ? error.code === IOL_GRANT_EXPIRED
-          ? t.iol.relinkInSettings
-          : t.iol.linkErrors[error.code]
+          ? messages.iol.relinkInSettings
+          : messages.iol.linkErrors[error.code]
         : undefined
       if (reason) {
-        toast.error(t.iol.syncFailed, { description: reason })
+        toast.error(messages.iol.syncFailed, { description: reason })
       } else {
-        toastApiError(error, t.iol.syncFailed)
+        toastApiError(error, messages.iol.syncFailed)
       }
     } finally {
       setIsSyncingIol(false)
@@ -503,7 +512,7 @@ export default function InvestmentsPage() {
     const created = await createInvestment(payload)
     refreshList()
     refreshSummary()
-    toast.success(`Inversión "${created.assetName}" registrada`)
+    toast.success(t.created(created.assetName))
   }
 
   const handleSubmit = async (payload: CreateInvestmentPayload) => {
@@ -515,7 +524,7 @@ export default function InvestmentsPage() {
     const updated = await updateInvestment(editingInvestment.id, payload)
     refreshList()
     refreshSummary()
-    toast.success(`Inversión "${updated.assetName}" actualizada`)
+    toast.success(t.updated(updated.assetName))
   }
 
   const handleDialogChange = (open: boolean) => {
@@ -540,10 +549,10 @@ export default function InvestmentsPage() {
         refreshList()
       }
       refreshSummary()
-      toast.success(`Inversión "${investmentToDelete.assetName}" eliminada`)
+      toast.success(t.deleted(investmentToDelete.assetName))
       setInvestmentToDelete(null)
     } catch (error) {
-      toastApiError(error, "No se pudo eliminar la inversión.")
+      toastApiError(error, t.deleteFailed)
     } finally {
       setIsDeleting(false)
     }
@@ -559,7 +568,7 @@ export default function InvestmentsPage() {
   const investmentCount = summary?.investmentCount ?? 0
   const lastPurchase = summary?.lastPurchase ?? null
   const consolidated = consolidateInDollars(portfolioCurrencies, mepQuote)
-  const emptyHint = summary === null ? "Cargando..." : "Todavía no registraste inversiones"
+  const emptyHint = summary === null ? t.loading : t.noInvestments
 
   const allocationCurrencies =
     mepQuote && currencies.some((currency) => mepConvertibleCurrencies.includes(currency))
@@ -567,7 +576,7 @@ export default function InvestmentsPage() {
       : currencies
   const selectedAllocationCurrency = pickCurrency(allocationCurrencies, allocationCurrency)
   const allocation: Allocation = selectedAllocationCurrency
-    ? allocationByType(summary?.allocation ?? [], selectedAllocationCurrency, mepQuote)
+    ? allocationByType(summary?.allocation ?? [], selectedAllocationCurrency, mepQuote, messages.labels.investmentTypes)
     : { slices: [], convertedCurrencies: [], excludedCurrencies: [] }
   const allocationChartConfig: ChartConfig = Object.fromEntries(
     allocation.slices.map((slice) => [slice.label, { label: slice.label, color: slice.color }]),
@@ -578,30 +587,28 @@ export default function InvestmentsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-balance">Inversiones</h1>
-          <p className="text-muted-foreground mt-1">Gestioná y seguí el rendimiento de tus inversiones</p>
+          <h1 className="text-3xl font-bold text-balance">{t.title}</h1>
+          <p className="text-muted-foreground mt-1">{t.subtitle}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {iolLinked && (
             <Button variant="outline" onClick={syncIolPortfolio} disabled={isSyncingIol}>
               {isSyncingIol ? <Spinner /> : <RefreshCwIcon className="size-4" />}
-              {t.iol.syncInvestments}
+              {messages.iol.syncInvestments}
             </Button>
           )}
           <Dialog open={isAddDialogOpen} onOpenChange={handleDialogChange}>
             <DialogTrigger asChild>
               <Button>
                 <PlusIcon className="size-4" />
-                Agregar Inversión
+                {t.add}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>{editingInvestment ? "Editar inversión" : "Agregar Nueva Inversión"}</DialogTitle>
+                <DialogTitle>{editingInvestment ? t.editTitle : t.addTitle}</DialogTitle>
                 <DialogDescription>
-                  {editingInvestment
-                    ? "Corregí los datos de la inversión seleccionada"
-                    : "Registrá una nueva inversión en tu portafolio"}
+                  {editingInvestment ? t.editDescription : t.addDescription}
                 </DialogDescription>
               </DialogHeader>
               <AddInvestmentForm
@@ -622,17 +629,19 @@ export default function InvestmentsPage() {
         >
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>¿Eliminar inversión?</AlertDialogTitle>
+              <AlertDialogTitle>{t.deleteTitle}</AlertDialogTitle>
               <AlertDialogDescription>
                 {investmentToDelete
-                  ? `Vas a eliminar "${investmentToDelete.assetName}" por ${formatMoney(investmentToDelete.investedAmount, investmentToDelete.currency)} invertidos. Esta acción no se puede deshacer.`
+                  ? t.deleteWarning(
+                      investmentToDelete.assetName,
+                      formatMoney(investmentToDelete.investedAmount, investmentToDelete.currency),
+                    )
                   : ""}
-                {investmentToDelete?.source === "Iol" &&
-                  " Si la seguís teniendo en IOL, vuelve a aparecer en la próxima sincronización."}
+                {investmentToDelete?.source === "Iol" && t.deleteIolNote}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+              <AlertDialogCancel disabled={isDeleting}>{messages.common.cancel}</AlertDialogCancel>
               <AlertDialogAction
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 disabled={isDeleting}
@@ -641,7 +650,7 @@ export default function InvestmentsPage() {
                   void handleDelete()
                 }}
               >
-                {isDeleting ? "Eliminando..." : "Eliminar"}
+                {isDeleting ? t.deleting : t.delete}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -651,7 +660,7 @@ export default function InvestmentsPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Valor Total del Portafolio</CardDescription>
+            <CardDescription>{t.totalValue}</CardDescription>
             <CardTitle className="text-2xl">
               <MoneyByCurrency amounts={portfolioCurrencies.map((entry) => [entry.currency, entry.currentValue])} />
             </CardTitle>
@@ -659,35 +668,35 @@ export default function InvestmentsPage() {
           <CardContent className="space-y-1">
             {consolidated && (
               <p className="text-sm font-medium">
-                ≈ {formatMoney(consolidated.amount, "USD")} en total al dólar MEP
+                {t.consolidated(formatMoney(consolidated.amount, "USD"))}
                 {consolidated.excludedCurrencies.length > 0 &&
-                  ` (sin ${listCurrencies(consolidated.excludedCurrencies)})`}
+                  t.consolidatedExcluding(listCurrencies(consolidated.excludedCurrencies, t))}
               </p>
             )}
             <p className="text-sm text-muted-foreground">
-              {summary && investmentCount > 0 ? valuationStatus(summary) : emptyHint}
+              {summary && investmentCount > 0 ? valuationStatus(summary, t) : emptyHint}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Total Invertido</CardDescription>
+            <CardDescription>{t.totalInvested}</CardDescription>
             <CardTitle className="text-2xl">
               <MoneyByCurrency amounts={portfolioCurrencies.map((entry) => [entry.currency, entry.investedAmount])} />
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">{pluralizeAssets(investmentCount)}</p>
+            <p className="text-sm text-muted-foreground">{t.assets(investmentCount)}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Rendimiento</CardDescription>
+            <CardDescription>{t.performance}</CardDescription>
             <CardTitle className="text-2xl">
               {quotedCurrencies.length === 0 ? (
-                <span className="text-muted-foreground">Sin cotizar</span>
+                <span className="text-muted-foreground">{t.unquoted}</span>
               ) : (
                 <div className="space-y-1">
                   {quotedCurrencies.map((entry, index) => (
@@ -705,9 +714,7 @@ export default function InvestmentsPage() {
           <CardContent className="space-y-1">
             {quotedCurrencies.length === 0 && (
               <p className="text-sm text-muted-foreground">
-                {investmentCount === 0
-                  ? emptyHint
-                  : "El rendimiento aparece cuando el mercado cotice tus activos."}
+                {investmentCount === 0 ? emptyHint : t.performancePending}
               </p>
             )}
             {quotedCurrencies.map((entry) => (
@@ -720,14 +727,12 @@ export default function InvestmentsPage() {
                 ) : (
                   <TrendingDownIcon className="size-4" />
                 )}
-                <span>
-                  {formatSignedPercentage(entry.quotedReturnPercentage)} en {entry.currency}
-                </span>
+                <span>{t.returnIn(formatSignedPercentage(entry.quotedReturnPercentage), entry.currency)}</span>
               </div>
             ))}
             {quotedCurrencies.length > 0 && summary && summary.unquotedCount > 0 && (
               <p className="text-xs text-muted-foreground">
-                No incluye {pluralizeAssets(summary.unquotedCount)} sin cotizar.
+                {t.excludesUnquoted(t.assets(summary.unquotedCount))}
               </p>
             )}
           </CardContent>
@@ -735,13 +740,13 @@ export default function InvestmentsPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Última compra</CardDescription>
-            <CardTitle className="text-2xl truncate">{lastPurchase ? lastPurchase.assetName : "Sin compras"}</CardTitle>
+            <CardDescription>{t.lastPurchase}</CardDescription>
+            <CardTitle className="text-2xl truncate">{lastPurchase ? lastPurchase.assetName : t.noPurchases}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
               {lastPurchase
-                ? `${investmentTypeLabels[lastPurchase.type]} · ${formatDate(lastPurchase.purchasedOn)}`
+                ? `${messages.labels.investmentTypes[lastPurchase.type]} · ${formatDate(lastPurchase.purchasedOn)}`
                 : emptyHint}
             </p>
           </CardContent>
@@ -754,8 +759,8 @@ export default function InvestmentsPage() {
         <div className="lg:col-span-2">
           <Card className="h-full">
             <CardHeader>
-              <CardTitle>Distribución por Tipo de Activo</CardTitle>
-              <CardDescription>Cómo se reparte tu portafolio según el valor actual de cada activo</CardDescription>
+              <CardTitle>{t.allocationTitle}</CardTitle>
+              <CardDescription>{t.allocationDescription}</CardDescription>
               {selectedAllocationCurrency && (
                 <CurrencyPicker
                   currencies={allocationCurrencies}
@@ -799,7 +804,8 @@ export default function InvestmentsPage() {
                           <span className="text-sm font-medium">{slice.label}</span>
                         </div>
                         <span className="text-sm font-semibold">
-                          {formatMoney(slice.value, selectedAllocationCurrency)} · {slice.share.toFixed(0)}%
+                          {formatMoney(slice.value, selectedAllocationCurrency)} ·{" "}
+                          {formatNumber(slice.share, { maximumFractionDigits: 0 })}%
                         </span>
                       </div>
                     ))}
@@ -831,8 +837,8 @@ export default function InvestmentsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Tu Cartera de Inversiones</CardTitle>
-          <CardDescription>Detalle completo de tus activos</CardDescription>
+          <CardTitle>{t.portfolioTitle}</CardTitle>
+          <CardDescription>{t.portfolioDescription}</CardDescription>
         </CardHeader>
         <CardContent>
           <InvestmentFiltersBar
@@ -844,32 +850,32 @@ export default function InvestmentsPage() {
           <Table className={isLoading && rows.length > 0 ? "opacity-60" : undefined}>
             <TableHeader>
               <TableRow>
-                <SortableTableHead label="Activo" field="AssetName" sort={sort} onSort={handleSort} />
-                <SortableTableHead label="Tipo" field="AssetType" sort={sort} onSort={handleSort} />
-                <SortableTableHead label="Fecha de compra" field="PurchasedOn" sort={sort} onSort={handleSort} />
+                <SortableTableHead label={t.columnAsset} field="AssetName" sort={sort} onSort={handleSort} />
+                <SortableTableHead label={t.columnType} field="AssetType" sort={sort} onSort={handleSort} />
+                <SortableTableHead label={t.columnPurchasedOn} field="PurchasedOn" sort={sort} onSort={handleSort} />
                 <SortableTableHead
-                  label="Capital invertido"
+                  label={t.columnInvested}
                   field="InvestedAmount"
                   sort={sort}
                   onSort={handleSort}
                   align="right"
                 />
-                <SortableTableHead label="Valor actual" field="CurrentValue" sort={sort} onSort={handleSort} align="right" />
+                <SortableTableHead label={t.columnCurrentValue} field="CurrentValue" sort={sort} onSort={handleSort} align="right" />
                 <SortableTableHead
-                  label="Rendimiento"
+                  label={t.columnReturn}
                   field="ReturnPercentage"
                   sort={sort}
                   onSort={handleSort}
                   align="right"
                 />
-                <TableHead className="text-right">Acciones</TableHead>
+                <TableHead className="text-right">{t.columnActions}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading && rows.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground">
-                    Cargando tus inversiones...
+                    {t.loadingList}
                   </TableCell>
                 </TableRow>
               )}
@@ -878,13 +884,13 @@ export default function InvestmentsPage() {
                   <TableCell colSpan={7} className="text-center text-muted-foreground">
                     {hasActiveFilters(appliedFilters) ? (
                       <div className="space-y-2 py-2">
-                        <p>Ninguna inversión coincide con los filtros.</p>
+                        <p>{t.noMatches}</p>
                         <Button variant="outline" size="sm" onClick={clearFilters}>
-                          Limpiar filtros
+                          {t.clearFilters}
                         </Button>
                       </div>
                     ) : (
-                      "Todavía no registraste ninguna inversión. Agregá la primera con el botón de arriba."
+                      t.emptyList
                     )}
                   </TableCell>
                 </TableRow>
@@ -895,7 +901,7 @@ export default function InvestmentsPage() {
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{investment.assetName}</span>
                       {investment.source === "Iol" && (
-                        <Badge variant="secondary" className="text-xs" title="Importada de InvertirOnline">
+                        <Badge variant="secondary" className="text-xs" title={t.importedFromIol}>
                           IOL
                         </Badge>
                       )}
@@ -905,13 +911,13 @@ export default function InvestmentsPage() {
                         {investment.symbol} · {formatQuantity(investment.quantity, investment.type)}
                       </div>
                     )}
-                    {rateDetail(investment) && (
-                      <div className="text-xs text-muted-foreground">{rateDetail(investment)}</div>
+                    {rateDetail(investment, t) && (
+                      <div className="text-xs text-muted-foreground">{rateDetail(investment, t)}</div>
                     )}
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="text-xs">
-                      {investmentTypeLabels[investment.type]}
+                      {messages.labels.investmentTypes[investment.type]}
                     </Badge>
                   </TableCell>
                   <TableCell>{formatDate(investment.purchasedOn)}</TableCell>
@@ -921,10 +927,10 @@ export default function InvestmentsPage() {
                   <TableCell className="text-right">
                     <div className="font-semibold">{formatMoney(investment.currentValue, investment.currency)}</div>
                     {!investment.hasMarketValuation && (
-                      <div className="text-xs text-muted-foreground">al costo</div>
+                      <div className="text-xs text-muted-foreground">{t.atCost}</div>
                     )}
                     {isValuedAtMaturity(investment) && (
-                      <div className="text-xs text-muted-foreground">al vencimiento</div>
+                      <div className="text-xs text-muted-foreground">{t.atMaturity}</div>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
@@ -943,7 +949,7 @@ export default function InvestmentsPage() {
                         </span>
                       </div>
                     ) : (
-                      <span className="text-sm text-muted-foreground">{unvaluedLabel(investment)}</span>
+                      <span className="text-sm text-muted-foreground">{unvaluedLabel(investment, t)}</span>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
@@ -962,11 +968,9 @@ export default function InvestmentsPage() {
             <div className="mt-4 flex flex-col gap-3 border-t pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-col gap-1">
                 <span className="font-medium text-foreground">
-                  {page.totalCount} {page.totalCount === 1 ? "inversión" : "inversiones"}
+                  {t.count(page.totalCount)}
                 </span>
-                <span>
-                  Mostrando {visibleStart}-{visibleEnd} de {page.totalCount}
-                </span>
+                <span>{t.showing(visibleStart, visibleEnd, page.totalCount)}</span>
               </div>
 
               <div className="flex flex-wrap items-center justify-end gap-2">
@@ -983,7 +987,7 @@ export default function InvestmentsPage() {
                   <SelectContent>
                     {pageSizeOptions.map((size) => (
                       <SelectItem key={size} value={String(size)}>
-                        {size} por página
+                        {t.perPage(size)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -991,19 +995,19 @@ export default function InvestmentsPage() {
                 <Button
                   variant="outline"
                   size="icon"
-                  aria-label="Página anterior"
+                  aria-label={t.previousPage}
                   disabled={page.pageNumber <= 1 || isLoading}
                   onClick={() => setPageNumber((current) => current - 1)}
                 >
                   <ChevronLeft className="size-4" />
                 </Button>
                 <span className="min-w-[84px] text-center">
-                  Página {page.pageNumber} de {Math.max(page.totalPages, 1)}
+                  {t.pageOf(page.pageNumber, Math.max(page.totalPages, 1))}
                 </span>
                 <Button
                   variant="outline"
                   size="icon"
-                  aria-label="Página siguiente"
+                  aria-label={t.nextPage}
                   disabled={page.pageNumber >= page.totalPages || isLoading}
                   onClick={() => setPageNumber((current) => current + 1)}
                 >

@@ -17,63 +17,38 @@ export type ExpenseCategory =
 
 export type IncomeCategory = "Salario" | "Freelance" | "Inversiones" | "Regalo" | "Otros"
 
-export const expenseCategoryLabels: Record<ExpenseCategory, string> = {
-  Alimentos: "Alimentos",
-  Transporte: "Transporte",
-  Vivienda: "Vivienda",
-  Servicios: "Servicios",
-  Salud: "Salud",
-  Educacion: "Educación",
-  Entretenimiento: "Entretenimiento",
-  Indumentaria: "Indumentaria",
-  AhorroInversion: "Ahorro e Inversión",
-  Otros: "Otros",
-}
-
-export const incomeCategoryLabels: Record<IncomeCategory, string> = {
-  Salario: "Salario",
-  Freelance: "Freelance",
-  Inversiones: "Inversiones",
-  Regalo: "Regalo",
-  Otros: "Otros",
-}
+// Las etiquetas de estos valores están en `lib/i18n` (`labels`): acá quedan solo los valores
+// que viajan a la API, que no se traducen.
+export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
+  "Alimentos",
+  "Transporte",
+  "Vivienda",
+  "Servicios",
+  "Salud",
+  "Educacion",
+  "Entretenimiento",
+  "Indumentaria",
+  "AhorroInversion",
+  "Otros",
+]
 
 export type TransactionStatus = "Confirmed" | "Pending"
 export type TransactionListStatus = TransactionStatus | "Eliminated"
 
-export const transactionStatusLabels: Record<TransactionListStatus, string> = {
-  Confirmed: "Confirmada",
-  Pending: "Pendiente",
-  Eliminated: "Eliminada",
-}
-
 export type Currency = "ARS" | "USD" | "EUR" | "BRL"
 
 export type PaymentMethod = "Cash" | "CreditCard" | "DebitCard" | "BankTransfer" | "DigitalWallet"
-export type PaymentMethodLabel =
-  | "Efectivo"
-  | "Tarjeta de Crédito"
-  | "Tarjeta de Débito"
-  | "Transferencia Bancaria"
-  | "Billetera Digital"
-
-export const paymentMethodLabels: Record<PaymentMethod, PaymentMethodLabel> = {
-  Cash: "Efectivo",
-  CreditCard: "Tarjeta de Crédito",
-  DebitCard: "Tarjeta de Débito",
-  BankTransfer: "Transferencia Bancaria",
-  DigitalWallet: "Billetera Digital",
-}
 
 export interface TransactionDto {
   id: string
   type: TransactionType
   amount: number
   currency: Currency
+  /** Valor de `ExpenseCategory` o `IncomeCategory`, según `type`. */
   category: string
   description: string
   occurredOn: string
-  paymentMethod: PaymentMethodLabel
+  paymentMethod: PaymentMethod
   source: string
   status: TransactionListStatus
   createdAt: string
@@ -156,25 +131,13 @@ export function getTransactionSummary(
   })
 }
 
-type ApiTransaction = Omit<TransactionDto, "paymentMethod" | "status"> & {
-  paymentMethod: PaymentMethod
-  status: TransactionListStatus
-}
-
-function translateTransaction(transaction: ApiTransaction) {
-  return {
-    ...transaction,
-    paymentMethod: paymentMethodLabels[transaction.paymentMethod] ?? transaction.paymentMethod,
-  }
-}
-
 export function listTransactions(
   pageNumber = 1,
   pageSize = 10,
   filters: TransactionFilters = {},
   signal?: AbortSignal,
 ): Promise<TransactionsResponse> {
-  return api.get<{ items: ApiTransaction[]; pageNumber: number; pageSize: number; totalCount: number; totalPages: number }>("/api/transactions", {
+  return api.get<TransactionsResponse>("/api/transactions", {
     query: {
       pageNumber,
       pageSize,
@@ -190,10 +153,7 @@ export function listTransactions(
       sortDirection: filters.sortDirection,
     },
     signal,
-  }).then((response) => ({
-    ...response,
-    items: response.items.map(translateTransaction),
-  }))
+  })
 }
 
 export function exportTransactions(filters: TransactionFilters = {}): Promise<Blob> {
@@ -216,9 +176,7 @@ export function exportTransactions(filters: TransactionFilters = {}): Promise<Bl
 }
 
 export function createTransaction(payload: CreateTransactionPayload, signal?: AbortSignal): Promise<TransactionDto> {
-  return api
-    .post<Omit<TransactionDto, "paymentMethod"> & { paymentMethod: PaymentMethod }>("/api/transactions", payload, { signal })
-    .then(translateTransaction)
+  return api.post<TransactionDto>("/api/transactions", payload, { signal })
 }
 
 export function updateTransaction(
@@ -226,9 +184,7 @@ export function updateTransaction(
   payload: UpdateTransactionPayload,
   signal?: AbortSignal,
 ): Promise<TransactionDto> {
-  return api
-    .put<Omit<TransactionDto, "paymentMethod"> & { paymentMethod: PaymentMethod }>(`/api/transactions/${encodeURIComponent(id)}`, payload, { signal })
-    .then(translateTransaction)
+  return api.put<TransactionDto>(`/api/transactions/${encodeURIComponent(id)}`, payload, { signal })
 }
 
 export function deleteTransaction(id: string, signal?: AbortSignal): Promise<void> {

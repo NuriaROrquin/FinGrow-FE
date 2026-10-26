@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { deleteDepartment, isApiError, toastApiError, type DepartmentDto } from "@/lib/api"
-import { plural } from "@/lib/utils"
+import { useMessages } from "@/lib/i18n"
 
 export function DeleteDepartmentDialog({
   department,
@@ -31,6 +31,8 @@ export function DeleteDepartmentDialog({
   onRejected: () => void
   onDeactivateInstead: () => void
 }) {
+  const messages = useMessages()
+  const t = messages.departments
   const [isDeleting, setIsDeleting] = useState(false)
   const employees = department.employeeCount
   const hasEmployees = employees > 0
@@ -40,7 +42,7 @@ export function DeleteDepartmentDialog({
     try {
       await deleteDepartment(department.id)
       onDeleted(department.id)
-      toast.success(`Departamento "${department.name}" eliminado`)
+      toast.success(t.deleted(department.name))
       onOpenChange(false)
     } catch (error) {
       if (isApiError(error) && error.code === "Department.HasEmployees") {
@@ -50,7 +52,7 @@ export function DeleteDepartmentDialog({
         return
       }
 
-      toastApiError(error, "No se pudo eliminar el departamento.")
+      toastApiError(error, t.deleteFailed)
     } finally {
       setIsDeleting(false)
     }
@@ -60,11 +62,9 @@ export function DeleteDepartmentDialog({
     <AlertDialog open={open} onOpenChange={(next) => !isDeleting && onOpenChange(next)}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>¿Eliminar el departamento &quot;{department.name}&quot;?</AlertDialogTitle>
+          <AlertDialogTitle>{t.deleteTitle(department.name)}</AlertDialogTitle>
           <AlertDialogDescription>
-            {hasEmployees
-              ? `Tiene ${employees} ${plural(employees, "empleado asignado", "empleados asignados")}: no se puede eliminar mientras tenga gente.`
-              : "Se borra junto con sus métricas de meses anteriores y no se puede recuperar."}
+            {hasEmployees ? t.hasEmployees(employees) : t.deleteWarning}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -72,12 +72,10 @@ export function DeleteDepartmentDialog({
           <div className="flex flex-col gap-3 rounded-md border bg-muted/50 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-medium text-foreground">
-                {hasEmployees ? "¿El departamento ya no existe?" : "¿Querés conservar su historial?"}
+                {hasEmployees ? t.noLongerExists : t.keepHistory}
               </p>
               <p className="text-muted-foreground">
-                {hasEmployees
-                  ? "Desactivalo: movés a su gente en el mismo paso y sus métricas se conservan."
-                  : "Desactivalo: deja de usarse pero sus métricas se conservan."}
+                {hasEmployees ? t.deactivateMovingPeople : t.deactivateKeepsMetrics}
               </p>
             </div>
             <Button
@@ -89,26 +87,26 @@ export function DeleteDepartmentDialog({
               onClick={onDeactivateInstead}
             >
               <Archive className="h-4 w-4" />
-              Desactivar en su lugar
+              {t.deactivateInstead}
             </Button>
           </div>
         ) : (
           !hasEmployees && (
             <p className="rounded-md border bg-muted/50 p-3 text-sm text-muted-foreground">
-              Ya está desactivado: mientras no lo elimines, sus métricas de meses anteriores se conservan.
+              {t.alreadyInactive}
             </p>
           )
         )}
 
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+          <AlertDialogCancel disabled={isDeleting}>{messages.common.cancel}</AlertDialogCancel>
           <Button
             type="button"
             variant="destructive"
             disabled={isDeleting || hasEmployees}
             onClick={() => void handleDelete()}
           >
-            {isDeleting ? "Eliminando..." : "Eliminar"}
+            {isDeleting ? t.deleting : t.delete}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

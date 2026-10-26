@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { changeDepartmentStatus, toastApiError, type DepartmentDto } from "@/lib/api"
-import { plural } from "@/lib/utils"
+import { useMessages } from "@/lib/i18n"
 
 const WITHOUT_DEPARTMENT = "none"
 
@@ -32,6 +32,8 @@ export function DeactivateDepartmentDialog({
   onOpenChange: (open: boolean) => void
   onDeactivated: () => void
 }) {
+  const messages = useMessages()
+  const t = messages.departments
   const [destination, setDestination] = useState("")
   const [isSaving, setIsSaving] = useState(false)
   const employees = department.employeeCount
@@ -49,15 +51,15 @@ export function DeactivateDepartmentDialog({
       const target = destinations.find((candidate) => candidate.id === moveEmployeesTo)
       toast.success(
         !hasEmployees
-          ? `Se desactivó "${department.name}"`
+          ? t.deactivated(department.name)
           : target
-            ? `Se desactivó "${department.name}" y ${plural(employees, "su empleado pasó", `sus ${employees} empleados pasaron`)} a "${target.name}"`
-            : `Se desactivó "${department.name}" y ${plural(employees, "su empleado quedó", `sus ${employees} empleados quedaron`)} sin departamento`,
+            ? t.deactivatedMoved(department.name, employees, target.name)
+            : t.deactivatedUnassigned(department.name, employees),
       )
       onDeactivated()
       onOpenChange(false)
     } catch (error) {
-      toastApiError(error, "No se pudo desactivar el departamento.")
+      toastApiError(error, t.deactivateFailed)
     } finally {
       setIsSaving(false)
     }
@@ -67,21 +69,18 @@ export function DeactivateDepartmentDialog({
     <AlertDialog open={open} onOpenChange={(next) => !isSaving && onOpenChange(next)}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>¿Desactivar el departamento &quot;{department.name}&quot;?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Deja de aparecer al dar de alta o mover empleados. Sus métricas de meses anteriores se conservan y podés
-            reactivarlo cuando quieras.
-          </AlertDialogDescription>
+          <AlertDialogTitle>{t.deactivateTitle(department.name)}</AlertDialogTitle>
+          <AlertDialogDescription>{t.deactivateDescription}</AlertDialogDescription>
         </AlertDialogHeader>
 
         {hasEmployees && (
           <div className="space-y-2 rounded-md border bg-muted/50 p-3 text-sm">
             <Label htmlFor="deactivate-department-destination" className="font-medium">
-              Tiene {employees} {plural(employees, "empleado", "empleados")}. ¿A dónde {plural(employees, "lo", "los")} movés?
+              {t.whereToMove(employees)}
             </Label>
             <Select value={destination} onValueChange={setDestination} disabled={isSaving}>
               <SelectTrigger id="deactivate-department-destination" className="w-full bg-background">
-                <SelectValue placeholder="Elegí un departamento" />
+                <SelectValue placeholder={t.pickDepartment} />
               </SelectTrigger>
               <SelectContent>
                 {destinations.map((candidate) => (
@@ -89,19 +88,19 @@ export function DeactivateDepartmentDialog({
                     {candidate.name}
                   </SelectItem>
                 ))}
-                <SelectItem value={WITHOUT_DEPARTMENT}>Dejarlos sin departamento</SelectItem>
+                <SelectItem value={WITHOUT_DEPARTMENT}>{t.leaveUnassigned}</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              El cambio queda en su historial: las métricas de meses anteriores siguen contándolos acá.
+              {t.historyNote}
             </p>
           </div>
         )}
 
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isSaving}>Cancelar</AlertDialogCancel>
+          <AlertDialogCancel disabled={isSaving}>{messages.common.cancel}</AlertDialogCancel>
           <Button type="button" disabled={isSaving || (hasEmployees && !destination)} onClick={() => void handleDeactivate()}>
-            {isSaving ? "Desactivando..." : "Desactivar departamento"}
+            {isSaving ? t.deactivating : t.deactivate}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -422,7 +422,7 @@ export function CompanyProfileCard() {
                   <SelectContent>
                     {COMPANY_INDUSTRIES.map((industry) => (
                       <SelectItem key={industry} value={industry}>
-                        {industry}
+                        {t.labels.companyIndustries[industry]}
                       </SelectItem>
                     ))}
                   </SelectContent>

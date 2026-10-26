@@ -13,6 +13,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { changeEmployeeAccess, toastApiError, type CompanyEmployeeDto } from "@/lib/api"
+import { useMessages } from "@/lib/i18n"
 
 export function DeactivateEmployeeDialog({
   employee,
@@ -25,16 +26,18 @@ export function DeactivateEmployeeDialog({
   onOpenChange: (open: boolean) => void
   onDeactivated: (employee: CompanyEmployeeDto) => void
 }) {
+  const messages = useMessages()
+  const t = messages.employees
   const [isSaving, setIsSaving] = useState(false)
 
   const handleDeactivate = async () => {
     setIsSaving(true)
     try {
       onDeactivated(await changeEmployeeAccess(employee.id, false))
-      toast.success(`Se desactivó el acceso de ${employee.fullName}`)
+      toast.success(t.deactivated(employee.fullName))
       onOpenChange(false)
     } catch (error) {
-      toastApiError(error, "No se pudo desactivar el acceso.")
+      toastApiError(error, t.deactivateFailed)
     } finally {
       setIsSaving(false)
     }
@@ -44,14 +47,11 @@ export function DeactivateEmployeeDialog({
     <AlertDialog open={open} onOpenChange={(next) => !isSaving && onOpenChange(next)}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>¿Desactivar el acceso de {employee.fullName}?</AlertDialogTitle>
-          <AlertDialogDescription>
-            No va a poder iniciar sesión y se cierran sus sesiones abiertas. Sus datos se conservan y podés
-            reactivarlo cuando quieras. Un acceso desactivado deja de contar como licencia activa.
-          </AlertDialogDescription>
+          <AlertDialogTitle>{t.deactivateTitle(employee.fullName)}</AlertDialogTitle>
+          <AlertDialogDescription>{t.deactivateDescription}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isSaving}>Cancelar</AlertDialogCancel>
+          <AlertDialogCancel disabled={isSaving}>{messages.common.cancel}</AlertDialogCancel>
           <AlertDialogAction
             disabled={isSaving}
             onClick={(event) => {
@@ -59,7 +59,7 @@ export function DeactivateEmployeeDialog({
               void handleDeactivate()
             }}
           >
-            {isSaving ? "Desactivando..." : "Desactivar"}
+            {isSaving ? t.deactivating : t.deactivate}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

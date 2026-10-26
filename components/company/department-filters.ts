@@ -22,24 +22,6 @@ export const defaultDepartmentFilters: DepartmentFilterValues = {
   manager: "all",
 }
 
-export const departmentStatusLabels: Record<DepartmentStatusFilter, string> = {
-  all: "Todos",
-  active: "Activos",
-  inactive: "Inactivos",
-}
-
-export const departmentStaffLabels: Record<DepartmentStaffFilter, string> = {
-  all: "Todos",
-  withEmployees: "Con empleados",
-  empty: "Sin empleados",
-}
-
-export const departmentManagerLabels: Record<DepartmentManagerFilter, string> = {
-  all: "Todos",
-  withManager: "Con responsable",
-  withoutManager: "Sin responsable",
-}
-
 export type DepartmentSortField = "name" | "description" | "manager" | "employeeCount" | "createdAt" | "isActive"
 
 export type DepartmentSort = SortState<DepartmentSortField>
@@ -89,8 +71,7 @@ const departmentSortValues: SortAccessors<DepartmentDto, DepartmentSortField> = 
   manager: (department) => department.manager?.fullName ?? null,
   employeeCount: (department) => department.employeeCount,
   createdAt: (department) => toDate(department.createdAt),
-  isActive: (department) =>
-    department.isActive ? departmentStatusLabels.active : departmentStatusLabels.inactive,
+  isActive: (department) => (department.isActive ? "active" : "inactive"),
 }
 
 export function sortDepartments(departments: DepartmentDto[], sort: DepartmentSort): DepartmentDto[] {

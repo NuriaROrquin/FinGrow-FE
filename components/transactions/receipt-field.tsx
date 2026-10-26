@@ -24,6 +24,7 @@ import {
   receiptMaxSizeBytes,
   uploadReceipt,
 } from "@/lib/api/receipts"
+import { useMessages } from "@/lib/i18n"
 
 type UploadState = "idle" | "uploading" | "uploaded" | "error"
 
@@ -59,6 +60,8 @@ export function ReceiptField({
   const [state, setState] = useState<UploadState>(uploaded ? "uploaded" : "idle")
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
+  const messages = useMessages()
+  const t = messages.receiptField
 
   useEffect(() => () => uploadRef.current?.abort(), [])
 
@@ -91,8 +94,8 @@ export function ReceiptField({
     } catch (openError) {
       tab?.close()
       toast({
-        title: "No se pudo abrir el comprobante",
-        description: isApiError(openError) ? openError.description : "Intentá de nuevo en unos segundos.",
+        title: t.openFailed,
+        description: isApiError(openError) ? openError.description : t.tryAgainShortly,
         variant: "destructive",
       })
     } finally {
@@ -129,7 +132,7 @@ export function ReceiptField({
 
     if (files.length > 1) {
       setState("error")
-      setError("Solo se puede subir un archivo.")
+      setError(t.onlyOneFile)
       return
     }
 
@@ -143,13 +146,13 @@ export function ReceiptField({
 
     if (!(receiptAcceptedTypes as readonly string[]).includes(selected.type)) {
       setState("error")
-      setError("El comprobante tiene que ser una imagen JPG o PNG, o un PDF.")
+      setError(t.invalidType)
       return
     }
 
     if (selected.size > receiptMaxSizeBytes) {
       setState("error")
-      setError(`El comprobante no puede superar los ${receiptMaxSizeBytes / (1024 * 1024)} MB.`)
+      setError(t.tooLarge(receiptMaxSizeBytes / (1024 * 1024)))
       return
     }
 
@@ -168,7 +171,7 @@ export function ReceiptField({
       }
 
       setState("error")
-      setError(isApiError(uploadError) ? uploadError.description : "No pudimos subir el comprobante. Intentá de nuevo.")
+      setError(isApiError(uploadError) ? uploadError.description : t.uploadFailed)
     } finally {
       if (!controller.signal.aborted) {
         onUploadingChange(false)
@@ -178,7 +181,7 @@ export function ReceiptField({
 
   return (
     <div className="space-y-2">
-      <Label htmlFor="receipt">Comprobante (opcional)</Label>
+      <Label htmlFor="receipt">{t.label}</Label>
       <input
         ref={inputRef}
         id="receipt"
@@ -192,10 +195,10 @@ export function ReceiptField({
       {keepsExisting ? (
         <div className="flex items-center gap-3 rounded-md border border-border/70 p-2">
           <FileText className="size-10 p-1.5 text-muted-foreground" />
-          <p className="min-w-0 flex-1 text-sm">Comprobante adjunto</p>
+          <p className="min-w-0 flex-1 text-sm">{t.attached}</p>
           <Button type="button" variant="ghost" size="sm" onClick={openExisting} disabled={disabled || isOpening}>
             {isOpening ? <Spinner className="size-4" /> : <Eye className="size-4" />}
-            Ver
+            {t.view}
           </Button>
           <Button
             type="button"
@@ -203,7 +206,7 @@ export function ReceiptField({
             size="icon"
             onClick={() => setIsConfirmingRemoval(true)}
             disabled={disabled}
-            aria-label="Quitar comprobante"
+            aria-label={t.remove}
           >
             <X className="size-4" />
           </Button>
@@ -217,13 +220,13 @@ export function ReceiptField({
           disabled={disabled}
         >
           <Paperclip className="size-4" />
-          Adjuntar foto o PDF
+          {t.attach}
         </Button>
       ) : (
         <div className="flex items-center gap-3 rounded-md border border-border/70 p-2">
           {previewUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={previewUrl} alt="Vista previa del comprobante" className="size-12 rounded object-cover" />
+            <img src={previewUrl} alt={t.previewAlt} className="size-12 rounded object-cover" />
           ) : (
             <FileText className="size-12 p-2 text-muted-foreground" />
           )}
@@ -234,19 +237,19 @@ export function ReceiptField({
               {state === "uploading" && (
                 <>
                   <Spinner className="size-3" />
-                  Subiendo…
+                  {t.uploading}
                 </>
               )}
               {state === "uploaded" && (
                 <>
                   <CheckCircle2 className="size-3 text-green-600" />
-                  Listo
+                  {t.ready}
                 </>
               )}
             </p>
           </div>
 
-          <Button type="button" variant="ghost" size="icon" onClick={clear} disabled={disabled} aria-label="Quitar comprobante">
+          <Button type="button" variant="ghost" size="icon" onClick={clear} disabled={disabled} aria-label={t.remove}>
             <X className="size-4" />
           </Button>
         </div>
@@ -257,14 +260,12 @@ export function ReceiptField({
       <AlertDialog open={isConfirmingRemoval} onOpenChange={setIsConfirmingRemoval}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Quitar el comprobante?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Al guardar, este movimiento va a quedar sin su comprobante actual. Después podés adjuntar otro.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t.removeTitle}</AlertDialogTitle>
+            <AlertDialogDescription>{t.removeDescription}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={removeExisting}>Quitar</AlertDialogAction>
+            <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
+            <AlertDialogAction onClick={removeExisting}>{t.removeConfirm}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
