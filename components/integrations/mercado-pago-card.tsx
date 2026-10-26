@@ -34,10 +34,10 @@ import {
 import { useMessages } from "@/lib/i18n"
 
 import { LastSync } from "./last-sync"
+import { MERCADO_PAGO_RESULT_PARAM } from "./link-result"
 import { formatLinkedDate, LINKED_ICON_CLASS } from "./link-code-integration-card"
 
 const PROVIDER = "mercadopago"
-const RESULT_PARAM = "mercadopago"
 
 export function MercadoPagoCard() {
   const t = useMessages()
@@ -64,7 +64,7 @@ export function MercadoPagoCard() {
 
   useEffect(() => {
     const url = new URL(window.location.href)
-    const result = url.searchParams.get(RESULT_PARAM) as MercadoPagoLinkResult | null
+    const result = url.searchParams.get(MERCADO_PAGO_RESULT_PARAM) as MercadoPagoLinkResult | null
     if (result === null) return
 
     if (result === "linked") {
@@ -78,7 +78,7 @@ export function MercadoPagoCard() {
       })
     }
 
-    url.searchParams.delete(RESULT_PARAM)
+    url.searchParams.delete(MERCADO_PAGO_RESULT_PARAM)
     url.searchParams.delete("reason")
     window.history.replaceState(window.history.state, "", url.toString())
   }, [t])
