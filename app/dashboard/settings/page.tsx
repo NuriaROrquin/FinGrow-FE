@@ -29,6 +29,7 @@ import { PreferencesCard } from "@/components/preferences/preferences-card"
 import { IolCard } from "@/components/integrations/iol-card"
 import { GmailCard } from "@/components/integrations/gmail-card"
 import { MercadoPagoCard } from "@/components/integrations/mercado-pago-card"
+import { tabAfterLink } from "@/components/integrations/link-result"
 import { TELEGRAM_BOT_USERNAME, TelegramCard } from "@/components/integrations/telegram-card"
 import { WhatsAppCard } from "@/components/integrations/whatsapp-card"
 import { useEffect, useState, type FormEvent } from "react"
@@ -39,9 +40,9 @@ export default function SettingsPage() {
   const { role, logout } = useAuth()
   const t = useMessages()
   const searchParams = useSearchParams()
-  const [activeTab, setActiveTab] = useState(() => searchParams.get("tab") || "profile")
+  const [activeTab, setActiveTab] = useState(() => (tabAfterLink(searchParams) ?? searchParams.get("tab")) || "profile")
   useEffect(() => {
-    const tab = searchParams.get("tab")
+    const tab = tabAfterLink(searchParams) ?? searchParams.get("tab")
     if (tab) setActiveTab(tab)
   }, [searchParams])
   const visibleTab = role === "empresa" && activeTab === "integrations" ? "profile" : activeTab
