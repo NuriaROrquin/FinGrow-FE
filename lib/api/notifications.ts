@@ -18,6 +18,7 @@ export type CompanyNotificationType =
   | "ParticipationLow"
   | "EmployeeAdded"
   | "EmployeeRemoved"
+  | "MonthlyReport"
 
 export type NotificationCadence = "Daily" | "Weekly" | "Monthly"
 

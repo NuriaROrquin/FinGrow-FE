@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { BellRingIcon, CircleHelpIcon, UserMinusIcon, UserPlusIcon, UsersRoundIcon, WalletCardsIcon } from "lucide-react"
+import { BellRingIcon, CircleHelpIcon, MailIcon, UserMinusIcon, UserPlusIcon, UsersRoundIcon, WalletCardsIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
@@ -27,6 +27,7 @@ const orderedTypes: CompanyNotificationType[] = [
   "ParticipationLow",
   "EmployeeAdded",
   "EmployeeRemoved",
+  "MonthlyReport",
 ]
 
 const thresholdDefaults: Partial<Record<CompanyNotificationType, number>> = {
@@ -39,6 +40,7 @@ const icons = {
   ParticipationLow: UsersRoundIcon,
   EmployeeAdded: UserPlusIcon,
   EmployeeRemoved: UserMinusIcon,
+  MonthlyReport: MailIcon,
 }
 
 function isThresholdType(type: CompanyNotificationType): type is "FinancialWellbeingLow" | "ParticipationLow" {

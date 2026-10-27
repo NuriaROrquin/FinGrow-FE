@@ -290,8 +290,6 @@ export const es = {
       wellbeingHint: "Recibe notificaciones sobre cambios en el bienestar financiero de empleados",
       newEmployees: "Nuevos Empleados Registrados",
       newEmployeesHint: "Alerta cuando un empleado se registra en la plataforma",
-      monthlyReports: "Reportes Mensuales",
-      monthlyReportsHint: "Recibe reportes mensuales de métricas empresariales",
       participation: "Alertas de Participación",
       participationHint: "Notificaciones sobre cambios en la tasa de participación",
       email: "Notificaciones por Email",
@@ -427,6 +425,11 @@ export const es = {
           EmployeeRemoved: {
             label: "Bajas definitivas",
             description: "Recibí un resumen de empleados eliminados definitivamente.",
+          },
+          MonthlyReport: {
+            label: "Reportes mensuales",
+            description:
+              "Recibí por mail, al cerrar cada mes, un resumen de la participación, el puntaje promedio de salud financiera y los cursos completados, comparado con el mes anterior. Llega al email de la cuenta de la empresa, empezando por el próximo mes que cierre.",
           },
         },
       },
@@ -954,42 +957,6 @@ export const es = {
     exporting: "Generando PDF...",
     exportFailed: "No se pudo generar el reporte. Probá de nuevo.",
     noPeriod: "Todavía no hay meses cerrados para exportar.",
-    title: "Reporte de Bienestar Financiero",
-    company: "Empresa",
-    period: "Período",
-    comparedWith: "Comparado con",
-    generatedAt: "Generado el",
-    summaryTitle: "Resumen del mes",
-    evolutionTitle: "Evolución",
-    trendsTitle: "Tendencias",
-    anonymized: (month: string, minimum: number) =>
-      `En ${month} hubo menos de ${minimum} empleados activos. Los indicadores se ocultan para no identificar a nadie.`,
-    participants: (participating: number, active: number) =>
-      `${participating} de ${active} empleados activos participaron`,
-    band: (label: string) => `Nivel: ${label}`,
-    bands: {
-      Critical: "Crítica",
-      Fragile: "Frágil",
-      Stable: "Estable",
-      Healthy: "Saludable",
-    },
-    hidden: "Oculto",
-    hiddenReasons: {
-      TooFewActiveEmployees: (minimum: number) => `Menos de ${minimum} empleados activos en el mes.`,
-      TooFewScoredEmployees: (minimum: number) =>
-        `Menos de ${minimum} empleados con actividad suficiente para medir su salud financiera.`,
-    },
-    change: (change: string, month: string) => `${change} respecto de ${month}`,
-    noChange: (month: string) => `Sin cambios respecto de ${month}`,
-    previousReasons: {
-      NoData: (month: string) => `Sin datos de ${month} para comparar.`,
-      TooFewActiveEmployees: (month: string, minimum: number) =>
-        `Sin comparación: en ${month} hubo menos de ${minimum} empleados activos.`,
-      TooFewScoredEmployees: (month: string, minimum: number) =>
-        `Sin comparación: en ${month} hubo menos de ${minimum} empleados con puntaje.`,
-    },
-    privacyNote: (minimum: number) =>
-      `Este reporte contiene solo métricas agregadas y anónimas de la plantilla: ningún dato identifica a un empleado. Los indicadores de grupos de menos de ${minimum} empleados no se muestran.`,
     fileName: "reporte-empresa",
   },
 
