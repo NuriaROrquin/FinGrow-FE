@@ -83,6 +83,7 @@ export {
   getCompanyInsights,
   getCompanyMetrics,
   getCompanyMonthlyReport,
+  downloadCompanyMonthlyReportPdf,
   getCompanyTrends,
   getCompanyProfile,
   getDepartmentMetrics,

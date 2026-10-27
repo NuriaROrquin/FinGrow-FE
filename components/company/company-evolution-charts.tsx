@@ -3,13 +3,12 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useIsReportExport } from "@/components/reports/report-export-context"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts"
 import type { CompanyMetricsDto } from "@/lib/api"
 import { formatDateText, formatNumber } from "@/lib/format"
 import { useMessages } from "@/lib/i18n"
 
-/** Lo que la página pide una sola vez a `GET /api/company/metrics` y comparten el panel y el PDF (HU-65). */
+/** Lo que la página pide una sola vez a `GET /api/company/metrics`. */
 export interface CompanyMetricsState {
   metrics: CompanyMetricsDto[]
   error: string | null
@@ -27,12 +26,11 @@ function formatRate(rate: number): string {
 
 /**
  * Gráficos de participación y de salud financiera de todos los meses con foto. Los meses que no
- * llegan al umbral de anonimato vienen marcados por el backend y quedan en blanco. En el PDF
- * (`ReportExportProvider`) van uno debajo del otro y sin animación, para que se capturen completos.
+ * llegan al umbral de anonimato vienen marcados por el backend y quedan en blanco. El PDF del
+ * reporte (HU-65) dibuja los mismos gráficos en el backend.
  */
 export function CompanyEvolutionCharts({ metrics, error, isLoading }: CompanyMetricsState) {
   const t = useMessages().companyPanel
-  const isExport = useIsReportExport()
   const chartConfig = {
     active: { label: t.chartParticipationRate, color: "#8b5cf6" },
     enrolled: { label: t.chartParticipatingEmployees, color: "#a78bfa" },
@@ -50,7 +48,7 @@ export function CompanyEvolutionCharts({ metrics, error, isLoading }: CompanyMet
   }))
 
   return (
-    <div className={isExport ? "grid gap-4" : "grid gap-4 grid-cols-1 md:grid-cols-2"}>
+    <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
       <Card>
         <CardHeader>
           <CardTitle>{t.participationTitle}</CardTitle>
@@ -89,7 +87,6 @@ export function CompanyEvolutionCharts({ metrics, error, isLoading }: CompanyMet
                   yAxisId="rate"
                   stroke={chartConfig.active.color}
                   strokeWidth={2}
-                  isAnimationActive={!isExport}
                 />
                 <Line
                   type="monotone"
@@ -97,7 +94,6 @@ export function CompanyEvolutionCharts({ metrics, error, isLoading }: CompanyMet
                   yAxisId="employees"
                   stroke={chartConfig.enrolled.color}
                   strokeWidth={2}
-                  isAnimationActive={!isExport}
                 />
               </LineChart>
             </ChartContainer>
@@ -144,7 +140,6 @@ export function CompanyEvolutionCharts({ metrics, error, isLoading }: CompanyMet
                   dataKey="score"
                   stroke={chartConfig.score.color}
                   strokeWidth={2}
-                  isAnimationActive={!isExport}
                 />
               </LineChart>
             </ChartContainer>

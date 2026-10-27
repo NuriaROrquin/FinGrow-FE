@@ -391,6 +391,18 @@ export function getCompanyMonthlyReport(signal?: AbortSignal): Promise<CompanyMo
   return api.get<CompanyMonthlyReportDto>("/api/company/metrics/report", { signal })
 }
 
+/**
+ * El PDF del último mes con foto (HU-65), en el idioma de la empresa. Lo arma el backend: es el mismo
+ * que adjunta el mail mensual (HU-82). Sin ningún mes cerrado responde 404.
+ */
+export function downloadCompanyMonthlyReportPdf(signal?: AbortSignal): Promise<Blob> {
+  return api.get<Blob>("/api/company/metrics/report/pdf", {
+    signal,
+    headers: { Accept: "application/pdf" },
+    responseType: "blob",
+  })
+}
+
 export type HealthBand = "Critical" | "Fragile" | "Stable" | "Healthy"
 
 export type DepartmentMetricsSummary = {

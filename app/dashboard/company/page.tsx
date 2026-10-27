@@ -11,19 +11,18 @@ import { FinancialHealthCard } from "@/components/company/financial-health-card"
 import { FinancialConcernsCard } from "@/components/company/financial-concerns-card"
 import { CompanyRecommendationsCard } from "@/components/company/company-recommendations-card"
 import { CompanyTrendsCard } from "@/components/company/company-trends-card"
-import { CompanyReportPdfExport } from "@/components/company/company-report-pdf-export"
 import { CompanyEvolutionCharts, type CompanyMetricsState } from "@/components/company/company-evolution-charts"
 import type { CompanyInsightsState } from "@/components/company/company-insights-state"
 import {
+  downloadCompanyMonthlyReportPdf,
   getCompanyMetrics,
   getCompanyMonthlyReport,
   isApiError,
   type CompanyMetricsDto,
-  type CompanyMonthlyReportDto,
 } from "@/lib/api"
 import { getCompanyInsights } from "@/lib/api/company"
 import { useMessages } from "@/lib/i18n"
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 
 export default function CompanyDashboardPage() {
   const messages = useMessages()
@@ -83,10 +82,9 @@ export default function CompanyDashboardPage() {
     return () => controller.abort()
   }, [])
 
-  // HU-65: el reporte se pide recién al exportar; preocupaciones y recomendaciones salen del mismo
-  // pedido a /insights que ya muestran las pestañas, así el PDF dice lo mismo que la pantalla.
+  // HU-65 y HU-82: el PDF lo arma el backend, el mismo que adjunta el mail mensual. El reporte se pide
+  // antes solo para saber si hay un mes cerrado y para nombrar el archivo con ese mes.
   const [isExporting, setIsExporting] = useState(false)
-  const [pdfExport, setPdfExport] = useState<{ report: CompanyMonthlyReportDto; generatedAt: Date } | null>(null)
 
   const startExport = async () => {
     setIsExporting(true)
@@ -96,27 +94,17 @@ export default function CompanyDashboardPage() {
 
       if (!report.period) {
         toast.info(reportTexts.noPeriod)
-        setIsExporting(false)
         return
       }
 
-      setPdfExport({ report, generatedAt: new Date() })
+      const pdf = await downloadCompanyMonthlyReportPdf()
+      saveFile(pdf, `${reportTexts.fileName}_${report.period.slice(0, 7).replace("-", "")}.pdf`)
     } catch {
       toast.error(reportTexts.exportFailed)
+    } finally {
       setIsExporting(false)
     }
   }
-
-  const finishExport = useCallback(() => {
-    setPdfExport(null)
-    setIsExporting(false)
-  }, [])
-
-  const failExport = useCallback(() => {
-    setPdfExport(null)
-    setIsExporting(false)
-    toast.error(reportTexts.exportFailed)
-  }, [reportTexts.exportFailed])
 
   const metricsState: CompanyMetricsState = {
     metrics,
@@ -137,7 +125,7 @@ export default function CompanyDashboardPage() {
             <p className="text-muted-foreground mt-1">{t.subtitle}</p>
           </div>
         </div>
-        <Button onClick={startExport} disabled={insightsState.isLoading || isComparisonLoading || isExporting} className="self-start lg:self-auto">
+        <Button onClick={startExport} disabled={isExporting} className="self-start lg:self-auto">
           <DownloadIcon className="size-4" />
           {isExporting ? reportTexts.exporting : reportTexts.export}
         </Button>
@@ -182,17 +170,19 @@ export default function CompanyDashboardPage() {
           </div>
         </TabsContent>
       </Tabs>
-
-      {pdfExport && (
-        <CompanyReportPdfExport
-          generatedAt={pdfExport.generatedAt}
-          report={pdfExport.report}
-          insights={insightsState}
-          metrics={metricsState}
-          onComplete={finishExport}
-          onError={failExport}
-        />
-      )}
     </div>
   )
+}
+
+function saveFile(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement("a")
+
+  link.href = url
+  link.download = fileName
+  link.style.visibility = "hidden"
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
 }
