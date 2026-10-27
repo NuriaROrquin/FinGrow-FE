@@ -89,20 +89,16 @@ el rol: un 401 vuelve siempre a la portada, y `/login/*` redirige ahí (`next.co
   banda crítica o frágil): no lo calcules con umbrales propios. Un departamento con las métricas
   restringidas nunca se destaca. Si ninguno lo necesita y alguno tiene banda visible, se avisa que
   ninguno está en banda crítica o frágil.
-  **Exportar el reporte de la empresa (HU-65)**: "Exportar reporte", en el encabezado del panel, se
-  habilita cuando terminó de cargar `/insights`. Al tocarlo pide `GET /api/company/metrics/report`
-  (`getCompanyMonthlyReport`, siempre el último mes con foto contra el anterior) y monta
-  `components/company/company-report-pdf-export.tsx`, que se captura con el mismo `lib/report-pdf.ts`
-  de HU-45. El PDF lleva el nombre de la empresa, los tres indicadores del mes (participación, puntaje
-  promedio con su nivel y cursos completados), los dos gráficos de evolución del panel
-  (`company-evolution-charts.tsx`, con los mismos datos de `GET /api/company/metrics` que ya pidió la
-  página: los meses ocultos por anonimato quedan en blanco), las tendencias (`TrendsContent` de la
-  tarjeta de HU-63) y
-  las mismas tarjetas de preocupaciones y recomendaciones que se ven en pantalla, con el estado de
-  `/insights` que ya tiene la página: la IA no se vuelve a llamar. Un indicador oculto llega en `null`
-  con su motivo (`CompanyReportValueStatus`) y el PDF muestra "Oculto" y por qué: no lo completes con
-  cero ni filtres nada en el front. Sin ningún mes cerrado no se genera el PDF y se avisa con un toast.
-  Los textos están en `lib/i18n` (`companyReportPdf`).
+  **Exportar el reporte de la empresa (HU-65 y HU-82)**: el PDF lo arma el backend, y es el mismo que
+  le llega por mail a la empresa cada mes. "Exportar reporte", en el encabezado del panel, pide
+  `GET /api/company/metrics/report` (`getCompanyMonthlyReport`) solo para saber si hay un mes cerrado y
+  nombrar el archivo con ese mes, y después descarga `GET /api/company/metrics/report/pdf`
+  (`downloadCompanyMonthlyReportPdf`). Sin ningún mes cerrado no se descarga nada y se avisa con un
+  toast. Qué lleva el PDF, cómo se dice y qué se oculta por anonimato lo decide el backend, en el
+  idioma de la empresa: no lo armes de nuevo en el front ni vuelvas a capturar la pantalla para esto
+  (`lib/report-pdf.ts` queda solo para el reporte del empleado, HU-45). Como el backend le pide las
+  recomendaciones a FinGrow-AI al armar el PDF, pueden no ser idénticas a las de la pestaña. Los
+  textos del botón están en `lib/i18n` (`companyReportPdf`); los del PDF, en el backend.
 - **Educación** (artículos y cursos) usa la API real. La pantalla de Inversiones abre el contenido
   de cada tipo de activo (HU-35, `components/investments/related-education-dialog.tsx`) y todo
   artículo o curso con `isInvestmentContent` muestra `components/education/investment-disclaimer.tsx`:
