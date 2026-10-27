@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { getCompanyMonthlyReport, getDepartmentMetrics } from "./company"
+import { downloadCompanyMonthlyReportPdf, getCompanyMonthlyReport, getDepartmentMetrics } from "./company"
 
 const client = vi.hoisted(() => ({ api: { get: vi.fn() } }))
 
@@ -54,5 +54,26 @@ describe("getCompanyMonthlyReport", () => {
 
     expect(client.api.get).toHaveBeenCalledTimes(1)
     expect(client.api.get).toHaveBeenCalledWith("/api/company/metrics/report", { signal: controller.signal })
+  })
+})
+
+describe("downloadCompanyMonthlyReportPdf", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    client.api.get.mockResolvedValue(new Blob(["%PDF-"], { type: "application/pdf" }))
+  })
+
+  it("downloads the pdf the backend builds, as a blob", async () => {
+    const controller = new AbortController()
+
+    const pdf = await downloadCompanyMonthlyReportPdf(controller.signal)
+
+    expect(pdf.type).toBe("application/pdf")
+    expect(client.api.get).toHaveBeenCalledTimes(1)
+    expect(client.api.get).toHaveBeenCalledWith("/api/company/metrics/report/pdf", {
+      signal: controller.signal,
+      headers: { Accept: "application/pdf" },
+      responseType: "blob",
+    })
   })
 })

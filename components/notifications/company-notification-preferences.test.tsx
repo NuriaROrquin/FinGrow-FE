@@ -24,7 +24,16 @@ const preferences: CompanyNotificationTypePreferenceDto[] = [
   { type: "ParticipationLow", isEnabled: false, cadence: "Monthly", threshold: null },
   { type: "EmployeeAdded", isEnabled: false, cadence: "Weekly", threshold: null },
   { type: "EmployeeRemoved", isEnabled: false, cadence: "Weekly", threshold: null },
+  { type: "MonthlyReport", isEnabled: false, cadence: "Monthly", threshold: null },
 ]
+
+const switchNames: Record<CompanyNotificationTypePreferenceDto["type"], RegExp> = {
+  FinancialWellbeingLow: /Bienestar/,
+  ParticipationLow: /Participación/,
+  EmployeeAdded: /Altas/,
+  EmployeeRemoved: /Bajas/,
+  MonthlyReport: /Reportes mensuales/,
+}
 
 describe("CompanyNotificationPreferences", () => {
   afterEach(cleanup)
@@ -43,7 +52,7 @@ describe("CompanyNotificationPreferences", () => {
 
     expect(await screen.findByText("Bienestar financiero")).not.toBeNull()
     for (const preference of preferences) {
-      expect(screen.getByRole("switch", { name: new RegExp(preference.type === "EmployeeAdded" ? "Altas" : preference.type === "EmployeeRemoved" ? "Bajas" : preference.type === "ParticipationLow" ? "Participación" : "Bienestar") }).getAttribute("data-state")).toBe("unchecked")
+      expect(screen.getByRole("switch", { name: switchNames[preference.type] }).getAttribute("data-state")).toBe("unchecked")
     }
   })
 
@@ -110,6 +119,21 @@ describe("CompanyNotificationPreferences", () => {
       "EmployeeRemoved",
       { isEnabled: true, cadence: "Weekly", threshold: null },
     ))
+  })
+
+  it("turns on the monthly report as a monthly preference without threshold", async () => {
+    const user = userEvent.setup()
+    render(<CompanyNotificationPreferences />)
+
+    await user.click(await screen.findByRole("switch", { name: "Reportes mensuales" }))
+    expect(screen.queryByLabelText(/Alertar si/)).toBeNull()
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }))
+
+    await waitFor(() => expect(api.updateCompanyNotificationTypePreference).toHaveBeenCalledWith(
+      "MonthlyReport",
+      { isEnabled: true, cadence: "Monthly", threshold: null },
+    ))
+    expect(api.updateCompanyNotificationTypePreference).toHaveBeenCalledTimes(1)
   })
 
   it("displays the expanded metric help", async () => {
