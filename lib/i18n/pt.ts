@@ -456,10 +456,10 @@ export const pt: Messages = {
       closeOtherSessions: "Encerrar as outras sessões",
       closeSessionTitle: "Encerrar esta sessão?",
       closeSessionDescription: (device: string) =>
-        `${device} vai ter que entrar de novo. Pode continuar acessando por alguns minutos, até precisar renovar o acesso.`,
+        `${device} vai ter que entrar de novo: sai assim que fizer qualquer coisa no FinGrow.`,
       closeOtherSessionsTitle: "Encerrar as outras sessões?",
       closeOtherSessionsDescription:
-        "Todos os dispositivos menos este vão ter que entrar de novo. Podem continuar acessando por alguns minutos, até precisarem renovar o acesso.",
+        "Todos os dispositivos menos este vão ter que entrar de novo: saem assim que fizerem qualquer coisa no FinGrow.",
       cancel: "Cancelar",
       closing: "Encerrando...",
       sessionClosed: "Sessão encerrada",

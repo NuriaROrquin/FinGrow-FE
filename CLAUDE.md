@@ -39,10 +39,11 @@ el rol: un 401 vuelve siempre a la portada, y `/login/*` redirige ahí (`next.co
   valida el enlace al abrirlo y lo canjea con la contraseña nueva; al terminar se vuelve a la portada.
 - **Sesiones abiertas (HU-73)**: en Configuración → Seguridad, `components/security/active-sessions-card.tsx`
   lista las sesiones reales del usuario, empleado o empresa (`GET /session/all`), y cierra una
-  (`DELETE /session/{id}`) o todas menos la actual (`DELETE /session/others`). Cuelgan de `/session`
-  porque el backend reconoce la sesión actual por la cookie de refresh, que solo viaja ahí. No hay
+  (`DELETE /session/{id}`) o todas menos la actual (`DELETE /session/others`). La sesión actual la
+  reconoce el backend por el access token, que lleva el id de su sesión. No hay
   ubicación: el backend no la registra y la pantalla no inventa una ciudad. Un dispositivo cerrado
-  sigue entrando hasta que vence su access token y vuelve al login en el próximo refresh.
+  sale en su próximo pedido: el backend rechaza el access token de una sesión cerrada (HU-73), el
+  refresh también falla y `lib/api/client.ts` lo manda a la portada.
 - **Departamentos y empleados del panel de empresa** (HU-51, HU-54) usan la API real
   (`lib/api/company.ts`, `/api/company/departments` y `/api/company/employees`). El empleado se
   relaciona con su departamento por id. El alta devuelve una contraseña temporal que se muestra

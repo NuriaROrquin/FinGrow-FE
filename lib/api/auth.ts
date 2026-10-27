@@ -57,8 +57,6 @@ export interface ActiveSessionDto {
   isCurrent: boolean
 }
 
-// Cuelgan de /session y no de /api porque la sesión actual se reconoce por la cookie de refresh,
-// que el navegador solo manda a /session.
 export function listSessions(signal?: AbortSignal) {
   return api.get<ActiveSessionDto[]>("/session/all", { signal })
 }
